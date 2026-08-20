@@ -2,5 +2,6 @@
 members = [
     "crates/omnispex_core",
     "crates/omnispex_cli",
+    "crates/omnispex_flutter",
 ]
 resolver = "2"
