@@ -152,14 +152,20 @@ fn print_report(
     if !weapon.abilities.is_empty() {
         println!("Abilities: {:?}", weapon.abilities);
     }
+    let expanded = target.expanded_models();
+    let first_save = expanded.first().map_or(3, |m| m.save);
+    let first_wounds = expanded.first().map_or(1, |m| m.wounds);
     println!(
         "Defender: {} ({} models, T: {}, SV: {}+, W: {})",
         target.name,
         target.total_models(),
         target.toughness,
-        target.models.first().map_or(3, |m| m.save),
-        target.models.first().map_or(1, |m| m.wounds)
+        first_save,
+        first_wounds
     );
+    if !target.defensive_abilities.is_empty() {
+        println!("Defensive Abilities: {:?}", target.defensive_abilities);
+    }
     println!(
         "Context : Iterations: {} | Distance: {} | Cover: {} | Stationary: {}",
         report.iterations,
@@ -168,6 +174,8 @@ fn print_report(
         if context.is_stationary { "Yes" } else { "No" }
     );
     println!("--------------------------------------------------------------------------------");
+    println!("TACTICAL VERDICT: {}", report.tactical_verdict.label());
+    println!("--------------------------------------------------------------------------------");
     println!("SUMMARY METRICS");
     println!("--------------------------------------------------------------------------------");
     println!(
@@ -175,13 +183,37 @@ fn print_report(
         report.expected_models_killed, report.std_dev_kills
     );
     println!(
-        "Expected Damage Dealt  : {:.2} ± {:.2}",
-        report.expected_damage_dealt, report.std_dev_damage
+        "Safe Bet (80% Floor)   : {} models",
+        report.safe_bet_kills_80
+    );
+    println!(
+        "Expected Damage Dealt  : {:.2} ± {:.2} (Overkill loss: {:.2})",
+        report.expected_damage_dealt, report.std_dev_damage, report.spillover_damage_lost
     );
     println!(
         "Squad Wipe Probability : {:.2}%",
         report.wipe_probability * 100.0
     );
+    println!(
+        "Percentiles (Kills)    : p10: {}, p25: {}, p50 (Median): {}, p75: {}, p90: {}",
+        report.percentiles.p10,
+        report.percentiles.p25,
+        report.percentiles.p50,
+        report.percentiles.p75,
+        report.percentiles.p90
+    );
+    if report.keyword_audit.lethal_damage > 0.0
+        || report.keyword_audit.sustained_damage > 0.0
+        || report.keyword_audit.devastating_damage > 0.0
+    {
+        println!(
+            "Keyword Damage Audit   : Lethal: {:.2}, Sustained: {:.2}, Devastating: {:.2}, Standard: {:.2}",
+            report.keyword_audit.lethal_damage,
+            report.keyword_audit.sustained_damage,
+            report.keyword_audit.devastating_damage,
+            report.keyword_audit.standard_damage
+        );
+    }
     println!("--------------------------------------------------------------------------------");
     println!("KILL PROBABILITY DISTRIBUTION");
     println!("--------------------------------------------------------------------------------");

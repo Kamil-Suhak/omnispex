@@ -1,12 +1,20 @@
-use crate::domain::unit::UnitProfile;
+use crate::domain::unit::{ModelProfile, UnitProfile};
 use crate::domain::weapon::WeaponProfile;
 use crate::engine::context::CombatContext;
 use rand::Rng;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WoundKind {
+pub enum WoundSource {
     Standard,
-    Devastating,
+    LethalHits,
+    SustainedHits,
+    DevastatingWounds,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WoundKind {
+    Standard(WoundSource),
+    Devastating(WoundSource),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -19,6 +27,10 @@ pub struct VolleyOutcome {
     pub saves_failed: u32,
     pub models_killed: u32,
     pub damage_dealt: u32,
+    pub raw_damage_generated: u32,
+    pub lethal_damage: u32,
+    pub sustained_damage: u32,
+    pub devastating_damage: u32,
     pub surviving_models: usize,
     pub final_wounds: Vec<u32>,
 }
@@ -37,8 +49,8 @@ pub fn required_wound_roll(strength: u32, toughness: u32) -> u32 {
     }
 }
 
-pub fn find_allocated_model_index(wounds: &[u32], target: &UnitProfile) -> Option<usize> {
-    for (i, (&w, model)) in wounds.iter().zip(&target.models).enumerate() {
+pub fn find_allocated_model_index(wounds: &[u32], models: &[ModelProfile]) -> Option<usize> {
+    for (i, (&w, model)) in wounds.iter().zip(models).enumerate() {
         if w > 0 && w < model.wounds {
             return Some(i);
         }
@@ -84,7 +96,7 @@ pub fn resolve_volley(
     outcome.attacks_generated = attack_count;
 
     let mut pending_wounds: Vec<WoundKind> = Vec::new();
-    let mut standard_hits = 0u32;
+    let mut pending_hits_sources: Vec<WoundSource> = Vec::new();
 
     let mut raw_hit_mod: i32 = 0;
     if weapon.has_heavy() && context.is_stationary {
@@ -93,12 +105,16 @@ pub fn resolve_volley(
     if weapon.has_indirect_fire() && !context.target_visible {
         raw_hit_mod -= 1;
     }
+    if target.has_stealth() && weapon.range > 0 {
+        raw_hit_mod -= 1;
+    }
+    raw_hit_mod -= target.minus_hit_value() as i32;
     let hit_mod = raw_hit_mod.clamp(-1, 1);
 
     for _ in 0..attack_count {
         if weapon.has_torrent() {
             outcome.hits_scored += 1;
-            standard_hits += 1;
+            pending_hits_sources.push(WoundSource::Standard);
             continue;
         }
 
@@ -117,17 +133,19 @@ pub fn resolve_volley(
                 outcome.critical_hits += 1;
 
                 if weapon.has_lethal_hits() {
-                    pending_wounds.push(WoundKind::Standard);
+                    pending_wounds.push(WoundKind::Standard(WoundSource::LethalHits));
                     outcome.wounds_inflicted += 1;
                 } else {
-                    standard_hits += 1;
+                    pending_hits_sources.push(WoundSource::Standard);
                 }
 
                 if let Some(sustained) = weapon.sustained_hits_value() {
-                    standard_hits += sustained;
+                    for _ in 0..sustained {
+                        pending_hits_sources.push(WoundSource::SustainedHits);
+                    }
                 }
             } else {
-                standard_hits += 1;
+                pending_hits_sources.push(WoundSource::Standard);
             }
         }
     }
@@ -137,16 +155,18 @@ pub fn resolve_volley(
     if weapon.has_lance() && context.has_charged {
         raw_wound_mod += 1;
     }
+    raw_wound_mod -= target.minus_wound_value() as i32;
     let wound_mod = raw_wound_mod.clamp(-1, 1);
 
     let target_keywords = target.all_keywords();
     let anti_threshold = weapon.anti_threshold_for(&target_keywords);
+    let can_reroll_wounds = weapon.has_twin_linked() && !target.prevents_wound_rerolls();
 
-    for _ in 0..standard_hits {
+    for source in pending_hits_sources {
         let mut roll = rng.gen_range(1..=6);
         let mut wound_success = evaluate_wound_roll(roll, wound_mod, base_req_wound, anti_threshold);
 
-        if !wound_success.is_wound && weapon.has_twin_linked() {
+        if !wound_success.is_wound && can_reroll_wounds {
             roll = rng.gen_range(1..=6);
             wound_success = evaluate_wound_roll(roll, wound_mod, base_req_wound, anti_threshold);
         }
@@ -156,25 +176,31 @@ pub fn resolve_volley(
             if wound_success.is_crit {
                 outcome.critical_wounds += 1;
                 if weapon.has_devastating_wounds() {
-                    pending_wounds.push(WoundKind::Devastating);
+                    pending_wounds.push(WoundKind::Devastating(WoundSource::DevastatingWounds));
                 } else {
-                    pending_wounds.push(WoundKind::Standard);
+                    pending_wounds.push(WoundKind::Standard(source));
                 }
             } else {
-                pending_wounds.push(WoundKind::Standard);
+                pending_wounds.push(WoundKind::Standard(source));
             }
         }
     }
 
+    let expanded_models = target.expanded_models();
+
     for wound_kind in pending_wounds {
-        let alloc_idx = match find_allocated_model_index(wounds, target) {
+        let alloc_idx = match find_allocated_model_index(wounds, &expanded_models) {
             Some(idx) => idx,
             None => break,
         };
 
-        let model = &target.models[alloc_idx];
+        let model = &expanded_models[alloc_idx];
+        let (is_devastating, source) = match wound_kind {
+            WoundKind::Standard(src) => (false, src),
+            WoundKind::Devastating(src) => (true, src),
+        };
 
-        if wound_kind == WoundKind::Standard {
+        if !is_devastating {
             let has_cover = (context.target_has_benefit_of_cover
                 || (weapon.has_indirect_fire() && !context.target_visible))
                 && !weapon.has_ignores_cover();
@@ -212,6 +238,15 @@ pub fn resolve_volley(
             }
         }
 
+        if target.has_half_damage() || model.has_half_damage() {
+            damage = ((damage as f64) / 2.0).ceil() as u32;
+        }
+
+        let dmg_reduction = target.damage_reduction_value().max(model.damage_reduction_value());
+        if dmg_reduction > 0 {
+            damage = damage.saturating_sub(dmg_reduction).max(1);
+        }
+
         let effective_dmg = if let Some(fnp) = model.feel_no_pain {
             let mut taken = 0;
             for _ in 0..damage {
@@ -225,11 +260,20 @@ pub fn resolve_volley(
             damage
         };
 
+        outcome.raw_damage_generated += effective_dmg;
+
         if effective_dmg > 0 {
             let current_hp = wounds[alloc_idx];
             let damage_applied = effective_dmg.min(current_hp);
             wounds[alloc_idx] -= damage_applied;
             outcome.damage_dealt += damage_applied;
+
+            match source {
+                WoundSource::LethalHits => outcome.lethal_damage += damage_applied,
+                WoundSource::SustainedHits => outcome.sustained_damage += damage_applied,
+                WoundSource::DevastatingWounds => outcome.devastating_damage += damage_applied,
+                WoundSource::Standard => {}
+            }
 
             if wounds[alloc_idx] == 0 {
                 outcome.models_killed += 1;
