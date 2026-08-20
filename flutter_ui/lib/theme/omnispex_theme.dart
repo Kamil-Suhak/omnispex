@@ -17,7 +17,7 @@ class OmnispexTheme {
         onSecondary: OmnispexColors.background,
         onSurface: OmnispexColors.textPrimary,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: OmnispexColors.surfaceCard,
         elevation: 0,
         shape: RoundedRectangleBorder(

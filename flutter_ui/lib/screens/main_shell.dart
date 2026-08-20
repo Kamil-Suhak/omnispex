@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'in_battle_screen.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
@@ -17,72 +17,66 @@ class MainShell extends ConsumerWidget {
 
     final destinations = [
       const NavigationDestination(
-        icon: Icon(LucideIcons.swords),
-        selectedIcon: Icon(LucideIcons.swords, color: OmnispexColors.cyan),
+        icon: Icon(Icons.flash_on_outlined),
+        selectedIcon: Icon(Icons.flash_on, color: OmnispexColors.cyan),
         label: 'In-Battle',
       ),
       const NavigationDestination(
-        icon: Icon(LucideIcons.layoutGrid),
-        selectedIcon: Icon(LucideIcons.layoutGrid, color: OmnispexColors.cyan),
+        icon: Icon(Icons.grid_view_outlined),
+        selectedIcon: Icon(Icons.grid_view, color: OmnispexColors.cyan),
         label: 'List-Build',
       ),
       const NavigationDestination(
-        icon: Icon(LucideIcons.fileText),
-        selectedIcon: Icon(LucideIcons.fileText, color: OmnispexColors.cyan),
+        icon: Icon(Icons.description_outlined),
+        selectedIcon: Icon(Icons.description, color: OmnispexColors.cyan),
         label: 'Import',
       ),
       const NavigationDestination(
-        icon: Icon(LucideIcons.settings),
-        selectedIcon: Icon(LucideIcons.settings, color: OmnispexColors.cyan),
+        icon: Icon(Icons.settings_outlined),
+        selectedIcon: Icon(Icons.settings, color: OmnispexColors.cyan),
         label: 'Settings',
       ),
     ];
 
     final railDestinations = [
       const NavigationRailDestination(
-        icon: Icon(LucideIcons.swords),
-        selectedIcon: Icon(LucideIcons.swords, color: OmnispexColors.cyan),
+        icon: Icon(Icons.flash_on_outlined),
+        selectedIcon: Icon(Icons.flash_on, color: OmnispexColors.cyan),
         label: Text('In-Battle'),
       ),
       const NavigationRailDestination(
-        icon: Icon(LucideIcons.layoutGrid),
-        selectedIcon: Icon(LucideIcons.layoutGrid, color: OmnispexColors.cyan),
+        icon: Icon(Icons.grid_view_outlined),
+        selectedIcon: Icon(Icons.grid_view, color: OmnispexColors.cyan),
         label: Text('List-Build'),
       ),
       const NavigationRailDestination(
-        icon: Icon(LucideIcons.fileText),
-        selectedIcon: Icon(LucideIcons.fileText, color: OmnispexColors.cyan),
+        icon: Icon(Icons.description_outlined),
+        selectedIcon: Icon(Icons.description, color: OmnispexColors.cyan),
         label: Text('Import'),
       ),
       const NavigationRailDestination(
-        icon: Icon(LucideIcons.settings),
-        selectedIcon: Icon(LucideIcons.settings, color: OmnispexColors.cyan),
+        icon: Icon(Icons.settings_outlined),
+        selectedIcon: Icon(Icons.settings, color: OmnispexColors.cyan),
         label: Text('Settings'),
       ),
     ];
 
     final pages = [
-      _buildPlaceholderTab(
-        title: "IN-BATTLE TACTICAL DUEL",
-        subtitle: isDeepAnalytics
-            ? "Deep Analytics View (Histograms & Breakdown)"
-            : "Simplified In-Game View (30s Chess-Clock Verdict)",
-        icon: LucideIcons.swords,
-      ),
+      const InBattleScreen(),
       _buildPlaceholderTab(
         title: "LIST-BUILDING BENCHMARK",
         subtitle: "Evaluating Loadouts vs GEQ, MEQ, TEQ, Transport, Heavy Armor",
-        icon: LucideIcons.layoutGrid,
+        icon: Icons.grid_view,
       ),
       _buildPlaceholderTab(
         title: "WAHAPEDIA INGESTION",
         subtitle: "Quick-Paste Raw Text Weapon & Datasheet Tables",
-        icon: LucideIcons.fileText,
+        icon: Icons.description,
       ),
       _buildPlaceholderTab(
         title: "SETTINGS & ARCHETYPES",
         subtitle: "Customize standard defensive benchmark profiles",
-        icon: LucideIcons.settings,
+        icon: Icons.settings,
       ),
     ];
 
@@ -116,12 +110,11 @@ class MainShell extends ConsumerWidget {
           ],
         ),
         actions: [
-          // Simplified vs Deep Analytics Toggle Chip
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: FilterChip(
               avatar: Icon(
-                isDeepAnalytics ? LucideIcons.barChart2 : LucideIcons.zap,
+                isDeepAnalytics ? Icons.insights : Icons.bolt,
                 size: 14,
                 color: isDeepAnalytics ? OmnispexColors.amber : OmnispexColors.cyan,
               ),

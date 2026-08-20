@@ -23,7 +23,7 @@ class ScannableMetricCard extends StatelessWidget {
     final color = accentColor ?? OmnispexColors.cyan;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: OmnispexColors.surfaceCard,
         borderRadius: BorderRadius.circular(10),
@@ -36,29 +36,36 @@ class ScannableMetricCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label.toUpperCase(),
-                style: OmnispexTypography.label.copyWith(
-                  color: OmnispexColors.textSecondary,
-                  fontSize: 11,
+              Expanded(
+                child: Text(
+                  label.toUpperCase(),
+                  style: OmnispexTypography.label.copyWith(
+                    color: OmnispexColors.textSecondary,
+                    fontSize: 10,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (icon != null) Icon(icon, size: 16, color: color),
+              if (icon != null) ...[
+                const SizedBox(width: 4),
+                Icon(icon, size: 14, color: color),
+              ],
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             value,
             style: OmnispexTypography.monoDataLarge.copyWith(
               color: color,
-              fontSize: 26,
+              fontSize: 22,
             ),
           ),
           if (subtitle != null) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               subtitle!,
-              style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
+              style: OmnispexTypography.bodyMuted.copyWith(fontSize: 10),
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],
