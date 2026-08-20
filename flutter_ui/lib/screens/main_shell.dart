@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'in_battle_screen.dart';
 import 'list_building_screen.dart';
+import 'settings_screen.dart';
+import 'wahapedia_ingestion_screen.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
@@ -65,16 +67,8 @@ class MainShell extends ConsumerWidget {
     final pages = [
       const InBattleScreen(),
       const ListBuildingScreen(),
-      _buildPlaceholderTab(
-        title: "WAHAPEDIA INGESTION",
-        subtitle: "Quick-Paste Raw Text Weapon & Datasheet Tables",
-        icon: Icons.description,
-      ),
-      _buildPlaceholderTab(
-        title: "SETTINGS & ARCHETYPES",
-        subtitle: "Customize standard defensive benchmark profiles",
-        icon: Icons.settings,
-      ),
+      const WahapediaIngestionScreen(),
+      const SettingsScreen(),
     ];
 
     return Scaffold(
