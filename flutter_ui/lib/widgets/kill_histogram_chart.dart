@@ -8,6 +8,7 @@ class KillHistogramChart extends StatelessWidget {
   final int safeBetFloor;
   final String title;
   final String unitLabel;
+  final int? targetMaxHp;
 
   const KillHistogramChart({
     super.key,
@@ -15,6 +16,7 @@ class KillHistogramChart extends StatelessWidget {
     required this.safeBetFloor,
     this.title = "KILL PROBABILITY DENSITY",
     this.unitLabel = "kills",
+    this.targetMaxHp,
   });
 
   @override
@@ -22,27 +24,33 @@ class KillHistogramChart extends StatelessWidget {
     if (distribution.isEmpty) return const SizedBox.shrink();
 
     final maxProb = distribution.map((e) => e.value).reduce((a, b) => a > b ? a : b);
-    final maxY = (maxProb * 1.25).clamp(0.1, 1.0);
+    final maxY = (maxProb * 1.25).clamp(0.05, 1.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 6,
           children: [
             Text(title, style: OmnispexTypography.label),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
               children: [
                 _buildLegendPill("Safe Bet (≥80%)", OmnispexColors.greenKill),
-                const SizedBox(width: 8),
                 _buildLegendPill("Distribution", OmnispexColors.cyan),
+                if (targetMaxHp != null)
+                  _buildLegendPill("Kill Zone (≥$targetMaxHp HP)", OmnispexColors.purple),
               ],
             ),
           ],
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 180,
+          height: 190,
           child: BarChart(
             BarChartData(
               maxY: maxY,
@@ -54,9 +62,13 @@ class KillHistogramChart extends StatelessWidget {
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final xVal = group.x;
                     final prob = (rod.toY * 100).toStringAsFixed(1);
+                    final isKill = targetMaxHp != null && xVal >= targetMaxHp!;
                     return BarTooltipItem(
-                      "$xVal $unitLabel\n$prob%",
-                      OmnispexTypography.monoStatBadge.copyWith(fontSize: 12),
+                      "$xVal $unitLabel${isKill ? ' (Kill)' : ''}\n$prob%",
+                      OmnispexTypography.monoStatBadge.copyWith(
+                        fontSize: 12,
+                        color: isKill ? OmnispexColors.purple : OmnispexColors.textPrimary,
+                      ),
                     );
                   },
                 ),
@@ -68,15 +80,18 @@ class KillHistogramChart extends StatelessWidget {
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
                       final intVal = value.toInt();
+                      final isKill = targetMaxHp != null && intVal >= targetMaxHp!;
                       return Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           "$intVal",
                           style: OmnispexTypography.monoStatBadge.copyWith(
                             fontSize: 10,
-                            color: intVal <= safeBetFloor && safeBetFloor > 0
-                                ? OmnispexColors.greenKill
-                                : OmnispexColors.textSecondary,
+                            color: isKill
+                                ? OmnispexColors.purple
+                                : (intVal <= safeBetFloor && safeBetFloor > 0
+                                    ? OmnispexColors.greenKill
+                                    : OmnispexColors.textSecondary),
                           ),
                         ),
                       );
@@ -116,13 +131,19 @@ class KillHistogramChart extends StatelessWidget {
               borderData: FlBorderData(show: false),
               barGroups: distribution.map((entry) {
                 final isSafeBet = entry.key <= safeBetFloor && safeBetFloor > 0;
+                final isKill = targetMaxHp != null && entry.key >= targetMaxHp!;
+
+                final barColor = isKill
+                    ? OmnispexColors.purple
+                    : (isSafeBet ? OmnispexColors.greenKill : OmnispexColors.cyan);
+
                 return BarChartGroupData(
                   x: entry.key,
                   barRods: [
                     BarChartRodData(
                       toY: entry.value,
-                      color: isSafeBet ? OmnispexColors.greenKill : OmnispexColors.cyan,
-                      width: distribution.length > 12 ? 8 : 14,
+                      color: barColor,
+                      width: distribution.length > 14 ? 6 : (distribution.length > 8 ? 10 : 14),
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                       backDrawRodData: BackgroundBarChartRodData(
                         show: true,

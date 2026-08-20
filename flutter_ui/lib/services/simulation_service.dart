@@ -347,6 +347,7 @@ class SimulationService {
       final wounds = List<int>.filled(target.modelCount, target.woundsPerModel);
       int roundKills = 0;
       int roundDmg = 0;
+      int roundRawDmg = 0;
 
       for (final entry in loadout) {
         if (wounds.every((w) => w == 0)) break;
@@ -525,6 +526,7 @@ class SimulationService {
           }
 
           totalRawDamage += effectiveDmg;
+          roundRawDmg += effectiveDmg;
 
           if (effectiveDmg > 0) {
             final hp = wounds[allocIdx];
@@ -558,13 +560,13 @@ class SimulationService {
       if (roundKills < killCounts.length) {
         killCounts[roundKills] += 1;
       }
-      damageCounts[roundDmg] = (damageCounts[roundDmg] ?? 0) + 1;
+      damageCounts[roundRawDmg] = (damageCounts[roundRawDmg] ?? 0) + 1;
 
       if (wounds.every((w) => w == 0)) wipes += 1;
       if (roundDmg >= (target.totalWounds / 2).ceil()) bracket50Count += 1;
 
       killsSamples.add(roundKills);
-      damageSamples.add(roundDmg);
+      damageSamples.add(roundRawDmg);
     }
 
     final n = iterations.toDouble();
@@ -583,7 +585,7 @@ class SimulationService {
     final varianceKills = killsSamples.map((k) => pow(k - expectedKills, 2)).reduce((a, b) => a + b) / n;
     final stdDevKills = sqrt(varianceKills);
 
-    final varianceDmg = damageSamples.map((d) => pow(d - expectedDamage, 2)).reduce((a, b) => a + b) / n;
+    final varianceDmg = damageSamples.map((d) => pow(d - rawDamage, 2)).reduce((a, b) => a + b) / n;
     final stdDevDmg = sqrt(varianceDmg);
 
     killsSamples.sort();
@@ -602,9 +604,9 @@ class SimulationService {
       killDist.add(MapEntry(k, killCounts[k] / n));
     }
 
-    final sortedDamageKeys = damageCounts.keys.toList()..sort();
+    final maxDmg = damageCounts.keys.isEmpty ? 0 : damageCounts.keys.reduce(max);
     final damageDist = <MapEntry<int, double>>[];
-    for (final d in sortedDamageKeys) {
+    for (int d = 0; d <= max(target.totalWounds, maxDmg); d++) {
       damageDist.add(MapEntry(d, (damageCounts[d] ?? 0) / n));
     }
 

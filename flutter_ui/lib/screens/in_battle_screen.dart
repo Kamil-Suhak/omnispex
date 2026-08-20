@@ -1074,6 +1074,7 @@ class InBattleScreen extends ConsumerWidget {
               safeBetFloor: isSingleModel ? report.safeBetDamage80 : report.safeBetKills80,
               title: isSingleModel ? "DAMAGE PROBABILITY DENSITY" : "KILL PROBABILITY DENSITY",
               unitLabel: isSingleModel ? "dmg" : "kills",
+              targetMaxHp: isSingleModel ? activeTarget.totalWounds : null,
             ),
           ),
           TacticalCard(
