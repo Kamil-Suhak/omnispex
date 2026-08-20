@@ -420,6 +420,7 @@ class InBattleScreen extends ConsumerWidget {
                       child: Text(
                         "Custom Weapon (Manual Input)...",
                         style: OmnispexTypography.monoData.copyWith(color: OmnispexColors.amber, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -434,39 +435,35 @@ class InBattleScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
 
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text("WEAPON COUNT:", style: OmnispexTypography.label.copyWith(fontSize: 11)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: [1, 3, 5, 10].map((count) {
-                          final isSel = weaponCount == count;
-                          return ChoiceChip(
-                            label: Text(
-                              "$count",
-                              style: OmnispexTypography.monoStatBadge.copyWith(
-                                color: isSel ? OmnispexColors.background : OmnispexColors.cyan,
-                                fontSize: 11,
-                              ),
-                            ),
-                            selected: isSel,
-                            selectedColor: OmnispexColors.cyan,
-                            backgroundColor: OmnispexColors.surfaceElevated,
-                            side: BorderSide(
-                              color: isSel ? OmnispexColors.cyan : OmnispexColors.border,
-                            ),
-                            onSelected: (selected) {
-                              if (selected) {
-                                ref.read(weaponCountProvider.notifier).state = count;
-                              }
-                            },
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                    ...[1, 3, 5, 10].map((count) {
+                      final isSel = weaponCount == count;
+                      return ChoiceChip(
+                        label: Text(
+                          "$count",
+                          style: OmnispexTypography.monoStatBadge.copyWith(
+                            color: isSel ? OmnispexColors.background : OmnispexColors.cyan,
+                            fontSize: 11,
+                          ),
+                        ),
+                        selected: isSel,
+                        selectedColor: OmnispexColors.cyan,
+                        backgroundColor: OmnispexColors.surfaceElevated,
+                        side: BorderSide(
+                          color: isSel ? OmnispexColors.cyan : OmnispexColors.border,
+                        ),
+                        onSelected: (selected) {
+                          if (selected) {
+                            ref.read(weaponCountProvider.notifier).state = count;
+                          }
+                        },
+                      );
+                    }),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -525,7 +522,7 @@ class InBattleScreen extends ConsumerWidget {
                     final sq = squadPresets[i];
                     return DropdownMenuItem(
                       value: i,
-                      child: Text(sq.name, style: OmnispexTypography.monoData.copyWith(fontSize: 12)),
+                      child: Text(sq.name, style: OmnispexTypography.monoData.copyWith(fontSize: 12), overflow: TextOverflow.ellipsis),
                     );
                   }),
                   onChanged: (val) {
@@ -544,8 +541,11 @@ class InBattleScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: OmnispexColors.border),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
                         Text(
                           "${entry.count}x ${entry.weapon.name} [${entry.weapon.profileName}]",
@@ -578,7 +578,7 @@ class InBattleScreen extends ConsumerWidget {
                   final t = targets[i];
                   return DropdownMenuItem(
                     value: i,
-                    child: Text(t.name, style: OmnispexTypography.monoData),
+                    child: Text(t.name, style: OmnispexTypography.monoData, overflow: TextOverflow.ellipsis),
                   );
                 }),
                 onChanged: (val) {
@@ -1080,8 +1080,10 @@ class InBattleScreen extends ConsumerWidget {
             title: "PERCENTILE DISTRIBUTION & OVERKILL LOSS",
             child: Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                Wrap(
+                  alignment: WrapAlignment.spaceAround,
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     _buildPercentilePill("p10", "${report.percentiles.p10}"),
                     _buildPercentilePill("p25", "${report.percentiles.p25}"),
@@ -1096,7 +1098,8 @@ class InBattleScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Raw Damage Generated:", style: OmnispexTypography.bodyMuted),
+                    Expanded(child: Text("Raw Damage Generated:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 8),
                     Text("${report.rawDamageGenerated.toStringAsFixed(1)} dmg", style: OmnispexTypography.monoData),
                   ],
                 ),
@@ -1104,7 +1107,8 @@ class InBattleScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Effective Damage Applied:", style: OmnispexTypography.bodyMuted),
+                    Expanded(child: Text("Effective Damage Applied:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 8),
                     Text("${report.expectedDamageDealt.toStringAsFixed(1)} dmg", style: OmnispexTypography.monoData),
                   ],
                 ),
@@ -1112,7 +1116,8 @@ class InBattleScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Overkill Loss to Model Truncation:", style: OmnispexTypography.bodyMuted),
+                    Expanded(child: Text("Overkill Loss to Model Truncation:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 8),
                     Text(
                       "${report.spilloverDamageLost.toStringAsFixed(1)} dmg",
                       style: OmnispexTypography.monoData.copyWith(color: OmnispexColors.amber),
@@ -1132,7 +1137,8 @@ class InBattleScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Lethal Hits Contribution:", style: OmnispexTypography.bodyMuted),
+                      Expanded(child: Text("Lethal Hits Contribution:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                      const SizedBox(width: 8),
                       Text("${report.keywordAudit.lethalDamage.toStringAsFixed(1)} dmg", style: OmnispexTypography.monoData),
                     ],
                   ),
@@ -1140,7 +1146,8 @@ class InBattleScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Sustained Hits Contribution:", style: OmnispexTypography.bodyMuted),
+                      Expanded(child: Text("Sustained Hits Contribution:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                      const SizedBox(width: 8),
                       Text("${report.keywordAudit.sustainedDamage.toStringAsFixed(1)} dmg", style: OmnispexTypography.monoData),
                     ],
                   ),
@@ -1148,7 +1155,8 @@ class InBattleScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Devastating Wounds Contribution:", style: OmnispexTypography.bodyMuted),
+                      Expanded(child: Text("Devastating Wounds Contribution:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                      const SizedBox(width: 8),
                       Text("${report.keywordAudit.devastatingDamage.toStringAsFixed(1)} dmg", style: OmnispexTypography.monoData),
                     ],
                   ),
