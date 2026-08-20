@@ -350,8 +350,6 @@ class SimulationService {
       int roundRawDmg = 0;
 
       for (final entry in loadout) {
-        if (wounds.every((w) => w == 0)) break;
-
         final weapon = entry.weapon;
         final count = entry.count.clamp(1, 100);
         final combinedAbilities = {...weapon.abilities, ...extraAbilities};
