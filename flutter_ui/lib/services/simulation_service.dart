@@ -1,6 +1,16 @@
 import 'dart:math';
 import '../models/simulation_models.dart';
 
+class SquadPreset {
+  final String name;
+  final List<WeaponLoadoutEntry> loadout;
+
+  const SquadPreset({
+    required this.name,
+    required this.loadout,
+  });
+}
+
 class SimulationService {
   static final List<WeaponUiProfile> defaultWeapons = [
     // Ranged Weapons
@@ -70,6 +80,50 @@ class SimulationService {
       damage: "1",
       abilities: ["Heavy"],
     ),
+    const WeaponUiProfile(
+      name: "Storm Bolter",
+      profileName: "Standard",
+      range: 24,
+      attacks: "2",
+      skill: 3,
+      strength: 4,
+      ap: 0,
+      damage: "1",
+      abilities: ["Rapid Fire 2"],
+    ),
+    const WeaponUiProfile(
+      name: "Lascannon",
+      profileName: "Standard",
+      range: 48,
+      attacks: "1",
+      skill: 3,
+      strength: 12,
+      ap: 3,
+      damage: "D6+1",
+      abilities: ["Heavy"],
+    ),
+    const WeaponUiProfile(
+      name: "Leman Russ Battle Cannon",
+      profileName: "Standard",
+      range: 48,
+      attacks: "D6+3",
+      skill: 4,
+      strength: 10,
+      ap: 1,
+      damage: "3",
+      abilities: ["Blast"],
+    ),
+    const WeaponUiProfile(
+      name: "Heavy Bolter",
+      profileName: "Standard",
+      range: 36,
+      attacks: "3",
+      skill: 4,
+      strength: 5,
+      ap: 1,
+      damage: "2",
+      abilities: ["Sustained Hits 1", "Heavy"],
+    ),
     // Melee Weapons
     const WeaponUiProfile(
       name: "Power Fist",
@@ -114,6 +168,36 @@ class SimulationService {
       ap: 2,
       damage: "2",
       abilities: ["Lance"],
+    ),
+  ];
+
+  static final List<SquadPreset> defaultSquadPresets = [
+    SquadPreset(
+      name: "Terminators (4x Storm Bolter + 1x Frag Cyclone)",
+      loadout: [
+        WeaponLoadoutEntry(weapon: defaultWeapons.firstWhere((w) => w.name == "Storm Bolter"), count: 4),
+        WeaponLoadoutEntry(weapon: defaultWeapons.firstWhere((w) => w.profileName == "Frag Missile"), count: 1),
+      ],
+    ),
+    SquadPreset(
+      name: "Leman Russ (Battle Cannon + 2x Heavy Bolter + Lascannon)",
+      loadout: [
+        WeaponLoadoutEntry(weapon: defaultWeapons.firstWhere((w) => w.name == "Leman Russ Battle Cannon"), count: 1),
+        WeaponLoadoutEntry(weapon: defaultWeapons.firstWhere((w) => w.name == "Heavy Bolter"), count: 2),
+        WeaponLoadoutEntry(weapon: defaultWeapons.firstWhere((w) => w.name == "Lascannon"), count: 1),
+      ],
+    ),
+    SquadPreset(
+      name: "Intercessor Squad (5x Bolt Rifle)",
+      loadout: [
+        WeaponLoadoutEntry(weapon: defaultWeapons.firstWhere((w) => w.name == "Bolt Rifle"), count: 5),
+      ],
+    ),
+    SquadPreset(
+      name: "Terminator Melee (5x Power Fist)",
+      loadout: [
+        WeaponLoadoutEntry(weapon: defaultWeapons.firstWhere((w) => w.name == "Power Fist"), count: 5),
+      ],
     ),
   ];
 
@@ -184,6 +268,54 @@ class SimulationService {
     ReRollOption woundReroll = ReRollOption.none,
     int bonusStrength = 0,
     int bonusAp = 0,
+    bool defensiveArmorOfContempt = false,
+    bool defensiveMinusWound = false,
+    bool defensiveGrantInvuln4 = false,
+    bool defensiveGrantFnp5 = false,
+    bool defensiveGrantHalfDamage = false,
+    bool defensiveGrantMinusDamage1 = false,
+    int iterations = 10000,
+  }) {
+    return runSquadSimulation(
+      loadout: [WeaponLoadoutEntry(weapon: weapon, count: weaponCount)],
+      target: target,
+      isStationary: isStationary,
+      hasCharged: hasCharged,
+      targetInCover: targetInCover,
+      distance: distance,
+      extraAbilities: extraAbilities,
+      hitReroll: hitReroll,
+      woundReroll: woundReroll,
+      bonusStrength: bonusStrength,
+      bonusAp: bonusAp,
+      defensiveArmorOfContempt: defensiveArmorOfContempt,
+      defensiveMinusWound: defensiveMinusWound,
+      defensiveGrantInvuln4: defensiveGrantInvuln4,
+      defensiveGrantFnp5: defensiveGrantFnp5,
+      defensiveGrantHalfDamage: defensiveGrantHalfDamage,
+      defensiveGrantMinusDamage1: defensiveGrantMinusDamage1,
+      iterations: iterations,
+    );
+  }
+
+  static SimulationUiReport runSquadSimulation({
+    required List<WeaponLoadoutEntry> loadout,
+    required UnitUiProfile target,
+    required bool isStationary,
+    required bool hasCharged,
+    required bool targetInCover,
+    int? distance,
+    Set<String> extraAbilities = const {},
+    ReRollOption hitReroll = ReRollOption.none,
+    ReRollOption woundReroll = ReRollOption.none,
+    int bonusStrength = 0,
+    int bonusAp = 0,
+    bool defensiveArmorOfContempt = false,
+    bool defensiveMinusWound = false,
+    bool defensiveGrantInvuln4 = false,
+    bool defensiveGrantFnp5 = false,
+    bool defensiveGrantHalfDamage = false,
+    bool defensiveGrantMinusDamage1 = false,
     int iterations = 10000,
   }) {
     final rng = Random();
@@ -196,11 +328,15 @@ class SimulationService {
     int wipes = 0;
     int bracket50Count = 0;
 
-    final combinedAbilities = {...weapon.abilities, ...extraAbilities};
+    final effectiveInvuln = defensiveGrantInvuln4
+        ? (target.invuln != null ? min(target.invuln!, 4) : 4)
+        : target.invuln;
 
-    final count = weaponCount.clamp(1, 100);
-    final effectiveStrength = (weapon.strength + bonusStrength).clamp(1, 30);
-    final effectiveAp = (weapon.ap + bonusAp).clamp(0, 6);
+    final effectiveFnp = defensiveGrantFnp5
+        ? (target.fnp != null ? min(target.fnp!, 5) : 5)
+        : target.fnp;
+
+    final hasEffectiveHalfDamage = target.hasHalfDamage || defensiveGrantHalfDamage;
 
     final killCounts = List<int>.filled(target.modelCount + 1, 0);
     final damageCounts = <int, int>{};
@@ -209,195 +345,210 @@ class SimulationService {
 
     for (int it = 0; it < iterations; it++) {
       final wounds = List<int>.filled(target.modelCount, target.woundsPerModel);
-      int livingModels = target.modelCount;
-
-      int attacksPerWeapon = _rollDiceExpr(weapon.attacks, rng);
-      if (weapon.isRanged && combinedAbilities.contains("Blast") && livingModels >= 5) {
-        attacksPerWeapon += (livingModels ~/ 5);
-      }
-      if (weapon.isRanged) {
-        for (final ab in combinedAbilities) {
-          if (ab.startsWith("Rapid Fire") && distance != null && distance <= weapon.range ~/ 2) {
-            final bonus = int.tryParse(ab.replaceAll("Rapid Fire", "").trim()) ?? 1;
-            attacksPerWeapon += bonus;
-          }
-        }
-      }
-
-      final totalAttacks = attacksPerWeapon * count;
-
-      int hitMod = 0;
-      if (weapon.isRanged && combinedAbilities.contains("Heavy") && isStationary) hitMod += 1;
-      if (weapon.isRanged && target.defensiveAbilities.contains("Stealth")) hitMod -= 1;
-      hitMod = hitMod.clamp(-1, 1);
-
-      final pendingWounds = <_Wound>[];
-      final standardHits = <_WoundSource>[];
-
-      for (int a = 0; a < totalAttacks; a++) {
-        if (combinedAbilities.contains("Torrent")) {
-          standardHits.add(_WoundSource.standard);
-          continue;
-        }
-
-        int roll = rng.nextInt(6) + 1;
-        bool isHit = roll != 1 && (roll == 6 || (roll + hitMod).clamp(1, 6) >= weapon.skill);
-
-        if (!isHit && hitReroll != ReRollOption.none) {
-          if (hitReroll == ReRollOption.all || (hitReroll == ReRollOption.ones && roll == 1)) {
-            roll = rng.nextInt(6) + 1;
-            isHit = roll != 1 && (roll == 6 || (roll + hitMod).clamp(1, 6) >= weapon.skill);
-          }
-        }
-
-        if (isHit) {
-          final isCrit = roll == 6;
-          if (isCrit) {
-            if (combinedAbilities.contains("Lethal Hits")) {
-              pendingWounds.add(_Wound(false, _WoundSource.lethal));
-            } else {
-              standardHits.add(_WoundSource.standard);
-            }
-
-            for (final ab in combinedAbilities) {
-              if (ab.startsWith("Sustained Hits")) {
-                final bonus = int.tryParse(ab.replaceAll("Sustained Hits", "").trim()) ?? 1;
-                for (int s = 0; s < bonus; s++) {
-                  standardHits.add(_WoundSource.sustained);
-                }
-              }
-            }
-          } else {
-            standardHits.add(_WoundSource.standard);
-          }
-        }
-      }
-
-      final reqWound = _requiredWoundRoll(effectiveStrength, target.toughness);
-      int woundMod = 0;
-      if (weapon.isMelee && combinedAbilities.contains("Lance") && hasCharged) {
-        woundMod += 1;
-      }
-      for (final def in target.defensiveAbilities) {
-        if (def.startsWith("MinusWound")) {
-          final minus = int.tryParse(def.replaceAll("MinusWound", "").trim()) ?? 1;
-          woundMod -= minus;
-        }
-      }
-      woundMod = woundMod.clamp(-1, 1);
-
-      final hasTwinLinked = combinedAbilities.contains("Twin-Linked");
-
-      for (final src in standardHits) {
-        int roll = rng.nextInt(6) + 1;
-        bool isWound = roll != 1 && (roll == 6 || (roll + woundMod).clamp(1, 6) >= reqWound);
-
-        if (!isWound) {
-          final shouldReroll = hasTwinLinked || woundReroll == ReRollOption.all || (woundReroll == ReRollOption.ones && roll == 1);
-          if (shouldReroll) {
-            roll = rng.nextInt(6) + 1;
-            isWound = roll != 1 && (roll == 6 || (roll + woundMod).clamp(1, 6) >= reqWound);
-          }
-        }
-
-        if (isWound) {
-          if (roll == 6 && combinedAbilities.contains("Devastating Wounds")) {
-            pendingWounds.add(_Wound(true, _WoundSource.devastating));
-          } else {
-            pendingWounds.add(_Wound(false, src));
-          }
-        }
-      }
-
       int roundKills = 0;
       int roundDmg = 0;
 
-      for (final wound in pendingWounds) {
-        int allocIdx = -1;
-        for (int i = 0; i < wounds.length; i++) {
-          if (wounds[i] > 0 && wounds[i] < target.woundsPerModel) {
-            allocIdx = i;
-            break;
+      for (final entry in loadout) {
+        if (wounds.every((w) => w == 0)) break;
+
+        final weapon = entry.weapon;
+        final count = entry.count.clamp(1, 100);
+        final combinedAbilities = {...weapon.abilities, ...extraAbilities};
+
+        final effectiveStrength = (weapon.strength + bonusStrength).clamp(1, 30);
+        int effectiveAp = (weapon.ap + bonusAp).clamp(0, 6);
+        if (defensiveArmorOfContempt) {
+          effectiveAp = max(0, effectiveAp - 1);
+        }
+
+        int livingModels = wounds.where((w) => w > 0).length;
+
+        int attacksPerWeapon = _rollDiceExpr(weapon.attacks, rng);
+        if (weapon.isRanged && combinedAbilities.contains("Blast") && livingModels >= 5) {
+          attacksPerWeapon += (livingModels ~/ 5);
+        }
+        if (weapon.isRanged) {
+          for (final ab in combinedAbilities) {
+            if (ab.startsWith("Rapid Fire") && distance != null && distance <= weapon.range ~/ 2) {
+              final bonus = int.tryParse(ab.replaceAll("Rapid Fire", "").trim()) ?? 1;
+              attacksPerWeapon += bonus;
+            }
           }
         }
-        if (allocIdx == -1) {
+
+        final totalAttacks = attacksPerWeapon * count;
+
+        int hitMod = 0;
+        if (weapon.isRanged && combinedAbilities.contains("Heavy") && isStationary) hitMod += 1;
+        if (weapon.isRanged && target.hasStealth) hitMod -= 1;
+        hitMod = hitMod.clamp(-1, 1);
+
+        final pendingWounds = <_Wound>[];
+        final standardHits = <_WoundSource>[];
+
+        for (int a = 0; a < totalAttacks; a++) {
+          if (combinedAbilities.contains("Torrent")) {
+            standardHits.add(_WoundSource.standard);
+            continue;
+          }
+
+          int roll = rng.nextInt(6) + 1;
+          bool isHit = roll != 1 && (roll == 6 || (roll + hitMod).clamp(1, 6) >= weapon.skill);
+
+          if (!isHit && hitReroll != ReRollOption.none) {
+            if (hitReroll == ReRollOption.all || (hitReroll == ReRollOption.ones && roll == 1)) {
+              roll = rng.nextInt(6) + 1;
+              isHit = roll != 1 && (roll == 6 || (roll + hitMod).clamp(1, 6) >= weapon.skill);
+            }
+          }
+
+          if (isHit) {
+            final isCrit = roll == 6;
+            if (isCrit) {
+              if (combinedAbilities.contains("Lethal Hits")) {
+                pendingWounds.add(_Wound(false, _WoundSource.lethal));
+              } else {
+                standardHits.add(_WoundSource.standard);
+              }
+
+              for (final ab in combinedAbilities) {
+                if (ab.startsWith("Sustained Hits")) {
+                  final bonus = int.tryParse(ab.replaceAll("Sustained Hits", "").trim()) ?? 1;
+                  for (int s = 0; s < bonus; s++) {
+                    standardHits.add(_WoundSource.sustained);
+                  }
+                }
+              }
+            } else {
+              standardHits.add(_WoundSource.standard);
+            }
+          }
+        }
+
+        final reqWound = _requiredWoundRoll(effectiveStrength, target.toughness);
+        int woundMod = 0;
+        if (weapon.isMelee && combinedAbilities.contains("Lance") && hasCharged) {
+          woundMod += 1;
+        }
+        if (target.hasMinusWound || defensiveMinusWound) {
+          woundMod -= 1;
+        }
+        woundMod = woundMod.clamp(-1, 1);
+
+        final hasTwinLinked = combinedAbilities.contains("Twin-Linked");
+
+        for (final src in standardHits) {
+          int roll = rng.nextInt(6) + 1;
+          bool isWound = roll != 1 && (roll == 6 || (roll + woundMod).clamp(1, 6) >= reqWound);
+
+          if (!isWound) {
+            final shouldReroll = hasTwinLinked || woundReroll == ReRollOption.all || (woundReroll == ReRollOption.ones && roll == 1);
+            if (shouldReroll) {
+              roll = rng.nextInt(6) + 1;
+              isWound = roll != 1 && (roll == 6 || (roll + woundMod).clamp(1, 6) >= reqWound);
+            }
+          }
+
+          if (isWound) {
+            if (roll == 6 && combinedAbilities.contains("Devastating Wounds")) {
+              pendingWounds.add(_Wound(true, _WoundSource.devastating));
+            } else {
+              pendingWounds.add(_Wound(false, src));
+            }
+          }
+        }
+
+        for (final wound in pendingWounds) {
+          int allocIdx = -1;
           for (int i = 0; i < wounds.length; i++) {
-            if (wounds[i] > 0) {
+            if (wounds[i] > 0 && wounds[i] < target.woundsPerModel) {
               allocIdx = i;
               break;
             }
           }
-        }
-        if (allocIdx == -1) break;
+          if (allocIdx == -1) {
+            for (int i = 0; i < wounds.length; i++) {
+              if (wounds[i] > 0) {
+                allocIdx = i;
+                break;
+              }
+            }
+          }
+          if (allocIdx == -1) break;
 
-        if (!wound.isDevastating) {
-          int coverBonus = 0;
-          if (weapon.isRanged && targetInCover && !combinedAbilities.contains("Ignores Cover")) {
-            if (effectiveAp == 0 && target.save <= 3) {
-              coverBonus = 0;
-            } else {
-              coverBonus = 1;
+          if (!wound.isDevastating) {
+            int coverBonus = 0;
+            if (weapon.isRanged && targetInCover && !combinedAbilities.contains("Ignores Cover")) {
+              if (effectiveAp == 0 && target.save <= 3) {
+                coverBonus = 0;
+              } else {
+                coverBonus = 1;
+              }
+            }
+
+            final effectiveArmor = max(2, target.save + effectiveAp - coverBonus);
+            final chosenSave = effectiveInvuln != null ? min(effectiveArmor, effectiveInvuln) : effectiveArmor;
+
+            final saveRoll = rng.nextInt(6) + 1;
+            if (saveRoll != 1 && saveRoll >= chosenSave) continue;
+          }
+
+          int dmg = _rollDiceExpr(weapon.damage, rng);
+          if (weapon.isRanged) {
+            for (final ab in combinedAbilities) {
+              if (ab.startsWith("Melta") && distance != null && distance <= weapon.range ~/ 2) {
+                final bonus = int.tryParse(ab.replaceAll("Melta", "").trim()) ?? 2;
+                dmg += bonus;
+              }
             }
           }
 
-          final effectiveArmor = max(2, target.save + effectiveAp - coverBonus);
-          final chosenSave = target.invuln != null ? min(effectiveArmor, target.invuln!) : effectiveArmor;
+          if (hasEffectiveHalfDamage) {
+            dmg = ((dmg as double) / 2.0).ceil();
+          }
 
-          final saveRoll = rng.nextInt(6) + 1;
-          if (saveRoll != 1 && saveRoll >= chosenSave) continue;
-        }
+          int totalDmgReduction = 0;
+          if (target.hasDamageReduction) totalDmgReduction += 1;
+          if (defensiveGrantMinusDamage1 && !target.hasDamageReduction) totalDmgReduction += 1;
+          if (totalDmgReduction > 0) {
+            dmg = max(1, dmg - totalDmgReduction);
+          }
 
-        int dmg = _rollDiceExpr(weapon.damage, rng);
-        if (weapon.isRanged) {
-          for (final ab in combinedAbilities) {
-            if (ab.startsWith("Melta") && distance != null && distance <= weapon.range ~/ 2) {
-              final bonus = int.tryParse(ab.replaceAll("Melta", "").trim()) ?? 2;
-              dmg += bonus;
+          int effectiveDmg = dmg;
+          if (effectiveFnp != null) {
+            int taken = 0;
+            for (int d = 0; d < dmg; d++) {
+              final fnpRoll = rng.nextInt(6) + 1;
+              if (fnpRoll < effectiveFnp) taken += 1;
             }
-          }
-        }
-
-        for (final def in target.defensiveAbilities) {
-          if (def.startsWith("ReduceDamage")) {
-            final red = int.tryParse(def.replaceAll("ReduceDamage", "").trim()) ?? 1;
-            dmg = max(1, dmg - red);
-          }
-        }
-
-        int effectiveDmg = dmg;
-        if (target.fnp != null) {
-          int taken = 0;
-          for (int d = 0; d < dmg; d++) {
-            final fnpRoll = rng.nextInt(6) + 1;
-            if (fnpRoll < target.fnp!) taken += 1;
-          }
-          effectiveDmg = taken;
-        }
-
-        totalRawDamage += effectiveDmg;
-
-        if (effectiveDmg > 0) {
-          final hp = wounds[allocIdx];
-          final applied = min(effectiveDmg, hp);
-          wounds[allocIdx] -= applied;
-          roundDmg += applied;
-
-          switch (wound.source) {
-            case _WoundSource.lethal:
-              totalLethalDmg += applied;
-              break;
-            case _WoundSource.sustained:
-              totalSustainedDmg += applied;
-              break;
-            case _WoundSource.devastating:
-              totalDevDmg += applied;
-              break;
-            case _WoundSource.standard:
-              break;
+            effectiveDmg = taken;
           }
 
-          if (wounds[allocIdx] == 0) {
-            roundKills += 1;
+          totalRawDamage += effectiveDmg;
+
+          if (effectiveDmg > 0) {
+            final hp = wounds[allocIdx];
+            final applied = min(effectiveDmg, hp);
+            wounds[allocIdx] -= applied;
+            roundDmg += applied;
+
+            switch (wound.source) {
+              case _WoundSource.lethal:
+                totalLethalDmg += applied;
+                break;
+              case _WoundSource.sustained:
+                totalSustainedDmg += applied;
+                break;
+              case _WoundSource.devastating:
+                totalDevDmg += applied;
+                break;
+              case _WoundSource.standard:
+                break;
+            }
+
+            if (wounds[allocIdx] == 0) {
+              roundKills += 1;
+            }
           }
         }
       }

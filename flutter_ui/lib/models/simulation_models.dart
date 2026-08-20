@@ -55,6 +55,26 @@ class WeaponUiProfile {
   }
 }
 
+class WeaponLoadoutEntry {
+  final WeaponUiProfile weapon;
+  final int count;
+
+  const WeaponLoadoutEntry({
+    required this.weapon,
+    required this.count,
+  });
+
+  WeaponLoadoutEntry copyWith({
+    WeaponUiProfile? weapon,
+    int? count,
+  }) {
+    return WeaponLoadoutEntry(
+      weapon: weapon ?? this.weapon,
+      count: count ?? this.count,
+    );
+  }
+}
+
 class UnitUiProfile {
   final String name;
   final int toughness;
@@ -80,6 +100,13 @@ class UnitUiProfile {
 
   int get totalWounds => woundsPerModel * modelCount;
   bool get isSingleModel => modelCount == 1;
+
+  bool get has4PlusInvuln => invuln != null && invuln! <= 4;
+  bool get hasMinusWound => defensiveAbilities.any((a) => a.startsWith("MinusWound"));
+  bool get hasDamageReduction => defensiveAbilities.any((a) => a.startsWith("ReduceDamage"));
+  bool get hasHalfDamage => defensiveAbilities.contains("HalfDamage");
+  bool get hasStealth => defensiveAbilities.contains("Stealth");
+  bool get hasFnp => fnp != null;
 }
 
 class PercentilesUi {
