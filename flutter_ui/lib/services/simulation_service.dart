@@ -179,6 +179,11 @@ class SimulationService {
     required bool targetInCover,
     int weaponCount = 1,
     int? distance,
+    Set<String> extraAbilities = const {},
+    ReRollOption hitReroll = ReRollOption.none,
+    ReRollOption woundReroll = ReRollOption.none,
+    int bonusStrength = 0,
+    int bonusAp = 0,
     int iterations = 10000,
   }) {
     final rng = Random();
@@ -189,22 +194,29 @@ class SimulationService {
     int totalSustainedDmg = 0;
     int totalDevDmg = 0;
     int wipes = 0;
+    int bracket50Count = 0;
+
+    final combinedAbilities = {...weapon.abilities, ...extraAbilities};
 
     final count = weaponCount.clamp(1, 100);
+    final effectiveStrength = (weapon.strength + bonusStrength).clamp(1, 30);
+    final effectiveAp = (weapon.ap + bonusAp).clamp(0, 6);
+
     final killCounts = List<int>.filled(target.modelCount + 1, 0);
+    final damageCounts = <int, int>{};
     final killsSamples = <int>[];
-    final damageSamples = <double>[];
+    final damageSamples = <int>[];
 
     for (int it = 0; it < iterations; it++) {
       final wounds = List<int>.filled(target.modelCount, target.woundsPerModel);
       int livingModels = target.modelCount;
 
       int attacksPerWeapon = _rollDiceExpr(weapon.attacks, rng);
-      if (weapon.isRanged && weapon.abilities.contains("Blast") && livingModels >= 5) {
+      if (weapon.isRanged && combinedAbilities.contains("Blast") && livingModels >= 5) {
         attacksPerWeapon += (livingModels ~/ 5);
       }
       if (weapon.isRanged) {
-        for (final ab in weapon.abilities) {
+        for (final ab in combinedAbilities) {
           if (ab.startsWith("Rapid Fire") && distance != null && distance <= weapon.range ~/ 2) {
             final bonus = int.tryParse(ab.replaceAll("Rapid Fire", "").trim()) ?? 1;
             attacksPerWeapon += bonus;
@@ -215,7 +227,7 @@ class SimulationService {
       final totalAttacks = attacksPerWeapon * count;
 
       int hitMod = 0;
-      if (weapon.isRanged && weapon.abilities.contains("Heavy") && isStationary) hitMod += 1;
+      if (weapon.isRanged && combinedAbilities.contains("Heavy") && isStationary) hitMod += 1;
       if (weapon.isRanged && target.defensiveAbilities.contains("Stealth")) hitMod -= 1;
       hitMod = hitMod.clamp(-1, 1);
 
@@ -223,26 +235,31 @@ class SimulationService {
       final standardHits = <_WoundSource>[];
 
       for (int a = 0; a < totalAttacks; a++) {
-        if (weapon.abilities.contains("Torrent")) {
+        if (combinedAbilities.contains("Torrent")) {
           standardHits.add(_WoundSource.standard);
           continue;
         }
 
-        final roll = rng.nextInt(6) + 1;
-        if (roll == 1) continue;
+        int roll = rng.nextInt(6) + 1;
+        bool isHit = roll != 1 && (roll == 6 || (roll + hitMod).clamp(1, 6) >= weapon.skill);
 
-        final isCrit = roll == 6;
-        final modified = (roll + hitMod).clamp(1, 6);
+        if (!isHit && hitReroll != ReRollOption.none) {
+          if (hitReroll == ReRollOption.all || (hitReroll == ReRollOption.ones && roll == 1)) {
+            roll = rng.nextInt(6) + 1;
+            isHit = roll != 1 && (roll == 6 || (roll + hitMod).clamp(1, 6) >= weapon.skill);
+          }
+        }
 
-        if (isCrit || modified >= weapon.skill) {
+        if (isHit) {
+          final isCrit = roll == 6;
           if (isCrit) {
-            if (weapon.abilities.contains("Lethal Hits")) {
+            if (combinedAbilities.contains("Lethal Hits")) {
               pendingWounds.add(_Wound(false, _WoundSource.lethal));
             } else {
               standardHits.add(_WoundSource.standard);
             }
 
-            for (final ab in weapon.abilities) {
+            for (final ab in combinedAbilities) {
               if (ab.startsWith("Sustained Hits")) {
                 final bonus = int.tryParse(ab.replaceAll("Sustained Hits", "").trim()) ?? 1;
                 for (int s = 0; s < bonus; s++) {
@@ -256,9 +273,9 @@ class SimulationService {
         }
       }
 
-      final reqWound = _requiredWoundRoll(weapon.strength, target.toughness);
+      final reqWound = _requiredWoundRoll(effectiveStrength, target.toughness);
       int woundMod = 0;
-      if (weapon.isMelee && weapon.abilities.contains("Lance") && hasCharged) {
+      if (weapon.isMelee && combinedAbilities.contains("Lance") && hasCharged) {
         woundMod += 1;
       }
       for (final def in target.defensiveAbilities) {
@@ -269,17 +286,22 @@ class SimulationService {
       }
       woundMod = woundMod.clamp(-1, 1);
 
+      final hasTwinLinked = combinedAbilities.contains("Twin-Linked");
+
       for (final src in standardHits) {
         int roll = rng.nextInt(6) + 1;
         bool isWound = roll != 1 && (roll == 6 || (roll + woundMod).clamp(1, 6) >= reqWound);
 
-        if (!isWound && weapon.abilities.contains("Twin-Linked")) {
-          roll = rng.nextInt(6) + 1;
-          isWound = roll != 1 && (roll == 6 || (roll + woundMod).clamp(1, 6) >= reqWound);
+        if (!isWound) {
+          final shouldReroll = hasTwinLinked || woundReroll == ReRollOption.all || (woundReroll == ReRollOption.ones && roll == 1);
+          if (shouldReroll) {
+            roll = rng.nextInt(6) + 1;
+            isWound = roll != 1 && (roll == 6 || (roll + woundMod).clamp(1, 6) >= reqWound);
+          }
         }
 
         if (isWound) {
-          if (roll == 6 && weapon.abilities.contains("Devastating Wounds")) {
+          if (roll == 6 && combinedAbilities.contains("Devastating Wounds")) {
             pendingWounds.add(_Wound(true, _WoundSource.devastating));
           } else {
             pendingWounds.add(_Wound(false, src));
@@ -310,15 +332,15 @@ class SimulationService {
 
         if (!wound.isDevastating) {
           int coverBonus = 0;
-          if (weapon.isRanged && targetInCover && !weapon.abilities.contains("Ignores Cover")) {
-            if (weapon.ap == 0 && target.save <= 3) {
+          if (weapon.isRanged && targetInCover && !combinedAbilities.contains("Ignores Cover")) {
+            if (effectiveAp == 0 && target.save <= 3) {
               coverBonus = 0;
             } else {
               coverBonus = 1;
             }
           }
 
-          final effectiveArmor = max(2, target.save + weapon.ap - coverBonus);
+          final effectiveArmor = max(2, target.save + effectiveAp - coverBonus);
           final chosenSave = target.invuln != null ? min(effectiveArmor, target.invuln!) : effectiveArmor;
 
           final saveRoll = rng.nextInt(6) + 1;
@@ -327,7 +349,7 @@ class SimulationService {
 
         int dmg = _rollDiceExpr(weapon.damage, rng);
         if (weapon.isRanged) {
-          for (final ab in weapon.abilities) {
+          for (final ab in combinedAbilities) {
             if (ab.startsWith("Melta") && distance != null && distance <= weapon.range ~/ 2) {
               final bonus = int.tryParse(ab.replaceAll("Melta", "").trim()) ?? 2;
               dmg += bonus;
@@ -385,10 +407,13 @@ class SimulationService {
       if (roundKills < killCounts.length) {
         killCounts[roundKills] += 1;
       }
+      damageCounts[roundDmg] = (damageCounts[roundDmg] ?? 0) + 1;
+
       if (wounds.every((w) => w == 0)) wipes += 1;
+      if (roundDmg >= (target.totalWounds / 2).ceil()) bracket50Count += 1;
 
       killsSamples.add(roundKills);
-      damageSamples.add(roundDmg.toDouble());
+      damageSamples.add(roundDmg);
     }
 
     final n = iterations.toDouble();
@@ -397,6 +422,7 @@ class SimulationService {
     final rawDamage = totalRawDamage / n;
     final spilloverLost = max(0.0, rawDamage - expectedDamage);
     final wipeProb = wipes / n;
+    final bracket50Prob = bracket50Count / n;
 
     final lethalDmg = totalLethalDmg / n;
     final sustainedDmg = totalSustainedDmg / n;
@@ -425,16 +451,29 @@ class SimulationService {
       killDist.add(MapEntry(k, killCounts[k] / n));
     }
 
-    int safeBet80 = 0;
+    final sortedDamageKeys = damageCounts.keys.toList()..sort();
+    final damageDist = <MapEntry<int, double>>[];
+    for (final d in sortedDamageKeys) {
+      damageDist.add(MapEntry(d, (damageCounts[d] ?? 0) / n));
+    }
+
+    int safeBetKills80 = 0;
     for (int candidate = target.modelCount; candidate >= 0; candidate--) {
       double sum = 0;
       for (final entry in killDist) {
         if (entry.key >= candidate) sum += entry.value;
       }
       if (sum >= 0.80 - 1e-5) {
-        safeBet80 = candidate;
+        safeBetKills80 = candidate;
         break;
       }
+    }
+
+    int safeBetDamage80 = 0;
+    damageSamples.sort();
+    if (damageSamples.isNotEmpty) {
+      final idx80 = ((damageSamples.length - 1) * 0.20).floor().clamp(0, damageSamples.length - 1);
+      safeBetDamage80 = damageSamples[idx80];
     }
 
     final TacticalVerdictUi verdict;
@@ -456,7 +495,9 @@ class SimulationService {
       expectedDamageDealt: expectedDamage,
       rawDamageGenerated: rawDamage,
       spilloverDamageLost: spilloverLost,
-      safeBetKills80: safeBet80,
+      safeBetKills80: safeBetKills80,
+      safeBetDamage80: safeBetDamage80,
+      bracket50Probability: bracket50Prob,
       wipeProbability: wipeProb,
       stdDevKills: stdDevKills,
       stdDevDamage: stdDevDmg,
@@ -469,6 +510,7 @@ class SimulationService {
         standardDamage: stdDmg,
       ),
       killDistribution: killDist,
+      damageDistribution: damageDist,
     );
   }
 

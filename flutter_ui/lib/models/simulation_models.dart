@@ -1,3 +1,9 @@
+enum ReRollOption {
+  none,
+  ones,
+  all,
+}
+
 class WeaponUiProfile {
   final String name;
   final String profileName;
@@ -73,6 +79,7 @@ class UnitUiProfile {
   });
 
   int get totalWounds => woundsPerModel * modelCount;
+  bool get isSingleModel => modelCount == 1;
 }
 
 class PercentilesUi {
@@ -120,6 +127,8 @@ class SimulationUiReport {
   final double rawDamageGenerated;
   final double spilloverDamageLost;
   final int safeBetKills80;
+  final int safeBetDamage80;
+  final double bracket50Probability;
   final double wipeProbability;
   final double stdDevKills;
   final double stdDevDamage;
@@ -127,6 +136,7 @@ class SimulationUiReport {
   final PercentilesUi percentiles;
   final KeywordAuditUi keywordAudit;
   final List<MapEntry<int, double>> killDistribution;
+  final List<MapEntry<int, double>> damageDistribution;
 
   const SimulationUiReport({
     required this.iterations,
@@ -137,6 +147,8 @@ class SimulationUiReport {
     required this.rawDamageGenerated,
     required this.spilloverDamageLost,
     required this.safeBetKills80,
+    required this.safeBetDamage80,
+    required this.bracket50Probability,
     required this.wipeProbability,
     required this.stdDevKills,
     required this.stdDevDamage,
@@ -144,5 +156,6 @@ class SimulationUiReport {
     required this.percentiles,
     required this.keywordAudit,
     required this.killDistribution,
+    required this.damageDistribution,
   });
 }

@@ -6,13 +6,15 @@ import '../theme/omnispex_typography.dart';
 class KillHistogramChart extends StatelessWidget {
   final List<MapEntry<int, double>> distribution;
   final int safeBetFloor;
-  final double expectedKills;
+  final String title;
+  final String unitLabel;
 
   const KillHistogramChart({
     super.key,
     required this.distribution,
     required this.safeBetFloor,
-    required this.expectedKills,
+    this.title = "KILL PROBABILITY DENSITY",
+    this.unitLabel = "kills",
   });
 
   @override
@@ -28,7 +30,7 @@ class KillHistogramChart extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("KILL PROBABILITY DENSITY", style: OmnispexTypography.label),
+            Text(title, style: OmnispexTypography.label),
             Row(
               children: [
                 _buildLegendPill("Safe Bet (≥80%)", OmnispexColors.greenKill),
@@ -50,10 +52,10 @@ class KillHistogramChart extends StatelessWidget {
                   getTooltipColor: (group) => OmnispexColors.surfaceElevated,
                   tooltipBorder: const BorderSide(color: OmnispexColors.cyan, width: 1),
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                    final kills = group.x;
+                    final xVal = group.x;
                     final prob = (rod.toY * 100).toStringAsFixed(1);
                     return BarTooltipItem(
-                      "$kills kills\n$prob%",
+                      "$xVal $unitLabel\n$prob%",
                       OmnispexTypography.monoStatBadge.copyWith(fontSize: 12),
                     );
                   },
@@ -120,7 +122,7 @@ class KillHistogramChart extends StatelessWidget {
                     BarChartRodData(
                       toY: entry.value,
                       color: isSafeBet ? OmnispexColors.greenKill : OmnispexColors.cyan,
-                      width: 14,
+                      width: distribution.length > 12 ? 8 : 14,
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                       backDrawRodData: BackgroundBarChartRodData(
                         show: true,

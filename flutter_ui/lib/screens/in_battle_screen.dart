@@ -33,6 +33,13 @@ final hasChargedProvider = StateProvider<bool>((ref) => false);
 final targetInCoverProvider = StateProvider<bool>((ref) => false);
 final combatDistanceProvider = StateProvider<int>((ref) => 12);
 
+// What-If / Stratagem Buff Providers
+final whatIfAbilitiesProvider = StateProvider<Set<String>>((ref) => {});
+final hitRerollProvider = StateProvider<ReRollOption>((ref) => ReRollOption.none);
+final woundRerollProvider = StateProvider<ReRollOption>((ref) => ReRollOption.none);
+final bonusStrengthProvider = StateProvider<int>((ref) => 0);
+final bonusApProvider = StateProvider<int>((ref) => 0);
+
 class InBattleScreen extends ConsumerWidget {
   const InBattleScreen({super.key});
 
@@ -49,6 +56,12 @@ class InBattleScreen extends ConsumerWidget {
     final targetInCover = ref.watch(targetInCoverProvider);
     final distance = ref.watch(combatDistanceProvider);
 
+    final whatIfAbilities = ref.watch(whatIfAbilitiesProvider);
+    final hitReroll = ref.watch(hitRerollProvider);
+    final woundReroll = ref.watch(woundRerollProvider);
+    final bonusStrength = ref.watch(bonusStrengthProvider);
+    final bonusAp = ref.watch(bonusApProvider);
+
     final weapons = SimulationService.defaultWeapons;
     final targets = SimulationService.defaultTargets;
 
@@ -63,6 +76,11 @@ class InBattleScreen extends ConsumerWidget {
       targetInCover: targetInCover,
       weaponCount: weaponCount,
       distance: distance,
+      extraAbilities: whatIfAbilities,
+      hitReroll: hitReroll,
+      woundReroll: woundReroll,
+      bonusStrength: bonusStrength,
+      bonusAp: bonusAp,
     );
 
     WeaponUiProfile? altWeapon;
@@ -87,6 +105,11 @@ class InBattleScreen extends ConsumerWidget {
           targetInCover: targetInCover,
           weaponCount: weaponCount,
           distance: distance,
+          extraAbilities: whatIfAbilities,
+          hitReroll: hitReroll,
+          woundReroll: woundReroll,
+          bonusStrength: bonusStrength,
+          bonusAp: bonusAp,
         );
       }
     }
@@ -102,6 +125,28 @@ class InBattleScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header Controls (Reset All)
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  Text("IN-BATTLE RESOLUTION", style: OmnispexTypography.h2),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.refresh, size: 14),
+                    label: Text("RESET DEFAULTS", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: OmnispexColors.textSecondary,
+                      side: const BorderSide(color: OmnispexColors.border),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                    onPressed: () => _resetAll(ref),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,6 +169,11 @@ class InBattleScreen extends ConsumerWidget {
                         distance,
                         activeWeapon,
                         activeTarget,
+                        whatIfAbilities,
+                        hitReroll,
+                        woundReroll,
+                        bonusStrength,
+                        bonusAp,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -132,6 +182,7 @@ class InBattleScreen extends ConsumerWidget {
                       child: _buildResultsColumn(
                         report,
                         activeWeapon,
+                        activeTarget,
                         altWeapon,
                         altReport,
                         weaponIdx,
@@ -158,11 +209,17 @@ class InBattleScreen extends ConsumerWidget {
                   distance,
                   activeWeapon,
                   activeTarget,
+                  whatIfAbilities,
+                  hitReroll,
+                  woundReroll,
+                  bonusStrength,
+                  bonusAp,
                 ),
                 const SizedBox(height: 16),
                 _buildResultsColumn(
                   report,
                   activeWeapon,
+                  activeTarget,
                   altWeapon,
                   altReport,
                   weaponIdx,
@@ -175,6 +232,22 @@ class InBattleScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _resetAll(WidgetRef ref) {
+    ref.read(selectedWeaponIndexProvider.notifier).state = 0;
+    ref.read(isCustomWeaponModeProvider.notifier).state = false;
+    ref.read(weaponCountProvider.notifier).state = 1;
+    ref.read(selectedTargetIndexProvider.notifier).state = 0;
+    ref.read(isStationaryProvider.notifier).state = true;
+    ref.read(hasChargedProvider.notifier).state = false;
+    ref.read(targetInCoverProvider.notifier).state = false;
+    ref.read(combatDistanceProvider.notifier).state = 12;
+    ref.read(whatIfAbilitiesProvider.notifier).state = {};
+    ref.read(hitRerollProvider.notifier).state = ReRollOption.none;
+    ref.read(woundRerollProvider.notifier).state = ReRollOption.none;
+    ref.read(bonusStrengthProvider.notifier).state = 0;
+    ref.read(bonusApProvider.notifier).state = 0;
   }
 
   Widget _buildControlsColumn(
@@ -193,11 +266,23 @@ class InBattleScreen extends ConsumerWidget {
     int distance,
     WeaponUiProfile activeWeapon,
     UnitUiProfile activeTarget,
+    Set<String> whatIfAbilities,
+    ReRollOption hitReroll,
+    ReRollOption woundReroll,
+    int bonusStrength,
+    int bonusAp,
   ) {
+    final showHeavy = activeWeapon.isRanged && activeWeapon.abilities.contains("Heavy");
+    final showLance = activeWeapon.isMelee && activeWeapon.abilities.contains("Lance");
+    final showCover = activeWeapon.isRanged &&
+        !activeWeapon.abilities.contains("Ignores Cover") &&
+        !whatIfAbilities.contains("Ignores Cover") &&
+        (activeWeapon.ap > 0 || activeTarget.save > 3);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. Attacker Weapon Loadout & Quantity
+        // 1. Attacker Weapon Loadout
         TacticalCard(
           title: "1. ATTACKER WEAPON LOADOUT",
           child: Column(
@@ -211,11 +296,10 @@ class InBattleScreen extends ConsumerWidget {
                 items: [
                   ...List.generate(weapons.length, (i) {
                     final w = weapons[i];
-                    final typeTag = w.isMelee ? "⚔️ MELEE" : '🏹 RNG ${w.range}"';
                     return DropdownMenuItem(
                       value: i,
                       child: Text(
-                        "${w.name} [${w.profileName}] ($typeTag)",
+                        "${w.name} [${w.profileName}]",
                         style: OmnispexTypography.monoData.copyWith(fontSize: 13),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -224,7 +308,7 @@ class InBattleScreen extends ConsumerWidget {
                   DropdownMenuItem(
                     value: -1,
                     child: Text(
-                      "⚙️ Custom Weapon (Manual Input)...",
+                      "Custom Weapon (Manual Input)...",
                       style: OmnispexTypography.monoData.copyWith(color: OmnispexColors.amber, fontSize: 13),
                     ),
                   ),
@@ -240,7 +324,6 @@ class InBattleScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // Weapon Quantity Selector
               Row(
                 children: [
                   Text("WEAPON COUNT:", style: OmnispexTypography.label.copyWith(fontSize: 11)),
@@ -278,7 +361,6 @@ class InBattleScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // Custom Weapon Builder or Static Badges
               if (isCustomWeapon)
                 _buildCustomWeaponEditor(context, ref, customWeapon)
               else ...[
@@ -287,7 +369,7 @@ class InBattleScreen extends ConsumerWidget {
                   runSpacing: 6,
                   children: [
                     StatBadge(
-                      label: activeWeapon.isMelee ? "TYPE" : "RNG",
+                      label: "TYPE",
                       value: activeWeapon.isMelee ? "MELEE" : '${activeWeapon.range}"',
                       accentColor: activeWeapon.isMelee ? OmnispexColors.amber : OmnispexColors.cyan,
                     ),
@@ -367,27 +449,29 @@ class InBattleScreen extends ConsumerWidget {
           ),
         ),
 
-        // 3. Combat Modifiers (Dynamic Ranged vs Melee Split)
+        // 3. Relevant Combat Modifiers
         TacticalCard(
-          title: activeWeapon.isMelee ? "3. MELEE COMBAT MODIFIERS" : "3. RANGED COMBAT MODIFIERS",
+          title: "3. APPLICABLE COMBAT MODIFIERS",
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (activeWeapon.isMelee)
+              if (showLance)
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text("Attacker Made Charge Move (Lance +1)", style: OmnispexTypography.body),
                   value: hasCharged,
                   activeColor: OmnispexColors.cyan,
                   onChanged: (val) => ref.read(hasChargedProvider.notifier).state = val,
-                )
-              else ...[
+                ),
+              if (showCover)
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text("Target Has Benefit of Cover", style: OmnispexTypography.body),
+                  title: Text("Target Has Benefit of Cover (+1 Sv)", style: OmnispexTypography.body),
                   value: targetInCover,
                   activeColor: OmnispexColors.cyan,
                   onChanged: (val) => ref.read(targetInCoverProvider.notifier).state = val,
                 ),
+              if (showHeavy)
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text("Attacker Stationary (Heavy +1)", style: OmnispexTypography.body),
@@ -395,7 +479,96 @@ class InBattleScreen extends ConsumerWidget {
                   activeColor: OmnispexColors.cyan,
                   onChanged: (val) => ref.read(isStationaryProvider.notifier).state = val,
                 ),
-              ],
+              if (!showLance && !showCover && !showHeavy)
+                Text(
+                  "No situational weapon modifiers apply to this profile.",
+                  style: OmnispexTypography.bodyMuted,
+                ),
+            ],
+          ),
+        ),
+
+        // 4. Stratagems & What-If Rule Injection Checklist
+        TacticalCard(
+          title: "4. WHAT-IF STRATAGEMS & ABILITY INJECTION",
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Test the impact of granting additional keywords or re-rolls:",
+                style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  "Lethal Hits",
+                  "Sustained Hits 1",
+                  "Devastating Wounds",
+                  "Twin-Linked",
+                  "Lance",
+                  "Ignores Cover",
+                ].map((kw) {
+                  final active = whatIfAbilities.contains(kw);
+                  return FilterChip(
+                    label: Text(kw, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
+                    selected: active,
+                    selectedColor: OmnispexColors.amber.withOpacity(0.25),
+                    backgroundColor: OmnispexColors.surfaceElevated,
+                    side: BorderSide(color: active ? OmnispexColors.amber : OmnispexColors.border),
+                    onSelected: (selected) {
+                      final updated = Set<String>.from(whatIfAbilities);
+                      if (selected) {
+                        updated.add(kw);
+                      } else {
+                        updated.remove(kw);
+                      }
+                      ref.read(whatIfAbilitiesProvider.notifier).state = updated;
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+              const Divider(color: OmnispexColors.border, height: 1),
+              const SizedBox(height: 10),
+
+              // Re-roll Selectors
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<ReRollOption>(
+                      value: hitReroll,
+                      decoration: const InputDecoration(labelText: "HIT RE-ROLLS"),
+                      dropdownColor: OmnispexColors.surfaceCard,
+                      items: const [
+                        DropdownMenuItem(value: ReRollOption.none, child: Text("None")),
+                        DropdownMenuItem(value: ReRollOption.ones, child: Text("Re-roll 1s")),
+                        DropdownMenuItem(value: ReRollOption.all, child: Text("Full Re-rolls")),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) ref.read(hitRerollProvider.notifier).state = val;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButtonFormField<ReRollOption>(
+                      value: woundReroll,
+                      decoration: const InputDecoration(labelText: "WOUND RE-ROLLS"),
+                      dropdownColor: OmnispexColors.surfaceCard,
+                      items: const [
+                        DropdownMenuItem(value: ReRollOption.none, child: Text("None")),
+                        DropdownMenuItem(value: ReRollOption.ones, child: Text("Re-roll 1s")),
+                        DropdownMenuItem(value: ReRollOption.all, child: Text("Full Re-rolls")),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) ref.read(woundRerollProvider.notifier).state = val;
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -424,8 +597,8 @@ class InBattleScreen extends ConsumerWidget {
               Text("CUSTOM WEAPON ATTRIBUTES", style: OmnispexTypography.label.copyWith(color: OmnispexColors.amber)),
               SegmentedButton<bool>(
                 segments: const [
-                  ButtonSegment(value: false, label: Text("🏹 Ranged")),
-                  ButtonSegment(value: true, label: Text("⚔️ Melee")),
+                  ButtonSegment(value: false, label: Text("Ranged")),
+                  ButtonSegment(value: true, label: Text("Melee")),
                 ],
                 selected: {custom.isMelee},
                 onSelectionChanged: (set) {
@@ -541,6 +714,7 @@ class InBattleScreen extends ConsumerWidget {
   Widget _buildResultsColumn(
     SimulationUiReport report,
     WeaponUiProfile activeWeapon,
+    UnitUiProfile activeTarget,
     WeaponUiProfile? altWeapon,
     SimulationUiReport? altReport,
     int weaponIdx,
@@ -553,18 +727,26 @@ class InBattleScreen extends ConsumerWidget {
       TacticalVerdictUi.redIneffective => VerdictType.redIneffective,
     };
 
+    final isSingleModel = activeTarget.isSingleModel;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TacticalVerdictBadge(verdict: verdictType),
         const SizedBox(height: 12),
+
+        // 3 Core Numbers (Adaptive Single-Model Vehicle vs Multi-Model Squad)
         Row(
           children: [
             Expanded(
               child: ScannableMetricCard(
-                label: "Expected Kills",
-                value: report.expectedModelsKilled.toStringAsFixed(1),
-                subtitle: "± ${report.stdDevKills.toStringAsFixed(1)} StdDev",
+                label: isSingleModel ? "Expected Damage" : "Expected Kills",
+                value: isSingleModel
+                    ? "${report.expectedDamageDealt.toStringAsFixed(1)} / ${activeTarget.totalWounds} HP"
+                    : "${report.expectedModelsKilled.toStringAsFixed(1)} / ${activeTarget.modelCount}",
+                subtitle: isSingleModel
+                    ? "± ${report.stdDevDamage.toStringAsFixed(1)} HP StdDev"
+                    : "± ${report.stdDevKills.toStringAsFixed(1)} Models StdDev",
                 accentColor: OmnispexColors.cyan,
                 icon: Icons.track_changes,
               ),
@@ -573,7 +755,7 @@ class InBattleScreen extends ConsumerWidget {
             Expanded(
               child: ScannableMetricCard(
                 label: "Safe Bet (≥80%)",
-                value: "${report.safeBetKills80}",
+                value: isSingleModel ? "${report.safeBetDamage80} HP" : "${report.safeBetKills80} models",
                 subtitle: "80% Confidence Floor",
                 accentColor: OmnispexColors.greenKill,
                 icon: Icons.shield,
@@ -582,12 +764,16 @@ class InBattleScreen extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: ScannableMetricCard(
-                label: "Wipe Chance",
-                value: "${(report.wipeProbability * 100).toStringAsFixed(0)}%",
-                subtitle: "100% Casualty Odds",
-                accentColor: report.wipeProbability >= 0.75
+                label: isSingleModel ? "Bracket Odds" : "Wipe Chance",
+                value: isSingleModel
+                    ? "${(report.bracket50Probability * 100).toStringAsFixed(0)}%"
+                    : "${(report.wipeProbability * 100).toStringAsFixed(0)}%",
+                subtitle: isSingleModel ? "≥50% HP Damage" : "100% Wipe Odds",
+                accentColor: (isSingleModel ? report.bracket50Probability : report.wipeProbability) >= 0.75
                     ? OmnispexColors.greenKill
-                    : (report.wipeProbability >= 0.25 ? OmnispexColors.yellowContest : OmnispexColors.redIneffective),
+                    : ((isSingleModel ? report.bracket50Probability : report.wipeProbability) >= 0.25
+                        ? OmnispexColors.yellowContest
+                        : OmnispexColors.redIneffective),
                 icon: Icons.dangerous,
               ),
             ),
@@ -615,11 +801,12 @@ class InBattleScreen extends ConsumerWidget {
 
         if (isDeepAnalytics) ...[
           TacticalCard(
-            title: "DEEP ANALYTICS: CASUALTY HISTOGRAM",
+            title: isSingleModel ? "DEEP ANALYTICS: DAMAGE HISTOGRAM" : "DEEP ANALYTICS: CASUALTY HISTOGRAM",
             child: KillHistogramChart(
-              distribution: report.killDistribution,
-              safeBetFloor: report.safeBetKills80,
-              expectedKills: report.expectedModelsKilled,
+              distribution: isSingleModel ? report.damageDistribution : report.killDistribution,
+              safeBetFloor: isSingleModel ? report.safeBetDamage80 : report.safeBetKills80,
+              title: isSingleModel ? "DAMAGE PROBABILITY DENSITY" : "KILL PROBABILITY DENSITY",
+              unitLabel: isSingleModel ? "dmg" : "kills",
             ),
           ),
           TacticalCard(
