@@ -20,6 +20,33 @@ class WeaponUiProfile {
     required this.damage,
     this.abilities = const [],
   });
+
+  bool get isMelee => range == 0;
+  bool get isRanged => range > 0;
+
+  WeaponUiProfile copyWith({
+    String? name,
+    String? profileName,
+    int? range,
+    String? attacks,
+    int? skill,
+    int? strength,
+    int? ap,
+    String? damage,
+    List<String>? abilities,
+  }) {
+    return WeaponUiProfile(
+      name: name ?? this.name,
+      profileName: profileName ?? this.profileName,
+      range: range ?? this.range,
+      attacks: attacks ?? this.attacks,
+      skill: skill ?? this.skill,
+      strength: strength ?? this.strength,
+      ap: ap ?? this.ap,
+      damage: damage ?? this.damage,
+      abilities: abilities ?? this.abilities,
+    );
+  }
 }
 
 class UnitUiProfile {

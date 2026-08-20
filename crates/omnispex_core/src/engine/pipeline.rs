@@ -73,7 +73,7 @@ pub fn resolve_volley(
         return outcome;
     }
 
-    if weapon.has_blast() && context.in_engagement_range {
+    if weapon.is_ranged() && weapon.has_blast() && context.in_engagement_range {
         outcome.surviving_models = living_count;
         outcome.final_wounds = wounds.to_vec();
         return outcome;
@@ -81,14 +81,16 @@ pub fn resolve_volley(
 
     let mut attack_count = weapon.attacks.roll(rng);
 
-    if weapon.has_blast() && living_count >= 5 {
+    if weapon.is_ranged() && weapon.has_blast() && living_count >= 5 {
         attack_count += (living_count / 5) as u32;
     }
 
-    if let Some(rf) = weapon.rapid_fire_bonus() {
-        if let Some(dist) = context.distance_inches {
-            if dist <= weapon.range / 2 {
-                attack_count += rf;
+    if weapon.is_ranged() {
+        if let Some(rf) = weapon.rapid_fire_bonus() {
+            if let Some(dist) = context.distance_inches {
+                if dist <= weapon.range / 2 {
+                    attack_count += rf;
+                }
             }
         }
     }
@@ -99,13 +101,13 @@ pub fn resolve_volley(
     let mut pending_hits_sources: Vec<WoundSource> = Vec::new();
 
     let mut raw_hit_mod: i32 = 0;
-    if weapon.has_heavy() && context.is_stationary {
+    if weapon.is_ranged() && weapon.has_heavy() && context.is_stationary {
         raw_hit_mod += 1;
     }
-    if weapon.has_indirect_fire() && !context.target_visible {
+    if weapon.is_ranged() && weapon.has_indirect_fire() && !context.target_visible {
         raw_hit_mod -= 1;
     }
-    if target.has_stealth() && weapon.range > 0 {
+    if weapon.is_ranged() && target.has_stealth() {
         raw_hit_mod -= 1;
     }
     raw_hit_mod -= target.minus_hit_value() as i32;
@@ -152,7 +154,7 @@ pub fn resolve_volley(
 
     let base_req_wound = required_wound_roll(weapon.strength, target.toughness);
     let mut raw_wound_mod: i32 = 0;
-    if weapon.has_lance() && context.has_charged {
+    if weapon.is_melee() && weapon.has_lance() && context.has_charged {
         raw_wound_mod += 1;
     }
     raw_wound_mod -= target.minus_wound_value() as i32;
@@ -230,10 +232,12 @@ pub fn resolve_volley(
         outcome.saves_failed += 1;
 
         let mut damage = weapon.damage.roll(rng);
-        if let Some(melta) = weapon.melta_bonus() {
-            if let Some(dist) = context.distance_inches {
-                if dist <= weapon.range / 2 {
-                    damage += melta;
+        if weapon.is_ranged() {
+            if let Some(melta) = weapon.melta_bonus() {
+                if let Some(dist) = context.distance_inches {
+                    if dist <= weapon.range / 2 {
+                        damage += melta;
+                    }
                 }
             }
         }

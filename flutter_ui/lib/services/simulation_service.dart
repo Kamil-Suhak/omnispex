@@ -3,6 +3,7 @@ import '../models/simulation_models.dart';
 
 class SimulationService {
   static final List<WeaponUiProfile> defaultWeapons = [
+    // Ranged Weapons
     const WeaponUiProfile(
       name: "Missile Launcher",
       profileName: "Frag Missile",
@@ -69,6 +70,51 @@ class SimulationService {
       damage: "1",
       abilities: ["Heavy"],
     ),
+    // Melee Weapons
+    const WeaponUiProfile(
+      name: "Power Fist",
+      profileName: "Melee",
+      range: 0,
+      attacks: "3",
+      skill: 3,
+      strength: 8,
+      ap: 2,
+      damage: "2",
+      abilities: [],
+    ),
+    const WeaponUiProfile(
+      name: "Thunder Hammer",
+      profileName: "Melee",
+      range: 0,
+      attacks: "3",
+      skill: 4,
+      strength: 8,
+      ap: 2,
+      damage: "2",
+      abilities: ["Devastating Wounds"],
+    ),
+    const WeaponUiProfile(
+      name: "Astartes Chainsword",
+      profileName: "Melee",
+      range: 0,
+      attacks: "4",
+      skill: 3,
+      strength: 4,
+      ap: 1,
+      damage: "1",
+      abilities: [],
+    ),
+    const WeaponUiProfile(
+      name: "Master-crafted Power Weapon",
+      profileName: "Melee",
+      range: 0,
+      attacks: "4",
+      skill: 2,
+      strength: 5,
+      ap: 2,
+      damage: "2",
+      abilities: ["Lance"],
+    ),
   ];
 
   static final List<UnitUiProfile> defaultTargets = [
@@ -131,6 +177,7 @@ class SimulationService {
     required bool isStationary,
     required bool hasCharged,
     required bool targetInCover,
+    int weaponCount = 1,
     int? distance,
     int iterations = 10000,
   }) {
@@ -143,6 +190,7 @@ class SimulationService {
     int totalDevDmg = 0;
     int wipes = 0;
 
+    final count = weaponCount.clamp(1, 100);
     final killCounts = List<int>.filled(target.modelCount + 1, 0);
     final killsSamples = <int>[];
     final damageSamples = <double>[];
@@ -151,26 +199,30 @@ class SimulationService {
       final wounds = List<int>.filled(target.modelCount, target.woundsPerModel);
       int livingModels = target.modelCount;
 
-      int attacks = _rollDiceExpr(weapon.attacks, rng);
-      if (weapon.abilities.contains("Blast") && livingModels >= 5) {
-        attacks += (livingModels ~/ 5);
+      int attacksPerWeapon = _rollDiceExpr(weapon.attacks, rng);
+      if (weapon.isRanged && weapon.abilities.contains("Blast") && livingModels >= 5) {
+        attacksPerWeapon += (livingModels ~/ 5);
       }
-      for (final ab in weapon.abilities) {
-        if (ab.startsWith("Rapid Fire") && distance != null && distance <= weapon.range ~/ 2) {
-          final bonus = int.tryParse(ab.replaceAll("Rapid Fire", "").trim()) ?? 1;
-          attacks += bonus;
+      if (weapon.isRanged) {
+        for (final ab in weapon.abilities) {
+          if (ab.startsWith("Rapid Fire") && distance != null && distance <= weapon.range ~/ 2) {
+            final bonus = int.tryParse(ab.replaceAll("Rapid Fire", "").trim()) ?? 1;
+            attacksPerWeapon += bonus;
+          }
         }
       }
 
+      final totalAttacks = attacksPerWeapon * count;
+
       int hitMod = 0;
-      if (weapon.abilities.contains("Heavy") && isStationary) hitMod += 1;
-      if (target.defensiveAbilities.contains("Stealth") && weapon.range > 0) hitMod -= 1;
+      if (weapon.isRanged && weapon.abilities.contains("Heavy") && isStationary) hitMod += 1;
+      if (weapon.isRanged && target.defensiveAbilities.contains("Stealth")) hitMod -= 1;
       hitMod = hitMod.clamp(-1, 1);
 
       final pendingWounds = <_Wound>[];
       final standardHits = <_WoundSource>[];
 
-      for (int a = 0; a < attacks; a++) {
+      for (int a = 0; a < totalAttacks; a++) {
         if (weapon.abilities.contains("Torrent")) {
           standardHits.add(_WoundSource.standard);
           continue;
@@ -206,7 +258,9 @@ class SimulationService {
 
       final reqWound = _requiredWoundRoll(weapon.strength, target.toughness);
       int woundMod = 0;
-      if (weapon.abilities.contains("Lance") && hasCharged) woundMod += 1;
+      if (weapon.isMelee && weapon.abilities.contains("Lance") && hasCharged) {
+        woundMod += 1;
+      }
       for (final def in target.defensiveAbilities) {
         if (def.startsWith("MinusWound")) {
           final minus = int.tryParse(def.replaceAll("MinusWound", "").trim()) ?? 1;
@@ -256,7 +310,7 @@ class SimulationService {
 
         if (!wound.isDevastating) {
           int coverBonus = 0;
-          if (targetInCover && !weapon.abilities.contains("Ignores Cover")) {
+          if (weapon.isRanged && targetInCover && !weapon.abilities.contains("Ignores Cover")) {
             if (weapon.ap == 0 && target.save <= 3) {
               coverBonus = 0;
             } else {
@@ -272,10 +326,12 @@ class SimulationService {
         }
 
         int dmg = _rollDiceExpr(weapon.damage, rng);
-        for (final ab in weapon.abilities) {
-          if (ab.startsWith("Melta") && distance != null && distance <= weapon.range ~/ 2) {
-            final bonus = int.tryParse(ab.replaceAll("Melta", "").trim()) ?? 2;
-            dmg += bonus;
+        if (weapon.isRanged) {
+          for (final ab in weapon.abilities) {
+            if (ab.startsWith("Melta") && distance != null && distance <= weapon.range ~/ 2) {
+              final bonus = int.tryParse(ab.replaceAll("Melta", "").trim()) ?? 2;
+              dmg += bonus;
+            }
           }
         }
 

@@ -126,6 +126,14 @@ impl WeaponProfile {
         }
     }
 
+    pub fn is_melee(&self) -> bool {
+        self.range == 0
+    }
+
+    pub fn is_ranged(&self) -> bool {
+        self.range > 0
+    }
+
     pub fn has_torrent(&self) -> bool {
         self.abilities.iter().any(|a| matches!(a, WeaponAbility::Torrent))
     }
