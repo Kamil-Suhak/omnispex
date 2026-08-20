@@ -1,0 +1,17 @@
+{
+  "name": "Meltagun",
+  "range": 12,
+  "attacks": {
+    "Flat": 1
+  },
+  "skill": 3,
+  "strength": 9,
+  "ap": 4,
+  "damage": "D6",
+  "abilities": [
+    {
+      "type": "Melta",
+      "data": 2
+    }
+  ]
+}

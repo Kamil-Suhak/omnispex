@@ -1,0 +1,59 @@
+{
+  "name": "Terminator Squad",
+  "toughness": 5,
+  "models": [
+    {
+      "name": "Terminator",
+      "wounds": 3,
+      "save": 2,
+      "invulnerable_save": 4,
+      "feel_no_pain": null,
+      "keywords": [
+        "INFANTRY"
+      ]
+    },
+    {
+      "name": "Terminator",
+      "wounds": 3,
+      "save": 2,
+      "invulnerable_save": 4,
+      "feel_no_pain": null,
+      "keywords": [
+        "INFANTRY"
+      ]
+    },
+    {
+      "name": "Terminator",
+      "wounds": 3,
+      "save": 2,
+      "invulnerable_save": 4,
+      "feel_no_pain": null,
+      "keywords": [
+        "INFANTRY"
+      ]
+    },
+    {
+      "name": "Terminator",
+      "wounds": 3,
+      "save": 2,
+      "invulnerable_save": 4,
+      "feel_no_pain": null,
+      "keywords": [
+        "INFANTRY"
+      ]
+    },
+    {
+      "name": "Terminator",
+      "wounds": 3,
+      "save": 2,
+      "invulnerable_save": 4,
+      "feel_no_pain": null,
+      "keywords": [
+        "INFANTRY"
+      ]
+    }
+  ],
+  "keywords": [
+    "INFANTRY"
+  ]
+}

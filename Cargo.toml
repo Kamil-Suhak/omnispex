@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/omnispex_core",
+    "crates/omnispex_cli",
+]
+resolver = "2"
