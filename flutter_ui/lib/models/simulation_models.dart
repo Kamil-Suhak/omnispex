@@ -186,3 +186,48 @@ class SimulationUiReport {
     required this.damageDistribution,
   });
 }
+
+// Archetype Benchmark Models
+class ArchetypeEntryUi {
+  final String id;
+  final String label;
+  final String description;
+  final UnitUiProfile target;
+
+  const ArchetypeEntryUi({
+    required this.id,
+    required this.label,
+    required this.description,
+    required this.target,
+  });
+}
+
+enum DuelWinner { profileA, profileB, tie }
+
+class ArchetypeEvaluationUi {
+  final ArchetypeEntryUi archetype;
+  final SimulationUiReport reportA;
+  final SimulationUiReport? reportB;
+  final double ptsEfficiencyA;
+  final double? ptsEfficiencyB;
+  final DuelWinner winner;
+  final double winMarginPercent;
+
+  const ArchetypeEvaluationUi({
+    required this.archetype,
+    required this.reportA,
+    this.reportB,
+    required this.ptsEfficiencyA,
+    this.ptsEfficiencyB,
+    required this.winner,
+    this.winMarginPercent = 0.0,
+  });
+}
+
+class BenchmarkRosterReportUi {
+  final List<ArchetypeEvaluationUi> evaluations;
+
+  const BenchmarkRosterReportUi({
+    required this.evaluations,
+  });
+}

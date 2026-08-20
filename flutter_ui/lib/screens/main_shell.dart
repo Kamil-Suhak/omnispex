@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'in_battle_screen.dart';
+import 'list_building_screen.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
@@ -63,11 +64,7 @@ class MainShell extends ConsumerWidget {
 
     final pages = [
       const InBattleScreen(),
-      _buildPlaceholderTab(
-        title: "LIST-BUILDING BENCHMARK",
-        subtitle: "Evaluating Loadouts vs GEQ, MEQ, TEQ, Transport, Heavy Armor",
-        icon: Icons.grid_view,
-      ),
+      const ListBuildingScreen(),
       _buildPlaceholderTab(
         title: "WAHAPEDIA INGESTION",
         subtitle: "Quick-Paste Raw Text Weapon & Datasheet Tables",

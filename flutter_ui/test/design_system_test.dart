@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_ui/screens/in_battle_screen.dart';
+import 'package:flutter_ui/screens/list_building_screen.dart';
 import 'package:flutter_ui/screens/main_shell.dart';
 import 'package:flutter_ui/theme/omnispex_theme.dart';
 import 'package:flutter_ui/widgets/scannable_metric_card.dart';
@@ -77,5 +79,23 @@ void main() {
 
     expect(find.text("OMNISPEX"), findsOneWidget);
     expect(find.text("SIMPLIFIED VIEW"), findsOneWidget);
+  });
+
+  testWidgets('ListBuildingScreen renders 5 archetypes and points efficiency', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: ListBuildingScreen()),
+        ),
+      ),
+    );
+
+    expect(find.text("LIST-BUILDING BENCHMARK"), findsOneWidget);
+    expect(find.text("DEFENSIVE ARCHETYPE MATRIX"), findsOneWidget);
+    expect(find.text("Chaff / Light Infantry (GEQ)"), findsOneWidget);
+    expect(find.text("Standard Marine (MEQ)"), findsOneWidget);
+    expect(find.text("Heavy Elite Infantry (TEQ)"), findsOneWidget);
+    expect(find.text("Light Transport / Skimmer"), findsOneWidget);
+    expect(find.text("Heavy Armor / Monster"), findsOneWidget);
   });
 }
