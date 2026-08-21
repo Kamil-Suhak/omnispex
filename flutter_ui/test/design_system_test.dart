@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_ui/screens/in_battle_screen.dart';
 import 'package:flutter_ui/screens/list_building_screen.dart';
 import 'package:flutter_ui/screens/main_shell.dart';
 import 'package:flutter_ui/screens/settings_screen.dart';

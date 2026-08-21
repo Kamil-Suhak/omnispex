@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/simulation_models.dart';
@@ -46,7 +45,9 @@ class ListBuildingScreen extends ConsumerWidget {
     final activeWeaponB = weapons[weaponIdxB % weapons.length];
 
     final loadoutA = [WeaponLoadoutEntry(weapon: activeWeaponA, count: countA)];
-    final loadoutB = isDualCompare ? [WeaponLoadoutEntry(weapon: activeWeaponB, count: countB)] : null;
+    final loadoutB = isDualCompare
+        ? [WeaponLoadoutEntry(weapon: activeWeaponB, count: countB)]
+        : null;
 
     final benchmarkReport = SimulationService.evaluateArchetypesBenchmark(
       loadoutA: loadoutA,
@@ -78,17 +79,22 @@ class ListBuildingScreen extends ConsumerWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("LIST-BUILDING BENCHMARK", style: OmnispexTypography.h2),
-                      Text("Cross-Archetype Efficiency & Weapon Optimization", style: OmnispexTypography.bodyMuted),
+                      Text("LIST-BUILDING BENCHMARK",
+                          style: OmnispexTypography.h2),
+                      Text("Cross-Archetype Efficiency & Weapon Optimization",
+                          style: OmnispexTypography.bodyMuted),
                     ],
                   ),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.refresh, size: 14),
-                    label: Text("RESET DEFAULTS", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11)),
+                    label: Text("RESET DEFAULTS",
+                        style: OmnispexTypography.monoStatBadge
+                            .copyWith(fontSize: 11)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: OmnispexColors.textSecondary,
                       side: const BorderSide(color: OmnispexColors.border),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                     ),
                     onPressed: () => _resetDefaults(ref),
                   ),
@@ -116,9 +122,15 @@ class ListBuildingScreen extends ConsumerWidget {
                               weaponIdx: weaponIdxA,
                               count: countA,
                               points: pointsA,
-                              onWeaponChanged: (val) => ref.read(benchWeaponIndexAProvider.notifier).state = val,
-                              onCountChanged: (val) => ref.read(benchWeaponCountAProvider.notifier).state = val,
-                              onPointsChanged: (val) => ref.read(benchPointsAProvider.notifier).state = val,
+                              onWeaponChanged: (val) => ref
+                                  .read(benchWeaponIndexAProvider.notifier)
+                                  .state = val,
+                              onCountChanged: (val) => ref
+                                  .read(benchWeaponCountAProvider.notifier)
+                                  .state = val,
+                              onPointsChanged: (val) => ref
+                                  .read(benchPointsAProvider.notifier)
+                                  .state = val,
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -133,9 +145,17 @@ class ListBuildingScreen extends ConsumerWidget {
                                     weaponIdx: weaponIdxB,
                                     count: countB,
                                     points: pointsB,
-                                    onWeaponChanged: (val) => ref.read(benchWeaponIndexBProvider.notifier).state = val,
-                                    onCountChanged: (val) => ref.read(benchWeaponCountBProvider.notifier).state = val,
-                                    onPointsChanged: (val) => ref.read(benchPointsBProvider.notifier).state = val,
+                                    onWeaponChanged: (val) => ref
+                                        .read(
+                                            benchWeaponIndexBProvider.notifier)
+                                        .state = val,
+                                    onCountChanged: (val) => ref
+                                        .read(
+                                            benchWeaponCountBProvider.notifier)
+                                        .state = val,
+                                    onPointsChanged: (val) => ref
+                                        .read(benchPointsBProvider.notifier)
+                                        .state = val,
                                   )
                                 : _buildDualComparePrompt(ref),
                           ),
@@ -151,9 +171,14 @@ class ListBuildingScreen extends ConsumerWidget {
                         weaponIdx: weaponIdxA,
                         count: countA,
                         points: pointsA,
-                        onWeaponChanged: (val) => ref.read(benchWeaponIndexAProvider.notifier).state = val,
-                        onCountChanged: (val) => ref.read(benchWeaponCountAProvider.notifier).state = val,
-                        onPointsChanged: (val) => ref.read(benchPointsAProvider.notifier).state = val,
+                        onWeaponChanged: (val) => ref
+                            .read(benchWeaponIndexAProvider.notifier)
+                            .state = val,
+                        onCountChanged: (val) => ref
+                            .read(benchWeaponCountAProvider.notifier)
+                            .state = val,
+                        onPointsChanged: (val) =>
+                            ref.read(benchPointsAProvider.notifier).state = val,
                       ),
                       const SizedBox(height: 12),
                       if (isDualCompare)
@@ -166,9 +191,15 @@ class ListBuildingScreen extends ConsumerWidget {
                           weaponIdx: weaponIdxB,
                           count: countB,
                           points: pointsB,
-                          onWeaponChanged: (val) => ref.read(benchWeaponIndexBProvider.notifier).state = val,
-                          onCountChanged: (val) => ref.read(benchWeaponCountBProvider.notifier).state = val,
-                          onPointsChanged: (val) => ref.read(benchPointsBProvider.notifier).state = val,
+                          onWeaponChanged: (val) => ref
+                              .read(benchWeaponIndexBProvider.notifier)
+                              .state = val,
+                          onCountChanged: (val) => ref
+                              .read(benchWeaponCountBProvider.notifier)
+                              .state = val,
+                          onPointsChanged: (val) => ref
+                              .read(benchPointsBProvider.notifier)
+                              .state = val,
                         )
                       else
                         _buildDualComparePrompt(ref),
@@ -184,28 +215,50 @@ class ListBuildingScreen extends ConsumerWidget {
                       runSpacing: 8,
                       children: [
                         FilterChip(
-                          label: Text("Stationary Attacker (+1 BS Heavy)", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11)),
+                          label: Text("Stationary Attacker (+1 BS Heavy)",
+                              style: OmnispexTypography.monoStatBadge
+                                  .copyWith(fontSize: 11)),
                           selected: isStationary,
                           selectedColor: OmnispexColors.cyan.withOpacity(0.25),
                           backgroundColor: OmnispexColors.surfaceElevated,
-                          side: BorderSide(color: isStationary ? OmnispexColors.cyan : OmnispexColors.border),
-                          onSelected: (val) => ref.read(benchIsStationaryProvider.notifier).state = val,
+                          side: BorderSide(
+                              color: isStationary
+                                  ? OmnispexColors.cyan
+                                  : OmnispexColors.border),
+                          onSelected: (val) => ref
+                              .read(benchIsStationaryProvider.notifier)
+                              .state = val,
                         ),
                         FilterChip(
-                          label: Text("Made Charge Move (+1 Wound Lance)", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11)),
+                          label: Text("Made Charge Move (+1 Wound Lance)",
+                              style: OmnispexTypography.monoStatBadge
+                                  .copyWith(fontSize: 11)),
                           selected: hasCharged,
                           selectedColor: OmnispexColors.amber.withOpacity(0.25),
                           backgroundColor: OmnispexColors.surfaceElevated,
-                          side: BorderSide(color: hasCharged ? OmnispexColors.amber : OmnispexColors.border),
-                          onSelected: (val) => ref.read(benchHasChargedProvider.notifier).state = val,
+                          side: BorderSide(
+                              color: hasCharged
+                                  ? OmnispexColors.amber
+                                  : OmnispexColors.border),
+                          onSelected: (val) => ref
+                              .read(benchHasChargedProvider.notifier)
+                              .state = val,
                         ),
                         FilterChip(
-                          label: Text("Target In Cover (+1 Sv)", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11)),
+                          label: Text("Target In Cover (+1 Sv)",
+                              style: OmnispexTypography.monoStatBadge
+                                  .copyWith(fontSize: 11)),
                           selected: targetInCover,
-                          selectedColor: OmnispexColors.purple.withOpacity(0.25),
+                          selectedColor:
+                              OmnispexColors.purple.withOpacity(0.25),
                           backgroundColor: OmnispexColors.surfaceElevated,
-                          side: BorderSide(color: targetInCover ? OmnispexColors.purple : OmnispexColors.border),
-                          onSelected: (val) => ref.read(benchTargetInCoverProvider.notifier).state = val,
+                          side: BorderSide(
+                              color: targetInCover
+                                  ? OmnispexColors.purple
+                                  : OmnispexColors.border),
+                          onSelected: (val) => ref
+                              .read(benchTargetInCoverProvider.notifier)
+                              .state = val,
                         ),
                       ],
                     ),
@@ -219,7 +272,8 @@ class ListBuildingScreen extends ConsumerWidget {
 
               // 5 Archetype Cards Grid
               ...benchmarkReport.evaluations.map((eval) {
-                return _buildArchetypeCard(context, eval, activeWeaponA, activeWeaponB, isDualCompare);
+                return _buildArchetypeCard(
+                    context, eval, activeWeaponA, activeWeaponB, isDualCompare);
               }),
             ],
           ),
@@ -269,18 +323,21 @@ class ListBuildingScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: OmnispexTypography.label.copyWith(color: color)),
+              Text(title,
+                  style: OmnispexTypography.label.copyWith(color: color)),
               if (title.contains("PROFILE B"))
                 IconButton(
-                  icon: const Icon(Icons.close, size: 16, color: OmnispexColors.textMuted),
+                  icon: const Icon(Icons.close,
+                      size: 16, color: OmnispexColors.textMuted),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  onPressed: () => ref.read(benchIsDualCompareProvider.notifier).state = false,
+                  onPressed: () => ref
+                      .read(benchIsDualCompareProvider.notifier)
+                      .state = false,
                 ),
             ],
           ),
           const SizedBox(height: 8),
-
           DropdownButtonFormField<int>(
             value: weaponIdx,
             isExpanded: true,
@@ -290,7 +347,9 @@ class ListBuildingScreen extends ConsumerWidget {
               final w = weapons[i];
               return DropdownMenuItem(
                 value: i,
-                child: Text("${w.name} [${w.profileName}]", style: OmnispexTypography.monoData.copyWith(fontSize: 12), overflow: TextOverflow.ellipsis),
+                child: Text("${w.name} [${w.profileName}]",
+                    style: OmnispexTypography.monoData.copyWith(fontSize: 12),
+                    overflow: TextOverflow.ellipsis),
               );
             }),
             onChanged: (val) {
@@ -298,7 +357,6 @@ class ListBuildingScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 8),
-
           Row(
             children: [
               Expanded(
@@ -307,15 +365,21 @@ class ListBuildingScreen extends ConsumerWidget {
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text("COUNT:", style: OmnispexTypography.label.copyWith(fontSize: 10)),
+                    Text("COUNT:",
+                        style: OmnispexTypography.label.copyWith(fontSize: 10)),
                     ...[1, 3, 5, 10].map((c) {
                       final isSel = count == c;
                       return ChoiceChip(
-                        label: Text("$c", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: isSel ? OmnispexColors.background : color)),
+                        label: Text("$c",
+                            style: OmnispexTypography.monoStatBadge.copyWith(
+                                fontSize: 10,
+                                color:
+                                    isSel ? OmnispexColors.background : color)),
                         selected: isSel,
                         selectedColor: color,
                         backgroundColor: OmnispexColors.surfaceCard,
-                        side: BorderSide(color: isSel ? color : OmnispexColors.border),
+                        side: BorderSide(
+                            color: isSel ? color : OmnispexColors.border),
                         padding: EdgeInsets.zero,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         onSelected: (sel) {
@@ -343,12 +407,14 @@ class ListBuildingScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 6),
-
           Wrap(
             spacing: 4,
             runSpacing: 4,
             children: [
-              StatBadge(label: "TYPE", value: active.isMelee ? "MELEE" : '${active.range}"', accentColor: color),
+              StatBadge(
+                  label: "TYPE",
+                  value: active.isMelee ? "MELEE" : '${active.range}"',
+                  accentColor: color),
               StatBadge(label: "A", value: active.attacks),
               StatBadge(label: "BS", value: '${active.skill}+'),
               StatBadge(label: "S", value: '${active.strength}'),
@@ -370,16 +436,22 @@ class ListBuildingScreen extends ConsumerWidget {
         decoration: BoxDecoration(
           color: OmnispexColors.surfaceElevated.withOpacity(0.5),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: OmnispexColors.border, style: BorderStyle.solid),
+          border: Border.all(
+              color: OmnispexColors.border, style: BorderStyle.solid),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.add_circle_outline, size: 24, color: OmnispexColors.amber),
+            const Icon(Icons.add_circle_outline,
+                size: 24, color: OmnispexColors.amber),
             const SizedBox(height: 6),
-            Text("ENABLE LOADOUT DUEL COMPARISON", style: OmnispexTypography.label.copyWith(color: OmnispexColors.amber, fontSize: 11)),
+            Text("ENABLE LOADOUT DUEL COMPARISON",
+                style: OmnispexTypography.label
+                    .copyWith(color: OmnispexColors.amber, fontSize: 11)),
             const SizedBox(height: 4),
-            Text("Compare Weapon A vs Weapon B across all 5 archetypes", style: OmnispexTypography.bodyMuted.copyWith(fontSize: 10), textAlign: TextAlign.center),
+            Text("Compare Weapon A vs Weapon B across all 5 archetypes",
+                style: OmnispexTypography.bodyMuted.copyWith(fontSize: 10),
+                textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -426,10 +498,13 @@ class ListBuildingScreen extends ConsumerWidget {
                   Container(
                     width: 4,
                     height: 18,
-                    decoration: BoxDecoration(color: OmnispexColors.cyan, borderRadius: BorderRadius.circular(2)),
+                    decoration: BoxDecoration(
+                        color: OmnispexColors.cyan,
+                        borderRadius: BorderRadius.circular(2)),
                   ),
                   const SizedBox(width: 8),
-                  Text(eval.archetype.label, style: OmnispexTypography.h2.copyWith(fontSize: 14)),
+                  Text(eval.archetype.label,
+                      style: OmnispexTypography.h2.copyWith(fontSize: 14)),
                 ],
               ),
               Wrap(
@@ -437,7 +512,11 @@ class ListBuildingScreen extends ConsumerWidget {
                 children: [
                   StatBadge(label: "T", value: '${target.toughness}'),
                   StatBadge(label: "SV", value: '${target.save}+'),
-                  if (target.invuln != null) StatBadge(label: "INV", value: '${target.invuln}+', accentColor: OmnispexColors.amber),
+                  if (target.invuln != null)
+                    StatBadge(
+                        label: "INV",
+                        value: '${target.invuln}+',
+                        accentColor: OmnispexColors.amber),
                   StatBadge(label: "W", value: '${target.woundsPerModel}'),
                   StatBadge(label: "MODELS", value: '${target.modelCount}'),
                 ],
@@ -445,7 +524,8 @@ class ListBuildingScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(eval.archetype.description, style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11)),
+          Text(eval.archetype.description,
+              style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11)),
           const SizedBox(height: 12),
 
           // Primary Evaluation Cards
@@ -458,7 +538,8 @@ class ListBuildingScreen extends ConsumerWidget {
                     value: isSingleModel
                         ? "${eval.reportA.expectedDamageDealt.toStringAsFixed(1)} / ${target.totalWounds} HP"
                         : "${eval.reportA.expectedModelsKilled.toStringAsFixed(1)} / ${target.modelCount}",
-                    subtitle: "± ${(isSingleModel ? eval.reportA.stdDevDamage : eval.reportA.stdDevKills).toStringAsFixed(1)} StdDev",
+                    subtitle:
+                        "± ${(isSingleModel ? eval.reportA.stdDevDamage : eval.reportA.stdDevKills).toStringAsFixed(1)} StdDev",
                     accentColor: OmnispexColors.cyan,
                   ),
                 ),
@@ -466,7 +547,9 @@ class ListBuildingScreen extends ConsumerWidget {
                 Expanded(
                   child: ScannableMetricCard(
                     label: "Safe Bet (≥80%)",
-                    value: isSingleModel ? "${eval.reportA.safeBetDamage80} HP" : "${eval.reportA.safeBetKills80} models",
+                    value: isSingleModel
+                        ? "${eval.reportA.safeBetDamage80} HP"
+                        : "${eval.reportA.safeBetKills80} models",
                     subtitle: "80% Confidence Floor",
                     accentColor: OmnispexColors.greenKill,
                   ),
@@ -494,22 +577,32 @@ class ListBuildingScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: OmnispexColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: OmnispexColors.cyan.withOpacity(0.3)),
+                      border: Border.all(
+                          color: OmnispexColors.cyan.withOpacity(0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("PROFILE A", style: OmnispexTypography.label.copyWith(color: OmnispexColors.cyan, fontSize: 10)),
+                        Text("PROFILE A",
+                            style: OmnispexTypography.label.copyWith(
+                                color: OmnispexColors.cyan, fontSize: 10)),
                         const SizedBox(height: 4),
                         Text(
                           isSingleModel
                               ? "${eval.reportA.expectedDamageDealt.toStringAsFixed(1)} HP"
                               : "${eval.reportA.expectedModelsKilled.toStringAsFixed(1)} / ${target.modelCount} Kills",
-                          style: OmnispexTypography.monoData.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
+                          style: OmnispexTypography.monoData.copyWith(
+                              fontSize: 15, fontWeight: FontWeight.w700),
                         ),
-                        Text("Safe: ${isSingleModel ? '${eval.reportA.safeBetDamage80} HP' : '${eval.reportA.safeBetKills80} kills'}", style: OmnispexTypography.bodyMuted.copyWith(fontSize: 10)),
+                        Text(
+                            "Safe: ${isSingleModel ? '${eval.reportA.safeBetDamage80} HP' : '${eval.reportA.safeBetKills80} kills'}",
+                            style: OmnispexTypography.bodyMuted
+                                .copyWith(fontSize: 10)),
                         const SizedBox(height: 4),
-                        Text("${eval.ptsEfficiencyA.toStringAsFixed(1)} dmg / 100pts", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11, color: OmnispexColors.cyan)),
+                        Text(
+                            "${eval.ptsEfficiencyA.toStringAsFixed(1)} dmg / 100pts",
+                            style: OmnispexTypography.monoStatBadge.copyWith(
+                                fontSize: 11, color: OmnispexColors.cyan)),
                       ],
                     ),
                   ),
@@ -521,22 +614,32 @@ class ListBuildingScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: OmnispexColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: OmnispexColors.amber.withOpacity(0.3)),
+                      border: Border.all(
+                          color: OmnispexColors.amber.withOpacity(0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("PROFILE B", style: OmnispexTypography.label.copyWith(color: OmnispexColors.amber, fontSize: 10)),
+                        Text("PROFILE B",
+                            style: OmnispexTypography.label.copyWith(
+                                color: OmnispexColors.amber, fontSize: 10)),
                         const SizedBox(height: 4),
                         Text(
                           isSingleModel
                               ? "${eval.reportB?.expectedDamageDealt.toStringAsFixed(1) ?? '0.0'} HP"
                               : "${eval.reportB?.expectedModelsKilled.toStringAsFixed(1) ?? '0.0'} / ${target.modelCount} Kills",
-                          style: OmnispexTypography.monoData.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
+                          style: OmnispexTypography.monoData.copyWith(
+                              fontSize: 15, fontWeight: FontWeight.w700),
                         ),
-                        Text("Safe: ${isSingleModel ? '${eval.reportB?.safeBetDamage80 ?? 0} HP' : '${eval.reportB?.safeBetKills80 ?? 0} kills'}", style: OmnispexTypography.bodyMuted.copyWith(fontSize: 10)),
+                        Text(
+                            "Safe: ${isSingleModel ? '${eval.reportB?.safeBetDamage80 ?? 0} HP' : '${eval.reportB?.safeBetKills80 ?? 0} kills'}",
+                            style: OmnispexTypography.bodyMuted
+                                .copyWith(fontSize: 10)),
                         const SizedBox(height: 4),
-                        Text("${eval.ptsEfficiencyB?.toStringAsFixed(1) ?? '0.0'} dmg / 100pts", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11, color: OmnispexColors.amber)),
+                        Text(
+                            "${eval.ptsEfficiencyB?.toStringAsFixed(1) ?? '0.0'} dmg / 100pts",
+                            style: OmnispexTypography.monoStatBadge.copyWith(
+                                fontSize: 11, color: OmnispexColors.amber)),
                       ],
                     ),
                   ),
@@ -556,7 +659,9 @@ class ListBuildingScreen extends ConsumerWidget {
   Widget _buildAdvantageBanner(ArchetypeEvaluationUi eval) {
     final winnerColor = eval.winner == DuelWinner.profileA
         ? OmnispexColors.cyan
-        : (eval.winner == DuelWinner.profileB ? OmnispexColors.amber : OmnispexColors.textSecondary);
+        : (eval.winner == DuelWinner.profileB
+            ? OmnispexColors.amber
+            : OmnispexColors.textSecondary);
 
     final winnerLabel = eval.winner == DuelWinner.profileA
         ? "PROFILE A IS +${eval.winMarginPercent.toStringAsFixed(0)}% MORE EFFICIENT"
@@ -565,7 +670,9 @@ class ListBuildingScreen extends ConsumerWidget {
             : "EQUAL POINTS EFFICIENCY");
 
     final totalPtsEff = eval.ptsEfficiencyA + (eval.ptsEfficiencyB ?? 0.0);
-    final ratioA = totalPtsEff > 0 ? (eval.ptsEfficiencyA / totalPtsEff).clamp(0.05, 0.95) : 0.5;
+    final ratioA = totalPtsEff > 0
+        ? (eval.ptsEfficiencyA / totalPtsEff).clamp(0.05, 0.95)
+        : 0.5;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,8 +680,13 @@ class ListBuildingScreen extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(winnerLabel, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: winnerColor)),
-            Text("${(ratioA * 100).toStringAsFixed(0)}% vs ${((1 - ratioA) * 100).toStringAsFixed(0)}%", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.textMuted)),
+            Text(winnerLabel,
+                style: OmnispexTypography.monoStatBadge
+                    .copyWith(fontSize: 10, color: winnerColor)),
+            Text(
+                "${(ratioA * 100).toStringAsFixed(0)}% vs ${((1 - ratioA) * 100).toStringAsFixed(0)}%",
+                style: OmnispexTypography.monoStatBadge
+                    .copyWith(fontSize: 10, color: OmnispexColors.textMuted)),
           ],
         ),
         const SizedBox(height: 4),

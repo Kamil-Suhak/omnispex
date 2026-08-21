@@ -32,7 +32,8 @@ class BsDataService {
       if (factionFilter != "All Factions") {
         if (factionFilter == "Space Marines" && faction.id != "sm-1") {
           continue;
-        } else if (factionFilter == "Chaos Space Marines" && faction.id != "csm-1") {
+        } else if (factionFilter == "Chaos Space Marines" &&
+            faction.id != "csm-1") {
           continue;
         } else if (factionFilter == "Astra Militarum" && faction.id != "am-1") {
           continue;
@@ -42,21 +43,30 @@ class BsDataService {
           continue;
         } else if (factionFilter == "Tyranids" && faction.id != "tyr-1") {
           continue;
-        } else if (factionFilter == "Adeptus Custodes" && faction.id != "cust-1") {
+        } else if (factionFilter == "Adeptus Custodes" &&
+            faction.id != "cust-1") {
           continue;
         } else if (factionFilter == "T'au Empire" && faction.id != "tau-1") {
           continue;
         } else if (factionFilter == "Aeldari" && faction.id != "ael-1") {
           continue;
-        } else if (!faction.name.toLowerCase().contains(factionFilter.toLowerCase())) {
+        } else if (!faction.name
+            .toLowerCase()
+            .contains(factionFilter.toLowerCase())) {
           continue;
         }
       }
 
       for (final unit in faction.units) {
-        if (categoryFilter == "Infantry" && !unit.isInfantry) continue;
-        if (categoryFilter == "Vehicle / Monster" && !unit.isVehicleOrMonster) continue;
-        if (categoryFilter == "Character" && !unit.isCharacter) continue;
+        if (categoryFilter == "Infantry" && !unit.isInfantry) {
+          continue;
+        }
+        if (categoryFilter == "Vehicle / Monster" && !unit.isVehicleOrMonster) {
+          continue;
+        }
+        if (categoryFilter == "Character" && !unit.isCharacter) {
+          continue;
+        }
 
         if (cleanQuery.isEmpty) {
           results.add(unit);
@@ -65,11 +75,18 @@ class BsDataService {
 
         final matchesName = unit.name.toLowerCase().contains(cleanQuery);
         final matchesFaction = unit.faction.toLowerCase().contains(cleanQuery);
-        final matchesCategory = unit.categories.any((c) => c.toLowerCase().contains(cleanQuery));
-        final matchesWeapon = unit.weapons.any((w) => w.name.toLowerCase().contains(cleanQuery));
-        final matchesAbility = unit.abilities.any((a) => a.toLowerCase().contains(cleanQuery));
+        final matchesCategory =
+            unit.categories.any((c) => c.toLowerCase().contains(cleanQuery));
+        final matchesWeapon =
+            unit.weapons.any((w) => w.name.toLowerCase().contains(cleanQuery));
+        final matchesAbility =
+            unit.abilities.any((a) => a.toLowerCase().contains(cleanQuery));
 
-        if (matchesName || matchesFaction || matchesCategory || matchesWeapon || matchesAbility) {
+        if (matchesName ||
+            matchesFaction ||
+            matchesCategory ||
+            matchesWeapon ||
+            matchesAbility) {
           results.add(unit);
         }
       }
@@ -93,7 +110,9 @@ class BsDataService {
 
     final factionId = cat['id']?.toString() ?? 'custom-faction';
     final factionName = cat['name']?.toString() ?? 'Custom Faction';
-    final revision = cat['revision'] != null ? int.tryParse(cat['revision'].toString()) : null;
+    final revision = cat['revision'] != null
+        ? int.tryParse(cat['revision'].toString())
+        : null;
 
     final units = <BsDataUnit>[];
 
@@ -124,7 +143,7 @@ class BsDataService {
     final type = entryJson['type']?.toString() ?? '';
     if (type == 'upgrade') return null;
 
-    final name = entryJson['name']?.toString()?.trim() ?? 'Unknown Unit';
+    final name = entryJson['name']?.toString().trim() ?? 'Unknown Unit';
     final id = entryJson['id']?.toString() ?? name;
 
     // Find Unit Profile
@@ -137,9 +156,7 @@ class BsDataService {
       }
     }
 
-    if (unitProfileJson == null) {
-      unitProfileJson = _findFirstProfileByType(entryJson, 'Unit');
-    }
+    unitProfileJson ??= _findFirstProfileByType(entryJson, 'Unit');
     if (unitProfileJson == null) return null;
 
     final chars = _extractCharacteristics(unitProfileJson);
@@ -171,7 +188,9 @@ class BsDataService {
     final costs = entryJson['costs'] as List? ?? [];
     for (final c in costs) {
       if (c is Map<String, dynamic> && c['name'] == 'pts') {
-        points = (c['value'] is num) ? (c['value'] as num).toInt() : int.tryParse(c['value'].toString());
+        points = (c['value'] is num)
+            ? (c['value'] as num).toInt()
+            : int.tryParse(c['value'].toString());
       }
     }
 
@@ -184,28 +203,44 @@ class BsDataService {
 
     for (final ab in abilities) {
       final lower = ab.toLowerCase();
-      if (lower.contains('worsen the armour penetration') || lower.contains('worsen the armor penetration')) {
-        if (!defensiveRules.contains('minus1Ap')) defensiveRules.add('minus1Ap');
+      if (lower.contains('worsen the armour penetration') ||
+          lower.contains('worsen the armor penetration')) {
+        if (!defensiveRules.contains('minus1Ap')) {
+          defensiveRules.add('minus1Ap');
+        }
       }
       if (lower.contains('subtract 1 from the damage characteristic')) {
-        if (!defensiveRules.contains('damageReduction1')) defensiveRules.add('damageReduction1');
+        if (!defensiveRules.contains('damageReduction1')) {
+          defensiveRules.add('damageReduction1');
+        }
       }
       if (lower.contains('halve the damage characteristic')) {
-        if (!defensiveRules.contains('halfDamage')) defensiveRules.add('halfDamage');
+        if (!defensiveRules.contains('halfDamage')) {
+          defensiveRules.add('halfDamage');
+        }
       }
       if (lower.contains('subtract 1 from the wound roll')) {
-        if (!defensiveRules.contains('minus1ToWound')) defensiveRules.add('minus1ToWound');
+        if (!defensiveRules.contains('minus1ToWound')) {
+          defensiveRules.add('minus1ToWound');
+        }
       }
-      if (lower.contains('stealth') || lower.contains('subtract 1 from the hit roll')) {
-        if (!defensiveRules.contains('stealth')) defensiveRules.add('stealth');
+      if (lower.contains('stealth') ||
+          lower.contains('subtract 1 from the hit roll')) {
+        if (!defensiveRules.contains('stealth')) {
+          defensiveRules.add('stealth');
+        }
       }
 
-      final fnpMatch = RegExp(r'(?:feel no pain|fnp)\s*(\d)\+', caseSensitive: false).firstMatch(ab);
+      final fnpMatch =
+          RegExp(r'(?:feel no pain|fnp)\s*(\d)\+', caseSensitive: false)
+              .firstMatch(ab);
       if (fnpMatch != null && fnp == null) {
         fnp = int.tryParse(fnpMatch.group(1)!);
       }
 
-      final invMatch = RegExp(r'(\d)\+\s+invulnerable save', caseSensitive: false).firstMatch(ab);
+      final invMatch =
+          RegExp(r'(\d)\+\s+invulnerable save', caseSensitive: false)
+              .firstMatch(ab);
       if (invMatch != null && invuln == null) {
         invuln = int.tryParse(invMatch.group(1)!);
       }
@@ -219,7 +254,10 @@ class BsDataService {
     final weapons = <WeaponUiProfile>[];
     _extractWeaponsRecursive(entryJson, weapons);
 
-    final modelCount = categories.any((c) => c.toLowerCase() == 'vehicle' || c.toLowerCase() == 'monster') ? 1 : 5;
+    final modelCount = categories.any(
+            (c) => c.toLowerCase() == 'vehicle' || c.toLowerCase() == 'monster')
+        ? 1
+        : 5;
 
     final unitProfile = UnitUiProfile(
       name: name,
@@ -248,7 +286,8 @@ class BsDataService {
     );
   }
 
-  static Map<String, String> _extractCharacteristics(Map<String, dynamic> profileJson) {
+  static Map<String, String> _extractCharacteristics(
+      Map<String, dynamic> profileJson) {
     final map = <String, String>{};
     final chars = profileJson['characteristics'] as List? ?? [];
     for (final c in chars) {
@@ -261,7 +300,8 @@ class BsDataService {
     return map;
   }
 
-  static Map<String, dynamic>? _findFirstProfileByType(dynamic obj, String typeName) {
+  static Map<String, dynamic>? _findFirstProfileByType(
+      dynamic obj, String typeName) {
     if (obj is Map<String, dynamic>) {
       if (obj['typeName'] == typeName) return obj;
       for (final v in obj.values) {
@@ -296,12 +336,16 @@ class BsDataService {
     }
   }
 
-  static void _extractWeaponsRecursive(dynamic obj, List<WeaponUiProfile> list) {
+  static void _extractWeaponsRecursive(
+      dynamic obj, List<WeaponUiProfile> list) {
     if (obj is Map<String, dynamic>) {
       final typeName = obj['typeName']?.toString() ?? '';
       if (typeName == 'Ranged Weapons' || typeName == 'Melee Weapons') {
         final w = _parseWeaponProfile(obj, typeName == 'Melee Weapons');
-        if (w != null && !list.any((existing) => existing.name == w.name && existing.profileName == w.profileName)) {
+        if (w != null &&
+            !list.any((existing) =>
+                existing.name == w.name &&
+                existing.profileName == w.profileName)) {
           list.add(w);
         }
       }
@@ -315,21 +359,26 @@ class BsDataService {
     }
   }
 
-  static WeaponUiProfile? _parseWeaponProfile(Map<String, dynamic> json, bool isMelee) {
-    final name = json['name']?.toString()?.trim() ?? 'Weapon';
+  static WeaponUiProfile? _parseWeaponProfile(
+      Map<String, dynamic> json, bool isMelee) {
+    final name = json['name']?.toString().trim() ?? 'Weapon';
     final chars = _extractCharacteristics(json);
 
     final rangeRaw = chars['Range'] ?? (isMelee ? '0' : '24"');
-    final isMeleeRange = isMelee || rangeRaw.toLowerCase() == 'melee' || rangeRaw == '-';
-    final range = isMeleeRange ? 0 : (int.tryParse(rangeRaw.replaceAll('"', '')) ?? 24);
+    final isMeleeRange =
+        isMelee || rangeRaw.toLowerCase() == 'melee' || rangeRaw == '-';
+    final range =
+        isMeleeRange ? 0 : (int.tryParse(rangeRaw.replaceAll('"', '')) ?? 24);
 
     final attacks = chars['A'] ?? '1';
     final skillRaw = chars['WS'] ?? chars['BS'] ?? '3+';
     final isTorrent = skillRaw == 'N/A' || skillRaw == '-';
-    final skill = isTorrent ? 7 : (int.tryParse(skillRaw.replaceAll('+', '')) ?? 3);
+    final skill =
+        isTorrent ? 7 : (int.tryParse(skillRaw.replaceAll('+', '')) ?? 3);
 
     final strength = int.tryParse(chars['S'] ?? '4') ?? 4;
-    final ap = (int.tryParse(chars['AP']?.replaceAll('-', '') ?? '0') ?? 0).abs();
+    final ap =
+        (int.tryParse(chars['AP']?.replaceAll('-', '') ?? '0') ?? 0).abs();
     final damage = chars['D'] ?? '1';
 
     final abilities = <String>[];
@@ -367,7 +416,7 @@ class BsDataService {
   }
 
   static List<BsDataFaction> _initBundledFactions() {
-    return [
+    return const [
       // 1. SPACE MARINES
       BsDataFaction(
         id: "sm-1",
@@ -378,7 +427,7 @@ class BsDataService {
             name: "Terminator Squad",
             faction: "Space Marines",
             pointsCost: 175,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Terminator Squad",
               toughness: 5,
               save: 2,
@@ -390,14 +439,60 @@ class BsDataService {
             movement: '5"',
             leadership: '6+',
             objectiveControl: 1,
-            abilities: ["Teleport Homer: Rapid ingress can be used for 0CP on this unit.", "Fury of the First: +1 to Hit against Oath of Moment targets."],
+            abilities: [
+              "Teleport Homer: Rapid ingress can be used for 0CP on this unit.",
+              "Fury of the First: +1 to Hit against Oath of Moment targets."
+            ],
             categories: ["Infantry", "Terminator", "Imperium"],
             weapons: [
-              const WeaponUiProfile(name: "Storm Bolter", profileName: "Standard", range: 24, attacks: "2", skill: 3, strength: 4, ap: 0, damage: "1", abilities: ["Rapid Fire 2"]),
-              const WeaponUiProfile(name: "Cyclone Missile Launcher", profileName: "Frag", range: 36, attacks: "2D6", skill: 3, strength: 4, ap: 0, damage: "1", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Cyclone Missile Launcher", profileName: "Krak", range: 36, attacks: "2", skill: 3, strength: 9, ap: 2, damage: "D6"),
-              const WeaponUiProfile(name: "Power Fist", profileName: "Melee", range: 0, attacks: "3", skill: 3, strength: 8, ap: 2, damage: "2"),
-              const WeaponUiProfile(name: "Chainfist", profileName: "Melee", range: 0, attacks: "3", skill: 4, strength: 8, ap: 2, damage: "2", abilities: ["Anti-Vehicle 3+"]),
+              WeaponUiProfile(
+                  name: "Storm Bolter",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "2",
+                  skill: 3,
+                  strength: 4,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Rapid Fire 2"]),
+              WeaponUiProfile(
+                  name: "Cyclone Missile Launcher",
+                  profileName: "Frag",
+                  range: 36,
+                  attacks: "2D6",
+                  skill: 3,
+                  strength: 4,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Cyclone Missile Launcher",
+                  profileName: "Krak",
+                  range: 36,
+                  attacks: "2",
+                  skill: 3,
+                  strength: 9,
+                  ap: 2,
+                  damage: "D6"),
+              WeaponUiProfile(
+                  name: "Power Fist",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "3",
+                  skill: 3,
+                  strength: 8,
+                  ap: 2,
+                  damage: "2"),
+              WeaponUiProfile(
+                  name: "Chainfist",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "3",
+                  skill: 4,
+                  strength: 8,
+                  ap: 2,
+                  damage: "2",
+                  abilities: ["Anti-Vehicle 3+"]),
             ],
           ),
           BsDataUnit(
@@ -405,7 +500,7 @@ class BsDataService {
             name: "Intercessor Squad",
             faction: "Space Marines",
             pointsCost: 80,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Intercessor Squad",
               toughness: 4,
               save: 3,
@@ -416,13 +511,49 @@ class BsDataService {
             movement: '6"',
             leadership: '6+',
             objectiveControl: 2,
-            abilities: ["Sticky Objectives: An objective marker remains under your control even if you move away."],
+            abilities: [
+              "Sticky Objectives: An objective marker remains under your control even if you move away."
+            ],
             categories: ["Infantry", "Battleline", "Imperium"],
             weapons: [
-              const WeaponUiProfile(name: "Bolt Rifle", profileName: "Standard", range: 24, attacks: "2", skill: 3, strength: 4, ap: 1, damage: "1", abilities: ["Assault", "Heavy"]),
-              const WeaponUiProfile(name: "Astartes Grenade Launcher", profileName: "Frag", range: 24, attacks: "D3", skill: 3, strength: 4, ap: 0, damage: "1", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Astartes Grenade Launcher", profileName: "Krak", range: 24, attacks: "1", skill: 3, strength: 9, ap: 2, damage: "D3"),
-              const WeaponUiProfile(name: "Close Combat Weapon", profileName: "Melee", range: 0, attacks: "3", skill: 3, strength: 4, ap: 0, damage: "1"),
+              WeaponUiProfile(
+                  name: "Bolt Rifle",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "2",
+                  skill: 3,
+                  strength: 4,
+                  ap: 1,
+                  damage: "1",
+                  abilities: ["Assault", "Heavy"]),
+              WeaponUiProfile(
+                  name: "Astartes Grenade Launcher",
+                  profileName: "Frag",
+                  range: 24,
+                  attacks: "D3",
+                  skill: 3,
+                  strength: 4,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Astartes Grenade Launcher",
+                  profileName: "Krak",
+                  range: 24,
+                  attacks: "1",
+                  skill: 3,
+                  strength: 9,
+                  ap: 2,
+                  damage: "D3"),
+              WeaponUiProfile(
+                  name: "Close Combat Weapon",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "3",
+                  skill: 3,
+                  strength: 4,
+                  ap: 0,
+                  damage: "1"),
             ],
           ),
           BsDataUnit(
@@ -430,7 +561,7 @@ class BsDataService {
             name: "Eradicator Squad",
             faction: "Space Marines",
             pointsCost: 95,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Eradicator Squad",
               toughness: 6,
               save: 3,
@@ -441,12 +572,41 @@ class BsDataService {
             movement: '5"',
             leadership: '6+',
             objectiveControl: 1,
-            abilities: ["Total Obliteration: Each time a model in this unit makes a ranged attack against a Monster or Vehicle, re-roll the Hit roll, Wound roll, and Damage roll."],
+            abilities: [
+              "Total Obliteration: Each time a model in this unit makes a ranged attack against a Monster or Vehicle, re-roll the Hit roll, Wound roll, and Damage roll."
+            ],
             categories: ["Infantry", "Gravis", "Imperium"],
             weapons: [
-              const WeaponUiProfile(name: "Melta Rifle", profileName: "Standard", range: 18, attacks: "1", skill: 3, strength: 9, ap: 4, damage: "D6", abilities: ["Melta 2"]),
-              const WeaponUiProfile(name: "Heavy Melta Rifle", profileName: "Standard", range: 18, attacks: "1", skill: 3, strength: 9, ap: 4, damage: "D6+1", abilities: ["Heavy", "Melta 2"]),
-              const WeaponUiProfile(name: "Multi-melta", profileName: "Standard", range: 18, attacks: "2", skill: 3, strength: 9, ap: 4, damage: "D6", abilities: ["Heavy", "Melta 2"]),
+              WeaponUiProfile(
+                  name: "Melta Rifle",
+                  profileName: "Standard",
+                  range: 18,
+                  attacks: "1",
+                  skill: 3,
+                  strength: 9,
+                  ap: 4,
+                  damage: "D6",
+                  abilities: ["Melta 2"]),
+              WeaponUiProfile(
+                  name: "Heavy Melta Rifle",
+                  profileName: "Standard",
+                  range: 18,
+                  attacks: "1",
+                  skill: 3,
+                  strength: 9,
+                  ap: 4,
+                  damage: "D6+1",
+                  abilities: ["Heavy", "Melta 2"]),
+              WeaponUiProfile(
+                  name: "Multi-melta",
+                  profileName: "Standard",
+                  range: 18,
+                  attacks: "2",
+                  skill: 3,
+                  strength: 9,
+                  ap: 4,
+                  damage: "D6",
+                  abilities: ["Heavy", "Melta 2"]),
             ],
           ),
           BsDataUnit(
@@ -454,7 +614,7 @@ class BsDataService {
             name: "Land Raider",
             faction: "Space Marines",
             pointsCost: 240,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Land Raider",
               toughness: 12,
               save: 2,
@@ -465,13 +625,48 @@ class BsDataService {
             movement: '10"',
             leadership: '6+',
             objectiveControl: 5,
-            abilities: ["Assault Ramp: Units disembarking after this model made a Normal move can still declare a charge."],
+            abilities: [
+              "Assault Ramp: Units disembarking after this model made a Normal move can still declare a charge."
+            ],
             categories: ["Vehicle", "Transport", "Imperium"],
             weapons: [
-              const WeaponUiProfile(name: "Godhammer Lascannon", profileName: "Standard", range: 48, attacks: "2", skill: 3, strength: 12, ap: 3, damage: "D6+1"),
-              const WeaponUiProfile(name: "Twin Heavy Bolter", profileName: "Standard", range: 36, attacks: "3", skill: 3, strength: 5, ap: 1, damage: "2", abilities: ["Twin-Linked", "Sustained Hits 1"]),
-              const WeaponUiProfile(name: "Hunter-Killer Missile", profileName: "Standard", range: 48, attacks: "1", skill: 2, strength: 14, ap: 3, damage: "D6"),
-              const WeaponUiProfile(name: "Armoured Tracks", profileName: "Melee", range: 0, attacks: "6", skill: 4, strength: 8, ap: 0, damage: "1"),
+              WeaponUiProfile(
+                  name: "Godhammer Lascannon",
+                  profileName: "Standard",
+                  range: 48,
+                  attacks: "2",
+                  skill: 3,
+                  strength: 12,
+                  ap: 3,
+                  damage: "D6+1"),
+              WeaponUiProfile(
+                  name: "Twin Heavy Bolter",
+                  profileName: "Standard",
+                  range: 36,
+                  attacks: "3",
+                  skill: 3,
+                  strength: 5,
+                  ap: 1,
+                  damage: "2",
+                  abilities: ["Twin-Linked", "Sustained Hits 1"]),
+              WeaponUiProfile(
+                  name: "Hunter-Killer Missile",
+                  profileName: "Standard",
+                  range: 48,
+                  attacks: "1",
+                  skill: 2,
+                  strength: 14,
+                  ap: 3,
+                  damage: "D6"),
+              WeaponUiProfile(
+                  name: "Armoured Tracks",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "6",
+                  skill: 4,
+                  strength: 8,
+                  ap: 0,
+                  damage: "1"),
             ],
           ),
           BsDataUnit(
@@ -479,7 +674,7 @@ class BsDataService {
             name: "Redemptor Dreadnought",
             faction: "Space Marines",
             pointsCost: 210,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Redemptor Dreadnought",
               toughness: 10,
               save: 2,
@@ -491,13 +686,50 @@ class BsDataService {
             movement: '8"',
             leadership: '6+',
             objectiveControl: 4,
-            abilities: ["Duty Eternal: Each time an attack is allocated to this model, subtract 1 from the Damage characteristic of that attack."],
+            abilities: [
+              "Duty Eternal: Each time an attack is allocated to this model, subtract 1 from the Damage characteristic of that attack."
+            ],
             categories: ["Vehicle", "Walker", "Imperium"],
             weapons: [
-              const WeaponUiProfile(name: "Macro Plasma Incinerator", profileName: "Standard", range: 36, attacks: "D6+1", skill: 3, strength: 8, ap: 3, damage: "2", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Macro Plasma Incinerator", profileName: "Supercharge", range: 36, attacks: "D6+1", skill: 3, strength: 9, ap: 4, damage: "3", abilities: ["Blast", "Hazardous"]),
-              const WeaponUiProfile(name: "Heavy Onslaught Gatling Cannon", profileName: "Standard", range: 24, attacks: "12", skill: 3, strength: 6, ap: 0, damage: "1", abilities: ["Devastating Wounds"]),
-              const WeaponUiProfile(name: "Redemptor Fist", profileName: "Melee", range: 0, attacks: "5", skill: 3, strength: 12, ap: 2, damage: "D6+1"),
+              WeaponUiProfile(
+                  name: "Macro Plasma Incinerator",
+                  profileName: "Standard",
+                  range: 36,
+                  attacks: "D6+1",
+                  skill: 3,
+                  strength: 8,
+                  ap: 3,
+                  damage: "2",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Macro Plasma Incinerator",
+                  profileName: "Supercharge",
+                  range: 36,
+                  attacks: "D6+1",
+                  skill: 3,
+                  strength: 9,
+                  ap: 4,
+                  damage: "3",
+                  abilities: ["Blast", "Hazardous"]),
+              WeaponUiProfile(
+                  name: "Heavy Onslaught Gatling Cannon",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "12",
+                  skill: 3,
+                  strength: 6,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Devastating Wounds"]),
+              WeaponUiProfile(
+                  name: "Redemptor Fist",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "5",
+                  skill: 3,
+                  strength: 12,
+                  ap: 2,
+                  damage: "D6+1"),
             ],
           ),
         ],
@@ -513,7 +745,7 @@ class BsDataService {
             name: "Cadian Shock Troops",
             faction: "Astra Militarum",
             pointsCost: 60,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Cadian Shock Troops",
               toughness: 3,
               save: 5,
@@ -527,11 +759,55 @@ class BsDataService {
             abilities: ["Shock Troops: Sticky objectives."],
             categories: ["Infantry", "Battleline", "Imperium"],
             weapons: [
-              const WeaponUiProfile(name: "Lasgun", profileName: "Standard", range: 24, attacks: "2", skill: 4, strength: 3, ap: 0, damage: "1", abilities: ["Rapid Fire 1"]),
-              const WeaponUiProfile(name: "Plasma Gun", profileName: "Standard", range: 24, attacks: "1", skill: 4, strength: 7, ap: 2, damage: "1", abilities: ["Rapid Fire 1"]),
-              const WeaponUiProfile(name: "Plasma Gun", profileName: "Supercharge", range: 24, attacks: "1", skill: 4, strength: 8, ap: 3, damage: "2", abilities: ["Rapid Fire 1", "Hazardous"]),
-              const WeaponUiProfile(name: "Melta Gun", profileName: "Standard", range: 12, attacks: "1", skill: 4, strength: 9, ap: 4, damage: "D6", abilities: ["Melta 2"]),
-              const WeaponUiProfile(name: "Close Combat Weapon", profileName: "Melee", range: 0, attacks: "1", skill: 4, strength: 3, ap: 0, damage: "1"),
+              WeaponUiProfile(
+                  name: "Lasgun",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "2",
+                  skill: 4,
+                  strength: 3,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Rapid Fire 1"]),
+              WeaponUiProfile(
+                  name: "Plasma Gun",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "1",
+                  skill: 4,
+                  strength: 7,
+                  ap: 2,
+                  damage: "1",
+                  abilities: ["Rapid Fire 1"]),
+              WeaponUiProfile(
+                  name: "Plasma Gun",
+                  profileName: "Supercharge",
+                  range: 24,
+                  attacks: "1",
+                  skill: 4,
+                  strength: 8,
+                  ap: 3,
+                  damage: "2",
+                  abilities: ["Rapid Fire 1", "Hazardous"]),
+              WeaponUiProfile(
+                  name: "Melta Gun",
+                  profileName: "Standard",
+                  range: 12,
+                  attacks: "1",
+                  skill: 4,
+                  strength: 9,
+                  ap: 4,
+                  damage: "D6",
+                  abilities: ["Melta 2"]),
+              WeaponUiProfile(
+                  name: "Close Combat Weapon",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "1",
+                  skill: 4,
+                  strength: 3,
+                  ap: 0,
+                  damage: "1"),
             ],
           ),
           BsDataUnit(
@@ -539,7 +815,7 @@ class BsDataService {
             name: "Leman Russ Battle Tank",
             faction: "Astra Militarum",
             pointsCost: 170,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Leman Russ Battle Tank",
               toughness: 11,
               save: 2,
@@ -550,15 +826,70 @@ class BsDataService {
             movement: '10"',
             leadership: '7+',
             objectiveControl: 3,
-            abilities: ["Armoured Spearhead: Re-roll Hit rolls of 1 against targets on objectives."],
+            abilities: [
+              "Armoured Spearhead: Re-roll Hit rolls of 1 against targets on objectives."
+            ],
             categories: ["Vehicle", "Imperium"],
             weapons: [
-              const WeaponUiProfile(name: "Leman Russ Battle Cannon", profileName: "Standard", range: 48, attacks: "D6+3", skill: 4, strength: 10, ap: 1, damage: "3", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Demolisher Battle Cannon", profileName: "Standard", range: 24, attacks: "D6+3", skill: 4, strength: 14, ap: 3, damage: "D6", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Lascannon", profileName: "Standard", range: 48, attacks: "1", skill: 4, strength: 12, ap: 3, damage: "D6+1", abilities: ["Heavy"]),
-              const WeaponUiProfile(name: "Heavy Bolter", profileName: "Standard", range: 36, attacks: "3", skill: 4, strength: 5, ap: 1, damage: "2", abilities: ["Heavy", "Sustained Hits 1"]),
-              const WeaponUiProfile(name: "Plasma Cannon", profileName: "Supercharge", range: 36, attacks: "D3", skill: 4, strength: 8, ap: 3, damage: "2", abilities: ["Blast", "Hazardous", "Heavy"]),
-              const WeaponUiProfile(name: "Armoured Tracks", profileName: "Melee", range: 0, attacks: "6", skill: 4, strength: 7, ap: 0, damage: "1"),
+              WeaponUiProfile(
+                  name: "Leman Russ Battle Cannon",
+                  profileName: "Standard",
+                  range: 48,
+                  attacks: "D6+3",
+                  skill: 4,
+                  strength: 10,
+                  ap: 1,
+                  damage: "3",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Demolisher Battle Cannon",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "D6+3",
+                  skill: 4,
+                  strength: 14,
+                  ap: 3,
+                  damage: "D6",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Lascannon",
+                  profileName: "Standard",
+                  range: 48,
+                  attacks: "1",
+                  skill: 4,
+                  strength: 12,
+                  ap: 3,
+                  damage: "D6+1",
+                  abilities: ["Heavy"]),
+              WeaponUiProfile(
+                  name: "Heavy Bolter",
+                  profileName: "Standard",
+                  range: 36,
+                  attacks: "3",
+                  skill: 4,
+                  strength: 5,
+                  ap: 1,
+                  damage: "2",
+                  abilities: ["Heavy", "Sustained Hits 1"]),
+              WeaponUiProfile(
+                  name: "Plasma Cannon",
+                  profileName: "Supercharge",
+                  range: 36,
+                  attacks: "D3",
+                  skill: 4,
+                  strength: 8,
+                  ap: 3,
+                  damage: "2",
+                  abilities: ["Blast", "Hazardous", "Heavy"]),
+              WeaponUiProfile(
+                  name: "Armoured Tracks",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "6",
+                  skill: 4,
+                  strength: 7,
+                  ap: 0,
+                  damage: "1"),
             ],
           ),
           BsDataUnit(
@@ -566,7 +897,7 @@ class BsDataService {
             name: "Rogal Dorn Battle Tank",
             faction: "Astra Militarum",
             pointsCost: 240,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Rogal Dorn Battle Tank",
               toughness: 12,
               save: 2,
@@ -578,13 +909,51 @@ class BsDataService {
             movement: '10"',
             leadership: '7+',
             objectiveControl: 5,
-            abilities: ["Ablative Armour: Once per battle, reduce damage of an attack to 0."],
+            abilities: [
+              "Ablative Armour: Once per battle, reduce damage of an attack to 0."
+            ],
             categories: ["Vehicle", "Imperium"],
             weapons: [
-              const WeaponUiProfile(name: "Oppressor Cannon", profileName: "Standard", range: 72, attacks: "D6+3", skill: 4, strength: 12, ap: 2, damage: "3", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Co-axial Autocannon", profileName: "Standard", range: 48, attacks: "2", skill: 4, strength: 9, ap: 1, damage: "3", abilities: ["Twin-Linked"]),
-              const WeaponUiProfile(name: "Castigator Gatling Cannon", profileName: "Standard", range: 24, attacks: "12", skill: 4, strength: 5, ap: 0, damage: "1", abilities: ["Sustained Hits 1"]),
-              const WeaponUiProfile(name: "Heavy Melta", profileName: "Standard", range: 18, attacks: "1", skill: 4, strength: 9, ap: 4, damage: "D6+1", abilities: ["Melta 2"]),
+              WeaponUiProfile(
+                  name: "Oppressor Cannon",
+                  profileName: "Standard",
+                  range: 72,
+                  attacks: "D6+3",
+                  skill: 4,
+                  strength: 12,
+                  ap: 2,
+                  damage: "3",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Co-axial Autocannon",
+                  profileName: "Standard",
+                  range: 48,
+                  attacks: "2",
+                  skill: 4,
+                  strength: 9,
+                  ap: 1,
+                  damage: "3",
+                  abilities: ["Twin-Linked"]),
+              WeaponUiProfile(
+                  name: "Castigator Gatling Cannon",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "12",
+                  skill: 4,
+                  strength: 5,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Sustained Hits 1"]),
+              WeaponUiProfile(
+                  name: "Heavy Melta",
+                  profileName: "Standard",
+                  range: 18,
+                  attacks: "1",
+                  skill: 4,
+                  strength: 9,
+                  ap: 4,
+                  damage: "D6+1",
+                  abilities: ["Melta 2"]),
             ],
           ),
         ],
@@ -600,7 +969,7 @@ class BsDataService {
             name: "Battlewagon",
             faction: "Orks",
             pointsCost: 145,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Battlewagon",
               toughness: 10,
               save: 3,
@@ -613,14 +982,59 @@ class BsDataService {
             movement: '10"',
             leadership: '7+',
             objectiveControl: 5,
-            abilities: ["Ramshackle but Rugged: Worsen the Armour Penetration characteristic of attacks by 1.", "Firing Deck 22: Up to 22 embark models can shoot."],
+            abilities: [
+              "Ramshackle but Rugged: Worsen the Armour Penetration characteristic of attacks by 1.",
+              "Firing Deck 22: Up to 22 embark models can shoot."
+            ],
             categories: ["Vehicle", "Transport", "Orks"],
             weapons: [
-              const WeaponUiProfile(name: "Killkannon", profileName: "Standard", range: 24, attacks: "D6+1", skill: 5, strength: 9, ap: 2, damage: "2", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Zzap Gun", profileName: "Standard", range: 36, attacks: "1", skill: 5, strength: 12, ap: 3, damage: "D6"),
-              const WeaponUiProfile(name: "Kannon", profileName: "Frag", range: 36, attacks: "D6", skill: 5, strength: 5, ap: 0, damage: "1", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Kannon", profileName: "Shell", range: 36, attacks: "1", skill: 5, strength: 9, ap: 2, damage: "D6"),
-              const WeaponUiProfile(name: "Deff Rolla", profileName: "Melee", range: 0, attacks: "6", skill: 3, strength: 9, ap: 1, damage: "2"),
+              WeaponUiProfile(
+                  name: "Killkannon",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "D6+1",
+                  skill: 5,
+                  strength: 9,
+                  ap: 2,
+                  damage: "2",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Zzap Gun",
+                  profileName: "Standard",
+                  range: 36,
+                  attacks: "1",
+                  skill: 5,
+                  strength: 12,
+                  ap: 3,
+                  damage: "D6"),
+              WeaponUiProfile(
+                  name: "Kannon",
+                  profileName: "Frag",
+                  range: 36,
+                  attacks: "D6",
+                  skill: 5,
+                  strength: 5,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Kannon",
+                  profileName: "Shell",
+                  range: 36,
+                  attacks: "1",
+                  skill: 5,
+                  strength: 9,
+                  ap: 2,
+                  damage: "D6"),
+              WeaponUiProfile(
+                  name: "Deff Rolla",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "6",
+                  skill: 3,
+                  strength: 9,
+                  ap: 1,
+                  damage: "2"),
             ],
           ),
           BsDataUnit(
@@ -628,7 +1042,7 @@ class BsDataService {
             name: "Beast Snagga Boyz",
             faction: "Orks",
             pointsCost: 105,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Beast Snagga Boyz",
               toughness: 5,
               save: 5,
@@ -641,12 +1055,39 @@ class BsDataService {
             movement: '6"',
             leadership: '7+',
             objectiveControl: 2,
-            abilities: ["Monster Hunters: Re-roll Hit rolls of 1 against Monsters and Vehicles.", "Feel No Pain 6+."],
+            abilities: [
+              "Monster Hunters: Re-roll Hit rolls of 1 against Monsters and Vehicles.",
+              "Feel No Pain 6+."
+            ],
             categories: ["Infantry", "Battleline", "Orks"],
             weapons: [
-              const WeaponUiProfile(name: "Slugga", profileName: "Standard", range: 12, attacks: "1", skill: 5, strength: 4, ap: 0, damage: "1"),
-              const WeaponUiProfile(name: "Choppa", profileName: "Melee", range: 0, attacks: "4", skill: 3, strength: 5, ap: 1, damage: "1"),
-              const WeaponUiProfile(name: "Power Snappa", profileName: "Melee", range: 0, attacks: "3", skill: 3, strength: 7, ap: 1, damage: "2"),
+              WeaponUiProfile(
+                  name: "Slugga",
+                  profileName: "Standard",
+                  range: 12,
+                  attacks: "1",
+                  skill: 5,
+                  strength: 4,
+                  ap: 0,
+                  damage: "1"),
+              WeaponUiProfile(
+                  name: "Choppa",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "4",
+                  skill: 3,
+                  strength: 5,
+                  ap: 1,
+                  damage: "1"),
+              WeaponUiProfile(
+                  name: "Power Snappa",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "3",
+                  skill: 3,
+                  strength: 7,
+                  ap: 1,
+                  damage: "2"),
             ],
           ),
           BsDataUnit(
@@ -654,7 +1095,7 @@ class BsDataService {
             name: "Killa Kans",
             faction: "Orks",
             pointsCost: 125,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Killa Kans",
               toughness: 6,
               save: 3,
@@ -666,12 +1107,40 @@ class BsDataService {
             movement: '6"',
             leadership: '8+',
             objectiveControl: 2,
-            abilities: ["Rokkit Barrage: Re-roll Hit rolls of 1 with Rokkit launchas."],
+            abilities: [
+              "Rokkit Barrage: Re-roll Hit rolls of 1 with Rokkit launchas."
+            ],
             categories: ["Vehicle", "Walker", "Orks"],
             weapons: [
-              const WeaponUiProfile(name: "Rokkit Launcha", profileName: "Standard", range: 24, attacks: "D3", skill: 4, strength: 9, ap: 2, damage: "3", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Grotzooka", profileName: "Standard", range: 18, attacks: "D6", skill: 4, strength: 6, ap: 0, damage: "1", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Kan Klaw", profileName: "Melee", range: 0, attacks: "3", skill: 4, strength: 8, ap: 2, damage: "3"),
+              WeaponUiProfile(
+                  name: "Rokkit Launcha",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "D3",
+                  skill: 4,
+                  strength: 9,
+                  ap: 2,
+                  damage: "3",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Grotzooka",
+                  profileName: "Standard",
+                  range: 18,
+                  attacks: "D6",
+                  skill: 4,
+                  strength: 6,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Kan Klaw",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "3",
+                  skill: 4,
+                  strength: 8,
+                  ap: 2,
+                  damage: "3"),
             ],
           ),
         ],
@@ -687,7 +1156,7 @@ class BsDataService {
             name: "Necron Warriors",
             faction: "Necrons",
             pointsCost: 100,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Necron Warriors",
               toughness: 4,
               save: 4,
@@ -698,12 +1167,40 @@ class BsDataService {
             movement: '5"',
             leadership: '7+',
             objectiveControl: 2,
-            abilities: ["Their Number is Legion: Reanimation Protocols re-rolls 1s to reanimate."],
+            abilities: [
+              "Their Number is Legion: Reanimation Protocols re-rolls 1s to reanimate."
+            ],
             categories: ["Infantry", "Battleline", "Necrons"],
             weapons: [
-              const WeaponUiProfile(name: "Gauss Flayer", profileName: "Standard", range: 24, attacks: "1", skill: 4, strength: 4, ap: 0, damage: "1", abilities: ["Lethal Hits", "Rapid Fire 1"]),
-              const WeaponUiProfile(name: "Gauss Reaper", profileName: "Standard", range: 12, attacks: "2", skill: 4, strength: 5, ap: 1, damage: "1", abilities: ["Lethal Hits", "Assault"]),
-              const WeaponUiProfile(name: "Close Combat Weapon", profileName: "Melee", range: 0, attacks: "1", skill: 4, strength: 4, ap: 0, damage: "1"),
+              WeaponUiProfile(
+                  name: "Gauss Flayer",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "1",
+                  skill: 4,
+                  strength: 4,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Lethal Hits", "Rapid Fire 1"]),
+              WeaponUiProfile(
+                  name: "Gauss Reaper",
+                  profileName: "Standard",
+                  range: 12,
+                  attacks: "2",
+                  skill: 4,
+                  strength: 5,
+                  ap: 1,
+                  damage: "1",
+                  abilities: ["Lethal Hits", "Assault"]),
+              WeaponUiProfile(
+                  name: "Close Combat Weapon",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "1",
+                  skill: 4,
+                  strength: 4,
+                  ap: 0,
+                  damage: "1"),
             ],
           ),
           BsDataUnit(
@@ -711,7 +1208,7 @@ class BsDataService {
             name: "C'tan Shard of the Void Dragon",
             faction: "Necrons",
             pointsCost: 290,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "C'tan Shard of the Void Dragon",
               toughness: 11,
               save: 4,
@@ -725,13 +1222,51 @@ class BsDataService {
             movement: '7"',
             leadership: '6+',
             objectiveControl: 4,
-            abilities: ["Necrodermis: Halve the Damage characteristic of attacks allocated to this model.", "Feel No Pain 5+."],
+            abilities: [
+              "Necrodermis: Halve the Damage characteristic of attacks allocated to this model.",
+              "Feel No Pain 5+."
+            ],
             categories: ["Monster", "Character", "Necrons"],
             weapons: [
-              const WeaponUiProfile(name: "Spear of the Void Dragon", profileName: "Ranged Strike", range: 12, attacks: "3", skill: 2, strength: 12, ap: 3, damage: "D6+1", abilities: ["Anti-Vehicle 2+"]),
-              const WeaponUiProfile(name: "Voltaic Storm", profileName: "Standard", range: 18, attacks: "D6+3", skill: 2, strength: 7, ap: 1, damage: "2", abilities: ["Blast", "Sustained Hits 1"]),
-              const WeaponUiProfile(name: "Spear of the Void Dragon", profileName: "Melee Strike", range: 0, attacks: "6", skill: 2, strength: 12, ap: 4, damage: "D6+2", abilities: ["Anti-Vehicle 2+"]),
-              const WeaponUiProfile(name: "Spear of the Void Dragon", profileName: "Melee Sweep", range: 0, attacks: "12", skill: 2, strength: 7, ap: 2, damage: "2"),
+              WeaponUiProfile(
+                  name: "Spear of the Void Dragon",
+                  profileName: "Ranged Strike",
+                  range: 12,
+                  attacks: "3",
+                  skill: 2,
+                  strength: 12,
+                  ap: 3,
+                  damage: "D6+1",
+                  abilities: ["Anti-Vehicle 2+"]),
+              WeaponUiProfile(
+                  name: "Voltaic Storm",
+                  profileName: "Standard",
+                  range: 18,
+                  attacks: "D6+3",
+                  skill: 2,
+                  strength: 7,
+                  ap: 1,
+                  damage: "2",
+                  abilities: ["Blast", "Sustained Hits 1"]),
+              WeaponUiProfile(
+                  name: "Spear of the Void Dragon",
+                  profileName: "Melee Strike",
+                  range: 0,
+                  attacks: "6",
+                  skill: 2,
+                  strength: 12,
+                  ap: 4,
+                  damage: "D6+2",
+                  abilities: ["Anti-Vehicle 2+"]),
+              WeaponUiProfile(
+                  name: "Spear of the Void Dragon",
+                  profileName: "Melee Sweep",
+                  range: 0,
+                  attacks: "12",
+                  skill: 2,
+                  strength: 7,
+                  ap: 2,
+                  damage: "2"),
             ],
           ),
         ],
@@ -747,7 +1282,7 @@ class BsDataService {
             name: "Carnifex",
             faction: "Tyranids",
             pointsCost: 125,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Carnifex",
               toughness: 9,
               save: 2,
@@ -758,13 +1293,49 @@ class BsDataService {
             movement: '8"',
             leadership: '8+',
             objectiveControl: 3,
-            abilities: ["Blistering Assault: Each time an enemy unit shoots this model, it can make a Normal move toward that enemy."],
+            abilities: [
+              "Blistering Assault: Each time an enemy unit shoots this model, it can make a Normal move toward that enemy."
+            ],
             categories: ["Monster", "Tyranids"],
             weapons: [
-              const WeaponUiProfile(name: "Heavy Venom Cannon", profileName: "Standard", range: 36, attacks: "D3", skill: 4, strength: 9, ap: 2, damage: "3", abilities: ["Blast"]),
-              const WeaponUiProfile(name: "Devourers with Brainleech Worms", profileName: "Standard", range: 18, attacks: "12", skill: 4, strength: 6, ap: 0, damage: "1", abilities: ["Twin-Linked"]),
-              const WeaponUiProfile(name: "Carnifex Crushing Claws", profileName: "Melee", range: 0, attacks: "4", skill: 4, strength: 12, ap: 3, damage: "D6+1"),
-              const WeaponUiProfile(name: "Carnifex Scything Talons", profileName: "Melee", range: 0, attacks: "6", skill: 3, strength: 9, ap: 2, damage: "3"),
+              WeaponUiProfile(
+                  name: "Heavy Venom Cannon",
+                  profileName: "Standard",
+                  range: 36,
+                  attacks: "D3",
+                  skill: 4,
+                  strength: 9,
+                  ap: 2,
+                  damage: "3",
+                  abilities: ["Blast"]),
+              WeaponUiProfile(
+                  name: "Devourers with Brainleech Worms",
+                  profileName: "Standard",
+                  range: 18,
+                  attacks: "12",
+                  skill: 4,
+                  strength: 6,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Twin-Linked"]),
+              WeaponUiProfile(
+                  name: "Carnifex Crushing Claws",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "4",
+                  skill: 4,
+                  strength: 12,
+                  ap: 3,
+                  damage: "D6+1"),
+              WeaponUiProfile(
+                  name: "Carnifex Scything Talons",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "6",
+                  skill: 3,
+                  strength: 9,
+                  ap: 2,
+                  damage: "3"),
             ],
           ),
         ],
@@ -780,7 +1351,7 @@ class BsDataService {
             name: "Chaos Terminator Squad",
             faction: "Chaos Space Marines",
             pointsCost: 185,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Chaos Terminator Squad",
               toughness: 5,
               save: 2,
@@ -792,13 +1363,49 @@ class BsDataService {
             movement: '5"',
             leadership: '6+',
             objectiveControl: 1,
-            abilities: ["Dark Pacts: Gain Sustained Hits 1 or Lethal Hits upon passing Leadership test."],
+            abilities: [
+              "Dark Pacts: Gain Sustained Hits 1 or Lethal Hits upon passing Leadership test."
+            ],
             categories: ["Infantry", "Terminator", "Chaos"],
             weapons: [
-              const WeaponUiProfile(name: "Combi-bolter", profileName: "Standard", range: 24, attacks: "2", skill: 3, strength: 4, ap: 0, damage: "1", abilities: ["Rapid Fire 2"]),
-              const WeaponUiProfile(name: "Reaper Autocannon", profileName: "Standard", range: 36, attacks: "4", skill: 3, strength: 7, ap: 1, damage: "1", abilities: ["Sustained Hits 1", "Devastating Wounds"]),
-              const WeaponUiProfile(name: "Accursed Weapon", profileName: "Melee", range: 0, attacks: "4", skill: 3, strength: 5, ap: 2, damage: "1"),
-              const WeaponUiProfile(name: "Power Fist", profileName: "Melee", range: 0, attacks: "3", skill: 3, strength: 8, ap: 2, damage: "2"),
+              WeaponUiProfile(
+                  name: "Combi-bolter",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "2",
+                  skill: 3,
+                  strength: 4,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Rapid Fire 2"]),
+              WeaponUiProfile(
+                  name: "Reaper Autocannon",
+                  profileName: "Standard",
+                  range: 36,
+                  attacks: "4",
+                  skill: 3,
+                  strength: 7,
+                  ap: 1,
+                  damage: "1",
+                  abilities: ["Sustained Hits 1", "Devastating Wounds"]),
+              WeaponUiProfile(
+                  name: "Accursed Weapon",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "4",
+                  skill: 3,
+                  strength: 5,
+                  ap: 2,
+                  damage: "1"),
+              WeaponUiProfile(
+                  name: "Power Fist",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "3",
+                  skill: 3,
+                  strength: 8,
+                  ap: 2,
+                  damage: "2"),
             ],
           ),
         ],
@@ -814,7 +1421,7 @@ class BsDataService {
             name: "Custodian Guard",
             faction: "Adeptus Custodes",
             pointsCost: 180,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Custodian Guard",
               toughness: 6,
               save: 2,
@@ -826,12 +1433,39 @@ class BsDataService {
             movement: '6"',
             leadership: '6+',
             objectiveControl: 2,
-            abilities: ["Stand Vigil: Re-roll Wound rolls of 1, or full Wound re-rolls if within range of an objective marker."],
+            abilities: [
+              "Stand Vigil: Re-roll Wound rolls of 1, or full Wound re-rolls if within range of an objective marker."
+            ],
             categories: ["Infantry", "Battleline", "Imperium"],
             weapons: [
-              const WeaponUiProfile(name: "Guardian Spear", profileName: "Shooting", range: 24, attacks: "2", skill: 2, strength: 4, ap: 1, damage: "2", abilities: ["Assault"]),
-              const WeaponUiProfile(name: "Guardian Spear", profileName: "Melee", range: 0, attacks: "5", skill: 2, strength: 7, ap: 2, damage: "2"),
-              const WeaponUiProfile(name: "Castellan Axe", profileName: "Melee", range: 0, attacks: "4", skill: 2, strength: 9, ap: 1, damage: "3"),
+              WeaponUiProfile(
+                  name: "Guardian Spear",
+                  profileName: "Shooting",
+                  range: 24,
+                  attacks: "2",
+                  skill: 2,
+                  strength: 4,
+                  ap: 1,
+                  damage: "2",
+                  abilities: ["Assault"]),
+              WeaponUiProfile(
+                  name: "Guardian Spear",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "5",
+                  skill: 2,
+                  strength: 7,
+                  ap: 2,
+                  damage: "2"),
+              WeaponUiProfile(
+                  name: "Castellan Axe",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "4",
+                  skill: 2,
+                  strength: 9,
+                  ap: 1,
+                  damage: "3"),
             ],
           ),
         ],
@@ -847,7 +1481,7 @@ class BsDataService {
             name: "Crisis Fireknife Battlesuits",
             faction: "T'au Empire",
             pointsCost: 130,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Crisis Fireknife Battlesuits",
               toughness: 5,
               save: 3,
@@ -859,11 +1493,29 @@ class BsDataService {
             movement: '10"',
             leadership: '7+',
             objectiveControl: 2,
-            abilities: ["FTGG: Guided units gain +1 BS against their spotted target."],
+            abilities: [
+              "FTGG: Guided units gain +1 BS against their spotted target."
+            ],
             categories: ["Vehicle", "Battlesuit", "Fly", "Tau"],
             weapons: [
-              const WeaponUiProfile(name: "Missile Pod", profileName: "Standard", range: 30, attacks: "2", skill: 4, strength: 7, ap: 1, damage: "2"),
-              const WeaponUiProfile(name: "Plasma Rifle", profileName: "Standard", range: 18, attacks: "1", skill: 4, strength: 8, ap: 3, damage: "3"),
+              WeaponUiProfile(
+                  name: "Missile Pod",
+                  profileName: "Standard",
+                  range: 30,
+                  attacks: "2",
+                  skill: 4,
+                  strength: 7,
+                  ap: 1,
+                  damage: "2"),
+              WeaponUiProfile(
+                  name: "Plasma Rifle",
+                  profileName: "Standard",
+                  range: 18,
+                  attacks: "1",
+                  skill: 4,
+                  strength: 8,
+                  ap: 3,
+                  damage: "3"),
             ],
           ),
         ],
@@ -879,7 +1531,7 @@ class BsDataService {
             name: "Avatar of Khaine",
             faction: "Aeldari",
             pointsCost: 335,
-            unitProfile: const UnitUiProfile(
+            unitProfile: UnitUiProfile(
               name: "Avatar of Khaine",
               toughness: 12,
               save: 2,
@@ -892,12 +1544,39 @@ class BsDataService {
             movement: '10"',
             leadership: '6+',
             objectiveControl: 5,
-            abilities: ["Molten Body: Halve the Damage characteristic of attacks allocated to this model."],
+            abilities: [
+              "Molten Body: Halve the Damage characteristic of attacks allocated to this model."
+            ],
             categories: ["Monster", "Character", "Epic Hero", "Aeldari"],
             weapons: [
-              const WeaponUiProfile(name: "The Wailing Doom", profileName: "Ranged", range: 12, attacks: "1", skill: 2, strength: 14, ap: 4, damage: "D6+2", abilities: ["Melta 3"]),
-              const WeaponUiProfile(name: "The Wailing Doom", profileName: "Melee Strike", range: 0, attacks: "6", skill: 2, strength: 14, ap: 4, damage: "D6+2"),
-              const WeaponUiProfile(name: "The Wailing Doom", profileName: "Melee Sweep", range: 0, attacks: "12", skill: 2, strength: 7, ap: 2, damage: "2"),
+              WeaponUiProfile(
+                  name: "The Wailing Doom",
+                  profileName: "Ranged",
+                  range: 12,
+                  attacks: "1",
+                  skill: 2,
+                  strength: 14,
+                  ap: 4,
+                  damage: "D6+2",
+                  abilities: ["Melta 3"]),
+              WeaponUiProfile(
+                  name: "The Wailing Doom",
+                  profileName: "Melee Strike",
+                  range: 0,
+                  attacks: "6",
+                  skill: 2,
+                  strength: 14,
+                  ap: 4,
+                  damage: "D6+2"),
+              WeaponUiProfile(
+                  name: "The Wailing Doom",
+                  profileName: "Melee Sweep",
+                  range: 0,
+                  attacks: "12",
+                  skill: 2,
+                  strength: 7,
+                  ap: 2,
+                  damage: "2"),
             ],
           ),
         ],

@@ -14,35 +14,38 @@ import '../widgets/tactical_verdict_badge.dart';
 
 enum AttackMode { singleWeapon, squadBundle }
 
-final attackModeProvider = StateProvider<AttackMode>((ref) => AttackMode.singleWeapon);
+final attackModeProvider =
+    StateProvider<AttackMode>((ref) => AttackMode.singleWeapon);
 final selectedWeaponIndexProvider = StateProvider<int>((ref) => 0);
 final selectedProfileIndexProvider = StateProvider<int>((ref) => 0);
 final isCustomWeaponModeProvider = StateProvider<bool>((ref) => false);
-final customWeaponProfileProvider = StateProvider<WeaponUiProfile>((ref) => const WeaponUiProfile(
-      name: "Custom Weapon",
-      profileName: "Custom Profile",
-      range: 24,
-      attacks: "2",
-      skill: 3,
-      strength: 4,
-      ap: 1,
-      damage: "1",
-      abilities: [],
-    ));
+final customWeaponProfileProvider =
+    StateProvider<WeaponUiProfile>((ref) => const WeaponUiProfile(
+          name: "Custom Weapon",
+          profileName: "Custom Profile",
+          range: 24,
+          attacks: "2",
+          skill: 3,
+          strength: 4,
+          ap: 1,
+          damage: "1",
+          abilities: [],
+        ));
 
 final weaponCountProvider = StateProvider<int>((ref) => 1);
 final selectedSquadPresetIndexProvider = StateProvider<int>((ref) => 0);
 
 final selectedTargetIndexProvider = StateProvider<int>((ref) => 0);
 final isCustomTargetModeProvider = StateProvider<bool>((ref) => false);
-final customTargetProfileProvider = StateProvider<UnitUiProfile>((ref) => const UnitUiProfile(
-      name: "Custom Target",
-      toughness: 4,
-      save: 3,
-      woundsPerModel: 2,
-      modelCount: 5,
-      keywords: ["INFANTRY"],
-    ));
+final customTargetProfileProvider =
+    StateProvider<UnitUiProfile>((ref) => const UnitUiProfile(
+          name: "Custom Target",
+          toughness: 4,
+          save: 3,
+          woundsPerModel: 2,
+          modelCount: 5,
+          keywords: ["INFANTRY"],
+        ));
 final isStationaryProvider = StateProvider<bool>((ref) => true);
 final hasChargedProvider = StateProvider<bool>((ref) => false);
 final targetInCoverProvider = StateProvider<bool>((ref) => false);
@@ -50,8 +53,10 @@ final combatDistanceProvider = StateProvider<int>((ref) => 12);
 
 // Offensive What-If Providers
 final whatIfAbilitiesProvider = StateProvider<Set<String>>((ref) => {});
-final hitRerollProvider = StateProvider<ReRollOption>((ref) => ReRollOption.none);
-final woundRerollProvider = StateProvider<ReRollOption>((ref) => ReRollOption.none);
+final hitRerollProvider =
+    StateProvider<ReRollOption>((ref) => ReRollOption.none);
+final woundRerollProvider =
+    StateProvider<ReRollOption>((ref) => ReRollOption.none);
 final bonusStrengthProvider = StateProvider<int>((ref) => 0);
 final bonusApProvider = StateProvider<int>((ref) => 0);
 
@@ -116,14 +121,17 @@ class InBattleScreen extends ConsumerWidget {
     if (isCustomWeapon) {
       currentProfiles = [customWeapon];
     } else {
-      final wName = weaponNames.isNotEmpty ? weaponNames[weaponIdx % weaponNames.length] : "";
+      final wName = weaponNames.isNotEmpty
+          ? weaponNames[weaponIdx % weaponNames.length]
+          : "";
       currentProfiles = groupedWeapons[wName] ?? [weapons.first];
     }
 
     final activeWeapon = isCustomWeapon
         ? customWeapon
         : currentProfiles[profileIdx % currentProfiles.length];
-    final activeTarget = isCustomTarget ? customTarget : targets[targetIdx % targets.length];
+    final activeTarget =
+        isCustomTarget ? customTarget : targets[targetIdx % targets.length];
     final activeSquad = squadPresets[squadIdx % squadPresets.length];
 
     final SimulationUiReport report;
@@ -171,7 +179,9 @@ class InBattleScreen extends ConsumerWidget {
     }
 
     final List<SimulationUiReport> currentProfileReports = [];
-    if (attackMode == AttackMode.singleWeapon && !isCustomWeapon && currentProfiles.length > 1) {
+    if (attackMode == AttackMode.singleWeapon &&
+        !isCustomWeapon &&
+        currentProfiles.length > 1) {
       for (final p in currentProfiles) {
         currentProfileReports.add(
           SimulationService.runSimulation(
@@ -218,18 +228,20 @@ class InBattleScreen extends ConsumerWidget {
                   Text("IN-BATTLE RESOLUTION", style: OmnispexTypography.h2),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.refresh, size: 14),
-                    label: Text("RESET DEFAULTS", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11)),
+                    label: Text("RESET DEFAULTS",
+                        style: OmnispexTypography.monoStatBadge
+                            .copyWith(fontSize: 11)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: OmnispexColors.textSecondary,
                       side: const BorderSide(color: OmnispexColors.border),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                     ),
                     onPressed: () => _resetAll(ref),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,20 +459,27 @@ class InBattleScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<int>(
-                  value: isCustomWeapon ? -1 : (weaponIdx % (weaponNames.isNotEmpty ? weaponNames.length : 1)),
+                  value: isCustomWeapon
+                      ? -1
+                      : (weaponIdx %
+                          (weaponNames.isNotEmpty ? weaponNames.length : 1)),
                   isExpanded: true,
                   dropdownColor: OmnispexColors.surfaceCard,
-                  decoration: const InputDecoration(labelText: "SELECT WEAPON LOADOUT"),
+                  decoration:
+                      const InputDecoration(labelText: "SELECT WEAPON LOADOUT"),
                   items: [
                     ...List.generate(weaponNames.length, (i) {
                       final name = weaponNames[i];
                       final profiles = groupedWeapons[name] ?? [];
-                      final profileLabel = profiles.length > 1 ? " (${profiles.length} Profiles)" : "";
+                      final profileLabel = profiles.length > 1
+                          ? " (${profiles.length} Profiles)"
+                          : "";
                       return DropdownMenuItem(
                         value: i,
                         child: Text(
                           "$name$profileLabel",
-                          style: OmnispexTypography.monoData.copyWith(fontSize: 13),
+                          style: OmnispexTypography.monoData
+                              .copyWith(fontSize: 13),
                           overflow: TextOverflow.ellipsis,
                         ),
                       );
@@ -469,36 +488,42 @@ class InBattleScreen extends ConsumerWidget {
                       value: -1,
                       child: Text(
                         "Custom Weapon (Manual Input)...",
-                        style: OmnispexTypography.monoData.copyWith(color: OmnispexColors.amber, fontSize: 13),
+                        style: OmnispexTypography.monoData.copyWith(
+                            color: OmnispexColors.amber, fontSize: 13),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                   onChanged: (val) {
                     if (val == -1) {
-                      ref.read(isCustomWeaponModeProvider.notifier).state = true;
+                      ref.read(isCustomWeaponModeProvider.notifier).state =
+                          true;
                     } else if (val != null) {
-                      ref.read(isCustomWeaponModeProvider.notifier).state = false;
-                      ref.read(selectedWeaponIndexProvider.notifier).state = val;
+                      ref.read(isCustomWeaponModeProvider.notifier).state =
+                          false;
+                      ref.read(selectedWeaponIndexProvider.notifier).state =
+                          val;
                       ref.read(selectedProfileIndexProvider.notifier).state = 0;
                     }
                   },
                 ),
                 const SizedBox(height: 12),
-
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text("WEAPON COUNT:", style: OmnispexTypography.label.copyWith(fontSize: 11)),
+                    Text("WEAPON COUNT:",
+                        style: OmnispexTypography.label.copyWith(fontSize: 11)),
                     ...[1, 3, 5, 10].map((count) {
                       final isSel = weaponCount == count;
                       return ChoiceChip(
                         label: Text(
                           "$count",
                           style: OmnispexTypography.monoStatBadge.copyWith(
-                            color: isSel ? OmnispexColors.background : OmnispexColors.cyan,
+                            color: isSel
+                                ? OmnispexColors.background
+                                : OmnispexColors.cyan,
                             fontSize: 11,
                           ),
                         ),
@@ -506,11 +531,14 @@ class InBattleScreen extends ConsumerWidget {
                         selectedColor: OmnispexColors.cyan,
                         backgroundColor: OmnispexColors.surfaceElevated,
                         side: BorderSide(
-                          color: isSel ? OmnispexColors.cyan : OmnispexColors.border,
+                          color: isSel
+                              ? OmnispexColors.cyan
+                              : OmnispexColors.border,
                         ),
                         onSelected: (selected) {
                           if (selected) {
-                            ref.read(weaponCountProvider.notifier).state = count;
+                            ref.read(weaponCountProvider.notifier).state =
+                                count;
                           }
                         },
                       );
@@ -518,7 +546,6 @@ class InBattleScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-
                 if (isCustomWeapon)
                   _buildCustomWeaponEditor(context, ref, customWeapon)
                 else ...[
@@ -528,7 +555,7 @@ class InBattleScreen extends ConsumerWidget {
                     children: [
                       if (activeWeapon.isMelee)
                         const StatBadge(
-                          label: "TYPE",
+                          label: "",
                           value: "MELEE",
                           accentColor: OmnispexColors.amber,
                         )
@@ -539,7 +566,8 @@ class InBattleScreen extends ConsumerWidget {
                           accentColor: OmnispexColors.cyan,
                         ),
                       StatBadge(label: "A", value: activeWeapon.attacks),
-                      StatBadge(label: "BS/WS", value: '${activeWeapon.skill}+'),
+                      StatBadge(
+                          label: "BS/WS", value: '${activeWeapon.skill}+'),
                       StatBadge(label: "S", value: '${activeWeapon.strength}'),
                       StatBadge(label: "AP", value: '-${activeWeapon.ap}'),
                       StatBadge(label: "D", value: activeWeapon.damage),
@@ -552,11 +580,14 @@ class InBattleScreen extends ConsumerWidget {
                       runSpacing: 4,
                       children: activeWeapon.abilities.map((ab) {
                         return Chip(
-                          label: Text(ab, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
+                          label: Text(ab,
+                              style: OmnispexTypography.monoStatBadge
+                                  .copyWith(fontSize: 10)),
                           backgroundColor: OmnispexColors.surfaceElevated,
                           side: const BorderSide(color: OmnispexColors.border),
                           padding: EdgeInsets.zero,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
                         );
                       }).toList(),
                     ),
@@ -575,25 +606,34 @@ class InBattleScreen extends ConsumerWidget {
                   value: squadIdx,
                   isExpanded: true,
                   dropdownColor: OmnispexColors.surfaceCard,
-                  decoration: const InputDecoration(labelText: "SELECT SQUAD PRESET"),
+                  decoration:
+                      const InputDecoration(labelText: "SELECT SQUAD PRESET"),
                   items: List.generate(squadPresets.length, (i) {
                     final sq = squadPresets[i];
                     return DropdownMenuItem(
                       value: i,
-                      child: Text(sq.name, style: OmnispexTypography.monoData.copyWith(fontSize: 12), overflow: TextOverflow.ellipsis),
+                      child: Text(sq.name,
+                          style: OmnispexTypography.monoData
+                              .copyWith(fontSize: 12),
+                          overflow: TextOverflow.ellipsis),
                     );
                   }),
                   onChanged: (val) {
-                    if (val != null) ref.read(selectedSquadPresetIndexProvider.notifier).state = val;
+                    if (val != null)
+                      ref
+                          .read(selectedSquadPresetIndexProvider.notifier)
+                          .state = val;
                   },
                 ),
                 const SizedBox(height: 12),
-                Text("SQUAD WEAPONS BUNDLED:", style: OmnispexTypography.label.copyWith(fontSize: 10)),
+                Text("SQUAD WEAPONS BUNDLED:",
+                    style: OmnispexTypography.label.copyWith(fontSize: 10)),
                 const SizedBox(height: 6),
                 ...activeSquad.loadout.map((entry) {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
                       color: OmnispexColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(6),
@@ -607,11 +647,14 @@ class InBattleScreen extends ConsumerWidget {
                       children: [
                         Text(
                           "${entry.count}x ${entry.weapon.name} [${entry.weapon.profileName}]",
-                          style: OmnispexTypography.monoData.copyWith(fontSize: 12),
+                          style: OmnispexTypography.monoData
+                              .copyWith(fontSize: 12),
                         ),
                         Text(
                           "A: ${entry.weapon.attacks} | S: ${entry.weapon.strength} | AP: ${entry.weapon.ap} | D: ${entry.weapon.damage}",
-                          style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.textSecondary),
+                          style: OmnispexTypography.monoStatBadge.copyWith(
+                              fontSize: 10,
+                              color: OmnispexColors.textSecondary),
                         ),
                       ],
                     ),
@@ -633,14 +676,16 @@ class InBattleScreen extends ConsumerWidget {
                 value: isCustomTarget ? -1 : targetIdx,
                 isExpanded: true,
                 dropdownColor: OmnispexColors.surfaceCard,
-                decoration: const InputDecoration(labelText: "SELECT TARGET UNIT"),
+                decoration:
+                    const InputDecoration(labelText: "SELECT TARGET UNIT"),
                 items: [
                   if (isCustomTarget)
                     DropdownMenuItem(
                       value: -1,
                       child: Text(
                         "${activeTarget.name} (Datasheet)",
-                        style: OmnispexTypography.monoData.copyWith(color: OmnispexColors.amber),
+                        style: OmnispexTypography.monoData
+                            .copyWith(color: OmnispexColors.amber),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -648,7 +693,9 @@ class InBattleScreen extends ConsumerWidget {
                     final t = targets[i];
                     return DropdownMenuItem(
                       value: i,
-                      child: Text(t.name, style: OmnispexTypography.monoData, overflow: TextOverflow.ellipsis),
+                      child: Text(t.name,
+                          style: OmnispexTypography.monoData,
+                          overflow: TextOverflow.ellipsis),
                     );
                   }),
                 ],
@@ -665,7 +712,8 @@ class InBattleScreen extends ConsumerWidget {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  StatBadge(label: "MODELS", value: '${activeTarget.modelCount}'),
+                  StatBadge(
+                      label: "MODELS", value: '${activeTarget.modelCount}'),
                   StatBadge(label: "T", value: '${activeTarget.toughness}'),
                   StatBadge(label: "SV", value: '${activeTarget.save}+'),
                   if (activeTarget.invuln != null)
@@ -674,7 +722,9 @@ class InBattleScreen extends ConsumerWidget {
                       value: '${activeTarget.invuln}+',
                       accentColor: OmnispexColors.amber,
                     ),
-                  StatBadge(label: "W/MODEL", value: '${activeTarget.woundsPerModel}'),
+                  StatBadge(
+                      label: "W/MODEL",
+                      value: '${activeTarget.woundsPerModel}'),
                   StatBadge(
                     label: "TOTAL HP",
                     value: '${activeTarget.totalWounds}',
@@ -692,13 +742,16 @@ class InBattleScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (activeWeapon.isMelee && activeWeapon.abilities.contains("Lance"))
+              if (activeWeapon.isMelee &&
+                  activeWeapon.abilities.contains("Lance"))
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text("Attacker Made Charge Move (Lance +1)", style: OmnispexTypography.body),
+                  title: Text("Attacker Made Charge Move (Lance +1)",
+                      style: OmnispexTypography.body),
                   value: hasCharged,
                   activeColor: OmnispexColors.cyan,
-                  onChanged: (val) => ref.read(hasChargedProvider.notifier).state = val,
+                  onChanged: (val) =>
+                      ref.read(hasChargedProvider.notifier).state = val,
                 ),
               if (activeWeapon.isRanged &&
                   !activeWeapon.abilities.contains("Ignores Cover") &&
@@ -706,21 +759,28 @@ class InBattleScreen extends ConsumerWidget {
                   (activeWeapon.ap > 0 || activeTarget.save > 3))
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text("Target Has Benefit of Cover (+1 Sv)", style: OmnispexTypography.body),
+                  title: Text("Target Has Benefit of Cover (+1 Sv)",
+                      style: OmnispexTypography.body),
                   value: targetInCover,
                   activeColor: OmnispexColors.cyan,
-                  onChanged: (val) => ref.read(targetInCoverProvider.notifier).state = val,
+                  onChanged: (val) =>
+                      ref.read(targetInCoverProvider.notifier).state = val,
                 ),
-              if (activeWeapon.isRanged && activeWeapon.abilities.contains("Heavy"))
+              if (activeWeapon.isRanged &&
+                  activeWeapon.abilities.contains("Heavy"))
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text("Attacker Stationary (Heavy +1)", style: OmnispexTypography.body),
+                  title: Text("Attacker Stationary (Heavy +1)",
+                      style: OmnispexTypography.body),
                   value: isStationary,
                   activeColor: OmnispexColors.cyan,
-                  onChanged: (val) => ref.read(isStationaryProvider.notifier).state = val,
+                  onChanged: (val) =>
+                      ref.read(isStationaryProvider.notifier).state = val,
                 ),
               if (!activeWeapon.abilities.contains("Lance") &&
-                  (!activeWeapon.isRanged || (!activeWeapon.abilities.contains("Heavy") && activeWeapon.abilities.contains("Ignores Cover"))))
+                  (!activeWeapon.isRanged ||
+                      (!activeWeapon.abilities.contains("Heavy") &&
+                          activeWeapon.abilities.contains("Ignores Cover"))))
                 Text(
                   "No situational weapon modifiers apply to this profile.",
                   style: OmnispexTypography.bodyMuted,
@@ -744,32 +804,62 @@ class InBattleScreen extends ConsumerWidget {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  _buildOffensiveChip(ref, "Lethal Hits", activeWeapon.abilities.contains("Lethal Hits"), whatIfAbilities),
-                  _buildOffensiveChip(ref, "Sustained Hits 1", activeWeapon.abilities.contains("Sustained Hits 1"), whatIfAbilities),
-                  _buildOffensiveChip(ref, "Devastating Wounds", activeWeapon.abilities.contains("Devastating Wounds"), whatIfAbilities),
-                  _buildOffensiveChip(ref, "Twin-Linked", activeWeapon.abilities.contains("Twin-Linked"), whatIfAbilities),
-                  _buildOffensiveChip(ref, "Lance", activeWeapon.abilities.contains("Lance"), whatIfAbilities),
-                  _buildOffensiveChip(ref, "Ignores Cover", activeWeapon.abilities.contains("Ignores Cover"), whatIfAbilities),
+                  _buildOffensiveChip(
+                      ref,
+                      "Lethal Hits",
+                      activeWeapon.abilities.contains("Lethal Hits"),
+                      whatIfAbilities),
+                  _buildOffensiveChip(
+                      ref,
+                      "Sustained Hits 1",
+                      activeWeapon.abilities.contains("Sustained Hits 1"),
+                      whatIfAbilities),
+                  _buildOffensiveChip(
+                      ref,
+                      "Devastating Wounds",
+                      activeWeapon.abilities.contains("Devastating Wounds"),
+                      whatIfAbilities),
+                  _buildOffensiveChip(
+                      ref,
+                      "Twin-Linked",
+                      activeWeapon.abilities.contains("Twin-Linked"),
+                      whatIfAbilities),
+                  _buildOffensiveChip(
+                      ref,
+                      "Lance",
+                      activeWeapon.abilities.contains("Lance"),
+                      whatIfAbilities),
+                  _buildOffensiveChip(
+                      ref,
+                      "Ignores Cover",
+                      activeWeapon.abilities.contains("Ignores Cover"),
+                      whatIfAbilities),
                 ],
               ),
               const SizedBox(height: 12),
               const Divider(color: OmnispexColors.border, height: 1),
               const SizedBox(height: 10),
-
               Row(
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<ReRollOption>(
                       value: hitReroll,
-                      decoration: const InputDecoration(labelText: "HIT RE-ROLLS"),
+                      decoration:
+                          const InputDecoration(labelText: "HIT RE-ROLLS"),
                       dropdownColor: OmnispexColors.surfaceCard,
                       items: const [
-                        DropdownMenuItem(value: ReRollOption.none, child: Text("None")),
-                        DropdownMenuItem(value: ReRollOption.ones, child: Text("Re-roll 1s")),
-                        DropdownMenuItem(value: ReRollOption.all, child: Text("Full Re-rolls")),
+                        DropdownMenuItem(
+                            value: ReRollOption.none, child: Text("None")),
+                        DropdownMenuItem(
+                            value: ReRollOption.ones,
+                            child: Text("Re-roll 1s")),
+                        DropdownMenuItem(
+                            value: ReRollOption.all,
+                            child: Text("Full Re-rolls")),
                       ],
                       onChanged: (val) {
-                        if (val != null) ref.read(hitRerollProvider.notifier).state = val;
+                        if (val != null)
+                          ref.read(hitRerollProvider.notifier).state = val;
                       },
                     ),
                   ),
@@ -777,15 +867,22 @@ class InBattleScreen extends ConsumerWidget {
                   Expanded(
                     child: DropdownButtonFormField<ReRollOption>(
                       value: woundReroll,
-                      decoration: const InputDecoration(labelText: "WOUND RE-ROLLS"),
+                      decoration:
+                          const InputDecoration(labelText: "WOUND RE-ROLLS"),
                       dropdownColor: OmnispexColors.surfaceCard,
                       items: const [
-                        DropdownMenuItem(value: ReRollOption.none, child: Text("None")),
-                        DropdownMenuItem(value: ReRollOption.ones, child: Text("Re-roll 1s")),
-                        DropdownMenuItem(value: ReRollOption.all, child: Text("Full Re-rolls")),
+                        DropdownMenuItem(
+                            value: ReRollOption.none, child: Text("None")),
+                        DropdownMenuItem(
+                            value: ReRollOption.ones,
+                            child: Text("Re-roll 1s")),
+                        DropdownMenuItem(
+                            value: ReRollOption.all,
+                            child: Text("Full Re-rolls")),
                       ],
                       onChanged: (val) {
-                        if (val != null) ref.read(woundRerollProvider.notifier).state = val;
+                        if (val != null)
+                          ref.read(woundRerollProvider.notifier).state = val;
                       },
                     ),
                   ),
@@ -811,42 +908,59 @@ class InBattleScreen extends ConsumerWidget {
                 runSpacing: 6,
                 children: [
                   FilterChip(
-                    label: Text("Armor of Contempt (-1 AP)", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
+                    label: Text("Armor of Contempt (-1 AP)",
+                        style: OmnispexTypography.monoStatBadge
+                            .copyWith(fontSize: 10)),
                     selected: defArmorOfContempt,
                     selectedColor: OmnispexColors.purple.withOpacity(0.25),
                     backgroundColor: OmnispexColors.surfaceElevated,
-                    side: BorderSide(color: defArmorOfContempt ? OmnispexColors.purple : OmnispexColors.border),
-                    onSelected: (val) => ref.read(defensiveArmorOfContemptProvider.notifier).state = val,
+                    side: BorderSide(
+                        color: defArmorOfContempt
+                            ? OmnispexColors.purple
+                            : OmnispexColors.border),
+                    onSelected: (val) => ref
+                        .read(defensiveArmorOfContemptProvider.notifier)
+                        .state = val,
                   ),
                   _buildDefensiveChip(
                     label: "-1 to Wound (Transhuman)",
                     isInherent: activeTarget.hasMinusWound,
                     isSelected: defMinusWound,
-                    onSelected: (val) => ref.read(defensiveMinusWoundProvider.notifier).state = val,
+                    onSelected: (val) => ref
+                        .read(defensiveMinusWoundProvider.notifier)
+                        .state = val,
                   ),
                   _buildDefensiveChip(
                     label: "4++ Invulnerable Save",
                     isInherent: activeTarget.has4PlusInvuln,
                     isSelected: defGrantInvuln4,
-                    onSelected: (val) => ref.read(defensiveGrantInvuln4Provider.notifier).state = val,
+                    onSelected: (val) => ref
+                        .read(defensiveGrantInvuln4Provider.notifier)
+                        .state = val,
                   ),
                   _buildDefensiveChip(
                     label: "5+++ Feel No Pain",
                     isInherent: activeTarget.hasFnp,
                     isSelected: defGrantFnp5,
-                    onSelected: (val) => ref.read(defensiveGrantFnp5Provider.notifier).state = val,
+                    onSelected: (val) => ref
+                        .read(defensiveGrantFnp5Provider.notifier)
+                        .state = val,
                   ),
                   _buildDefensiveChip(
                     label: "-1 Damage Reduction",
                     isInherent: activeTarget.hasDamageReduction,
                     isSelected: defGrantMinusDmg1,
-                    onSelected: (val) => ref.read(defensiveGrantMinusDamage1Provider.notifier).state = val,
+                    onSelected: (val) => ref
+                        .read(defensiveGrantMinusDamage1Provider.notifier)
+                        .state = val,
                   ),
                   _buildDefensiveChip(
                     label: "Half Damage",
                     isInherent: activeTarget.hasHalfDamage,
                     isSelected: defGrantHalfDmg,
-                    onSelected: (val) => ref.read(defensiveGrantHalfDamageProvider.notifier).state = val,
+                    onSelected: (val) => ref
+                        .read(defensiveGrantHalfDamageProvider.notifier)
+                        .state = val,
                   ),
                 ],
               ),
@@ -865,7 +979,9 @@ class InBattleScreen extends ConsumerWidget {
   ) {
     if (isInherent) {
       return Chip(
-        label: Text("$label (Inherent)", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.cyan)),
+        label: Text("$label (Inherent)",
+            style: OmnispexTypography.monoStatBadge
+                .copyWith(fontSize: 10, color: OmnispexColors.cyan)),
         backgroundColor: OmnispexColors.cyan.withOpacity(0.15),
         side: const BorderSide(color: OmnispexColors.cyan),
         padding: EdgeInsets.zero,
@@ -875,11 +991,13 @@ class InBattleScreen extends ConsumerWidget {
 
     final active = whatIfAbilities.contains(label);
     return FilterChip(
-      label: Text(label, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
+      label: Text(label,
+          style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
       selected: active,
       selectedColor: OmnispexColors.amber.withOpacity(0.25),
       backgroundColor: OmnispexColors.surfaceElevated,
-      side: BorderSide(color: active ? OmnispexColors.amber : OmnispexColors.border),
+      side: BorderSide(
+          color: active ? OmnispexColors.amber : OmnispexColors.border),
       onSelected: (selected) {
         final updated = Set<String>.from(whatIfAbilities);
         if (selected) {
@@ -900,7 +1018,9 @@ class InBattleScreen extends ConsumerWidget {
   }) {
     if (isInherent) {
       return Chip(
-        label: Text("$label (Inherent)", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.purple)),
+        label: Text("$label (Inherent)",
+            style: OmnispexTypography.monoStatBadge
+                .copyWith(fontSize: 10, color: OmnispexColors.purple)),
         backgroundColor: OmnispexColors.purple.withOpacity(0.15),
         side: const BorderSide(color: OmnispexColors.purple),
         padding: EdgeInsets.zero,
@@ -909,11 +1029,13 @@ class InBattleScreen extends ConsumerWidget {
     }
 
     return FilterChip(
-      label: Text(label, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
+      label: Text(label,
+          style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
       selected: isSelected,
       selectedColor: OmnispexColors.purple.withOpacity(0.25),
       backgroundColor: OmnispexColors.surfaceElevated,
-      side: BorderSide(color: isSelected ? OmnispexColors.purple : OmnispexColors.border),
+      side: BorderSide(
+          color: isSelected ? OmnispexColors.purple : OmnispexColors.border),
       onSelected: onSelected,
     );
   }
@@ -936,7 +1058,9 @@ class InBattleScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("CUSTOM WEAPON ATTRIBUTES", style: OmnispexTypography.label.copyWith(color: OmnispexColors.amber)),
+              Text("CUSTOM WEAPON ATTRIBUTES",
+                  style: OmnispexTypography.label
+                      .copyWith(color: OmnispexColors.amber)),
               SegmentedButton<bool>(
                 segments: const [
                   ButtonSegment(value: false, label: Text("Ranged")),
@@ -945,7 +1069,8 @@ class InBattleScreen extends ConsumerWidget {
                 selected: {custom.isMelee},
                 onSelectionChanged: (set) {
                   final isMelee = set.first;
-                  ref.read(customWeaponProfileProvider.notifier).state = custom.copyWith(
+                  ref.read(customWeaponProfileProvider.notifier).state =
+                      custom.copyWith(
                     range: isMelee ? 0 : 24,
                   );
                 },
@@ -959,7 +1084,9 @@ class InBattleScreen extends ConsumerWidget {
                 child: TextFormField(
                   initialValue: custom.attacks,
                   decoration: const InputDecoration(labelText: "Attacks (A)"),
-                  onChanged: (val) => ref.read(customWeaponProfileProvider.notifier).state = custom.copyWith(attacks: val.trim()),
+                  onChanged: (val) => ref
+                      .read(customWeaponProfileProvider.notifier)
+                      .state = custom.copyWith(attacks: val.trim()),
                 ),
               ),
               const SizedBox(width: 8),
@@ -970,7 +1097,9 @@ class InBattleScreen extends ConsumerWidget {
                   decoration: const InputDecoration(labelText: "Skill (BS/WS)"),
                   onChanged: (val) {
                     final n = int.tryParse(val);
-                    if (n != null) ref.read(customWeaponProfileProvider.notifier).state = custom.copyWith(skill: n);
+                    if (n != null)
+                      ref.read(customWeaponProfileProvider.notifier).state =
+                          custom.copyWith(skill: n);
                   },
                 ),
               ),
@@ -982,7 +1111,9 @@ class InBattleScreen extends ConsumerWidget {
                   decoration: const InputDecoration(labelText: "Strength (S)"),
                   onChanged: (val) {
                     final n = int.tryParse(val);
-                    if (n != null) ref.read(customWeaponProfileProvider.notifier).state = custom.copyWith(strength: n);
+                    if (n != null)
+                      ref.read(customWeaponProfileProvider.notifier).state =
+                          custom.copyWith(strength: n);
                   },
                 ),
               ),
@@ -995,10 +1126,13 @@ class InBattleScreen extends ConsumerWidget {
                 child: TextFormField(
                   initialValue: "${custom.ap}",
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: "Armor Pen (AP)"),
+                  decoration:
+                      const InputDecoration(labelText: "Armor Pen (AP)"),
                   onChanged: (val) {
                     final n = int.tryParse(val);
-                    if (n != null) ref.read(customWeaponProfileProvider.notifier).state = custom.copyWith(ap: n);
+                    if (n != null)
+                      ref.read(customWeaponProfileProvider.notifier).state =
+                          custom.copyWith(ap: n);
                   },
                 ),
               ),
@@ -1007,13 +1141,16 @@ class InBattleScreen extends ConsumerWidget {
                 child: TextFormField(
                   initialValue: custom.damage,
                   decoration: const InputDecoration(labelText: "Damage (D)"),
-                  onChanged: (val) => ref.read(customWeaponProfileProvider.notifier).state = custom.copyWith(damage: val.trim()),
+                  onChanged: (val) => ref
+                      .read(customWeaponProfileProvider.notifier)
+                      .state = custom.copyWith(damage: val.trim()),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Text("KEYWORD ABILITIES", style: OmnispexTypography.label.copyWith(fontSize: 10)),
+          Text("KEYWORD ABILITIES",
+              style: OmnispexTypography.label.copyWith(fontSize: 10)),
           const SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -1032,7 +1169,9 @@ class InBattleScreen extends ConsumerWidget {
             ].map((kw) {
               final active = custom.abilities.contains(kw);
               return FilterChip(
-                label: Text(kw, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
+                label: Text(kw,
+                    style: OmnispexTypography.monoStatBadge
+                        .copyWith(fontSize: 10)),
                 selected: active,
                 selectedColor: OmnispexColors.cyan.withOpacity(0.25),
                 backgroundColor: OmnispexColors.surfaceCard,
@@ -1043,7 +1182,8 @@ class InBattleScreen extends ConsumerWidget {
                   } else {
                     list.remove(kw);
                   }
-                  ref.read(customWeaponProfileProvider.notifier).state = custom.copyWith(abilities: list);
+                  ref.read(customWeaponProfileProvider.notifier).state =
+                      custom.copyWith(abilities: list);
                 },
               );
             }).toList(),
@@ -1077,7 +1217,6 @@ class InBattleScreen extends ConsumerWidget {
       children: [
         TacticalVerdictBadge(verdict: verdictType),
         const SizedBox(height: 12),
-
         Row(
           children: [
             Expanded(
@@ -1097,7 +1236,9 @@ class InBattleScreen extends ConsumerWidget {
             Expanded(
               child: ScannableMetricCard(
                 label: "Safe Bet (≥80%)",
-                value: isSingleModel ? "${report.safeBetDamage80} HP" : "${report.safeBetKills80} models",
+                value: isSingleModel
+                    ? "${report.safeBetDamage80} HP"
+                    : "${report.safeBetKills80} models",
                 subtitle: "80% Confidence Floor",
                 accentColor: OmnispexColors.greenKill,
                 icon: Icons.shield,
@@ -1111,9 +1252,15 @@ class InBattleScreen extends ConsumerWidget {
                     ? "${(report.bracket50Probability * 100).toStringAsFixed(0)}%"
                     : "${(report.wipeProbability * 100).toStringAsFixed(0)}%",
                 subtitle: isSingleModel ? "≥50% HP Damage" : "100% Wipe Odds",
-                accentColor: (isSingleModel ? report.bracket50Probability : report.wipeProbability) >= 0.75
+                accentColor: (isSingleModel
+                            ? report.bracket50Probability
+                            : report.wipeProbability) >=
+                        0.75
                     ? OmnispexColors.greenKill
-                    : ((isSingleModel ? report.bracket50Probability : report.wipeProbability) >= 0.25
+                    : ((isSingleModel
+                                ? report.bracket50Probability
+                                : report.wipeProbability) >=
+                            0.25
                         ? OmnispexColors.yellowContest
                         : OmnispexColors.redIneffective),
                 icon: Icons.dangerous,
@@ -1122,8 +1269,9 @@ class InBattleScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 12),
-
-        if (attackMode == AttackMode.singleWeapon && currentProfiles.length > 1 && currentProfileReports.length == currentProfiles.length) ...[
+        if (attackMode == AttackMode.singleWeapon &&
+            currentProfiles.length > 1 &&
+            currentProfileReports.length == currentProfiles.length) ...[
           ProfileDuelBar(
             profiles: currentProfiles,
             reports: currentProfileReports,
@@ -1134,14 +1282,21 @@ class InBattleScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
         ],
-
         if (isDeepAnalytics) ...[
           TacticalCard(
-            title: isSingleModel ? "DEEP ANALYTICS: DAMAGE HISTOGRAM" : "DEEP ANALYTICS: CASUALTY HISTOGRAM",
+            title: isSingleModel
+                ? "DEEP ANALYTICS: DAMAGE HISTOGRAM"
+                : "DEEP ANALYTICS: CASUALTY HISTOGRAM",
             child: KillHistogramChart(
-              distribution: isSingleModel ? report.damageDistribution : report.killDistribution,
-              safeBetFloor: isSingleModel ? report.safeBetDamage80 : report.safeBetKills80,
-              title: isSingleModel ? "DAMAGE PROBABILITY DENSITY" : "KILL PROBABILITY DENSITY",
+              distribution: isSingleModel
+                  ? report.damageDistribution
+                  : report.killDistribution,
+              safeBetFloor: isSingleModel
+                  ? report.safeBetDamage80
+                  : report.safeBetKills80,
+              title: isSingleModel
+                  ? "DAMAGE PROBABILITY DENSITY"
+                  : "KILL PROBABILITY DENSITY",
               unitLabel: isSingleModel ? "dmg" : "kills",
               targetMaxHp: isSingleModel ? activeTarget.totalWounds : null,
             ),
@@ -1157,7 +1312,9 @@ class InBattleScreen extends ConsumerWidget {
                   children: [
                     _buildPercentilePill("p10", "${report.percentiles.p10}"),
                     _buildPercentilePill("p25", "${report.percentiles.p25}"),
-                    _buildPercentilePill("p50 (Median)", "${report.percentiles.p50}", isMedian: true),
+                    _buildPercentilePill(
+                        "p50 (Median)", "${report.percentiles.p50}",
+                        isMedian: true),
                     _buildPercentilePill("p75", "${report.percentiles.p75}"),
                     _buildPercentilePill("p90", "${report.percentiles.p90}"),
                   ],
@@ -1168,29 +1325,41 @@ class InBattleScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(child: Text("Raw Damage Generated:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                    Expanded(
+                        child: Text("Raw Damage Generated:",
+                            style: OmnispexTypography.bodyMuted,
+                            overflow: TextOverflow.ellipsis)),
                     const SizedBox(width: 8),
-                    Text("${report.rawDamageGenerated.toStringAsFixed(1)} dmg", style: OmnispexTypography.monoData),
+                    Text("${report.rawDamageGenerated.toStringAsFixed(1)} dmg",
+                        style: OmnispexTypography.monoData),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(child: Text("Effective Damage Applied:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                    Expanded(
+                        child: Text("Effective Damage Applied:",
+                            style: OmnispexTypography.bodyMuted,
+                            overflow: TextOverflow.ellipsis)),
                     const SizedBox(width: 8),
-                    Text("${report.expectedDamageDealt.toStringAsFixed(1)} dmg", style: OmnispexTypography.monoData),
+                    Text("${report.expectedDamageDealt.toStringAsFixed(1)} dmg",
+                        style: OmnispexTypography.monoData),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(child: Text("Overkill Loss to Model Truncation:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                    Expanded(
+                        child: Text("Overkill Loss to Model Truncation:",
+                            style: OmnispexTypography.bodyMuted,
+                            overflow: TextOverflow.ellipsis)),
                     const SizedBox(width: 8),
                     Text(
                       "${report.spilloverDamageLost.toStringAsFixed(1)} dmg",
-                      style: OmnispexTypography.monoData.copyWith(color: OmnispexColors.amber),
+                      style: OmnispexTypography.monoData
+                          .copyWith(color: OmnispexColors.amber),
                     ),
                   ],
                 ),
@@ -1207,27 +1376,42 @@ class InBattleScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text("Lethal Hits Contribution:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                      Expanded(
+                          child: Text("Lethal Hits Contribution:",
+                              style: OmnispexTypography.bodyMuted,
+                              overflow: TextOverflow.ellipsis)),
                       const SizedBox(width: 8),
-                      Text("${report.keywordAudit.lethalDamage.toStringAsFixed(1)} dmg", style: OmnispexTypography.monoData),
+                      Text(
+                          "${report.keywordAudit.lethalDamage.toStringAsFixed(1)} dmg",
+                          style: OmnispexTypography.monoData),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text("Sustained Hits Contribution:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                      Expanded(
+                          child: Text("Sustained Hits Contribution:",
+                              style: OmnispexTypography.bodyMuted,
+                              overflow: TextOverflow.ellipsis)),
                       const SizedBox(width: 8),
-                      Text("${report.keywordAudit.sustainedDamage.toStringAsFixed(1)} dmg", style: OmnispexTypography.monoData),
+                      Text(
+                          "${report.keywordAudit.sustainedDamage.toStringAsFixed(1)} dmg",
+                          style: OmnispexTypography.monoData),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text("Devastating Wounds Contribution:", style: OmnispexTypography.bodyMuted, overflow: TextOverflow.ellipsis)),
+                      Expanded(
+                          child: Text("Devastating Wounds Contribution:",
+                              style: OmnispexTypography.bodyMuted,
+                              overflow: TextOverflow.ellipsis)),
                       const SizedBox(width: 8),
-                      Text("${report.keywordAudit.devastatingDamage.toStringAsFixed(1)} dmg", style: OmnispexTypography.monoData),
+                      Text(
+                          "${report.keywordAudit.devastatingDamage.toStringAsFixed(1)} dmg",
+                          style: OmnispexTypography.monoData),
                     ],
                   ),
                 ],
@@ -1238,7 +1422,8 @@ class InBattleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPercentilePill(String label, String value, {bool isMedian = false}) {
+  Widget _buildPercentilePill(String label, String value,
+      {bool isMedian = false}) {
     return Column(
       children: [
         Text(
@@ -1252,7 +1437,9 @@ class InBattleScreen extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: isMedian ? OmnispexColors.cyan.withOpacity(0.15) : OmnispexColors.surfaceElevated,
+            color: isMedian
+                ? OmnispexColors.cyan.withOpacity(0.15)
+                : OmnispexColors.surfaceElevated,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: isMedian ? OmnispexColors.cyan : OmnispexColors.border,
@@ -1262,7 +1449,8 @@ class InBattleScreen extends ConsumerWidget {
             "$value kills",
             style: OmnispexTypography.monoData.copyWith(
               fontSize: 12,
-              color: isMedian ? OmnispexColors.cyan : OmnispexColors.textPrimary,
+              color:
+                  isMedian ? OmnispexColors.cyan : OmnispexColors.textPrimary,
               fontWeight: isMedian ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
