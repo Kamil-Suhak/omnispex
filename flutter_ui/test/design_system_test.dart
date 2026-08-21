@@ -5,7 +5,6 @@ import 'package:flutter_ui/screens/in_battle_screen.dart';
 import 'package:flutter_ui/screens/list_building_screen.dart';
 import 'package:flutter_ui/screens/main_shell.dart';
 import 'package:flutter_ui/screens/settings_screen.dart';
-import 'package:flutter_ui/screens/wahapedia_ingestion_screen.dart';
 import 'package:flutter_ui/theme/omnispex_theme.dart';
 import 'package:flutter_ui/widgets/scannable_metric_card.dart';
 import 'package:flutter_ui/widgets/stat_badge.dart';
@@ -99,20 +98,6 @@ void main() {
     expect(find.text("Heavy Elite Infantry (TEQ)"), findsOneWidget);
     expect(find.text("Light Transport / Skimmer"), findsOneWidget);
     expect(find.text("Heavy Armor / Monster"), findsOneWidget);
-  });
-
-  testWidgets('WahapediaIngestionScreen parses sample templates', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(body: WahapediaIngestionScreen()),
-        ),
-      ),
-    );
-
-    expect(find.text("WAHAPEDIA RAW INGESTION"), findsOneWidget);
-    expect(find.text("LIVE PARSED WEAPONS (5)"), findsOneWidget);
-    expect(find.text("Storm bolter [Standard]"), findsOneWidget);
   });
 
   testWidgets('SettingsScreen renders simulation engine and archetype configs', (WidgetTester tester) async {

@@ -6,4 +6,4 @@ pub mod weapon;
 pub use archetypes::{ArchetypeEntry, ArchetypeRoster};
 pub use dice::ValueExpr;
 pub use unit::{DefensiveAbility, ModelGroup, ModelProfile, UnitProfile};
-pub use weapon::{Keyword, WeaponAbility, WeaponProfile};
+pub use weapon::{parse_weapon_ability, Keyword, WeaponAbility, WeaponProfile};

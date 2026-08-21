@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'in_battle_screen.dart';
 import 'list_building_screen.dart';
 import 'settings_screen.dart';
-import 'wahapedia_ingestion_screen.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
@@ -30,9 +29,9 @@ class MainShell extends ConsumerWidget {
         label: 'List-Build',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.description_outlined),
-        selectedIcon: Icon(Icons.description, color: OmnispexColors.cyan),
-        label: 'Import',
+        icon: Icon(Icons.library_books_outlined),
+        selectedIcon: Icon(Icons.library_books, color: OmnispexColors.cyan),
+        label: 'Datasheets',
       ),
       const NavigationDestination(
         icon: Icon(Icons.settings_outlined),
@@ -53,9 +52,9 @@ class MainShell extends ConsumerWidget {
         label: Text('List-Build'),
       ),
       const NavigationRailDestination(
-        icon: Icon(Icons.description_outlined),
-        selectedIcon: Icon(Icons.description, color: OmnispexColors.cyan),
-        label: Text('Import'),
+        icon: Icon(Icons.library_books_outlined),
+        selectedIcon: Icon(Icons.library_books, color: OmnispexColors.cyan),
+        label: Text('Datasheets'),
       ),
       const NavigationRailDestination(
         icon: Icon(Icons.settings_outlined),
@@ -67,7 +66,11 @@ class MainShell extends ConsumerWidget {
     final pages = [
       const InBattleScreen(),
       const ListBuildingScreen(),
-      const WahapediaIngestionScreen(),
+      _buildPlaceholderTab(
+        title: "BSDATA UNIT BROWSER",
+        subtitle: "Search and inspect 40k faction units, datasheets & wargear",
+        icon: Icons.library_books,
+      ),
       const SettingsScreen(),
     ];
 

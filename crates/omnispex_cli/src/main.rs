@@ -1,17 +1,13 @@
 mod args;
 
-use args::{Cli, Commands, ParseWahaArgs, RunMatchupArgs, SimulateArgs};
+use args::{Cli, Commands, RunMatchupArgs, SimulateArgs};
 use clap::Parser;
 use omnispex_core::domain::dice::ValueExpr;
 use omnispex_core::domain::unit::{ModelProfile, UnitProfile};
-use omnispex_core::domain::weapon::{Keyword, WeaponProfile};
+use omnispex_core::domain::weapon::{parse_weapon_ability, Keyword, WeaponProfile};
 use omnispex_core::engine::context::CombatContext;
 use omnispex_core::engine::simulator::{run_simulation, SimulationReport};
-use omnispex_core::parser::wahapedia::{
-    parse_wahapedia_unit, parse_wahapedia_weapons, parse_weapon_ability,
-};
 use std::fs;
-use std::io::{self, Read};
 use std::str::FromStr;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,7 +15,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match cli.command {
         Commands::Simulate(sim_args) => handle_simulate(sim_args)?,
-        Commands::ParseWaha(parse_args) => handle_parse_waha(parse_args)?,
         Commands::RunMatchup(matchup_args) => handle_run_matchup(matchup_args)?,
     }
 
@@ -87,26 +82,6 @@ fn handle_simulate(args: SimulateArgs) -> Result<(), Box<dyn std::error::Error>>
 
     let report = run_simulation(&weapon, &target, &context, args.iterations);
     print_report(&weapon, &target, &context, &report);
-
-    Ok(())
-}
-
-fn handle_parse_waha(args: ParseWahaArgs) -> Result<(), Box<dyn std::error::Error>> {
-    let input = if let Some(path) = args.file {
-        fs::read_to_string(path)?
-    } else {
-        let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer)?;
-        buffer
-    };
-
-    if args.unit {
-        let unit = parse_wahapedia_unit(&input)?;
-        println!("{}", serde_json::to_string_pretty(&unit)?);
-    } else {
-        let weapons = parse_wahapedia_weapons(&input);
-        println!("{}", serde_json::to_string_pretty(&weapons)?);
-    }
 
     Ok(())
 }

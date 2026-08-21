@@ -204,3 +204,83 @@ impl WeaponProfile {
         })
     }
 }
+
+pub fn parse_weapon_ability(s: &str) -> Option<WeaponAbility> {
+    let clean = s.trim().trim_matches(|c| c == '[' || c == ']' || c == '(' || c == ')');
+    let upper = clean.to_uppercase();
+
+    if upper == "TORRENT" {
+        return Some(WeaponAbility::Torrent);
+    }
+    if upper == "LETHAL HITS" {
+        return Some(WeaponAbility::LethalHits);
+    }
+    if upper == "DEVASTATING WOUNDS" {
+        return Some(WeaponAbility::DevastatingWounds);
+    }
+    if upper == "TWIN-LINKED" || upper == "TWIN LINKED" {
+        return Some(WeaponAbility::TwinLinked);
+    }
+    if upper == "BLAST" {
+        return Some(WeaponAbility::Blast);
+    }
+    if upper == "IGNORES COVER" {
+        return Some(WeaponAbility::IgnoresCover);
+    }
+    if upper == "HEAVY" {
+        return Some(WeaponAbility::Heavy);
+    }
+    if upper == "LANCE" {
+        return Some(WeaponAbility::Lance);
+    }
+    if upper == "INDIRECT FIRE" {
+        return Some(WeaponAbility::IndirectFire);
+    }
+    if upper == "PRECISION" {
+        return Some(WeaponAbility::Precision);
+    }
+    if upper == "HAZARDOUS" {
+        return Some(WeaponAbility::Hazardous);
+    }
+    if upper == "ASSAULT" {
+        return Some(WeaponAbility::Assault);
+    }
+    if upper == "EXTRA ATTACKS" {
+        return Some(WeaponAbility::ExtraAttacks);
+    }
+
+    if let Some(rest) = upper.strip_prefix("SUSTAINED HITS") {
+        let val_str = rest.trim();
+        if let Ok(val) = val_str.parse::<u32>() {
+            return Some(WeaponAbility::SustainedHits(val));
+        }
+    }
+
+    if let Some(rest) = upper.strip_prefix("RAPID FIRE") {
+        let val_str = rest.trim();
+        if let Ok(val) = val_str.parse::<u32>() {
+            return Some(WeaponAbility::RapidFire(val));
+        }
+    }
+
+    if let Some(rest) = upper.strip_prefix("MELTA") {
+        let val_str = rest.trim();
+        if let Ok(val) = val_str.parse::<u32>() {
+            return Some(WeaponAbility::Melta(val));
+        }
+    }
+
+    let anti_re = regex::Regex::new(r"(?i)^ANTI-([A-Z0-9_]+)\s+(\d+)\+?$").ok()?;
+    if let Some(caps) = anti_re.captures(&upper) {
+        let target_str = caps.get(1).map_or("", |m| m.as_str());
+        let threshold_str = caps.get(2).map_or("", |m| m.as_str());
+        if let Ok(threshold) = threshold_str.parse::<u32>() {
+            return Some(WeaponAbility::Anti {
+                target: Keyword::from(target_str),
+                threshold,
+            });
+        }
+    }
+
+    None
+}

@@ -371,38 +371,5 @@ mod tests {
 
         assert_eq!(outcome.attacks_generated, 8);
     }
-
-    #[test]
-    fn test_parser_wahapedia_weapon_and_unit() {
-        let weapon_raw = r#"Bolt rifle [HEAVY] 24" 2 3+ 4 -1 1 [HEAVY]"#;
-        let weapon = parse_weapon_line(weapon_raw).expect("Failed to parse weapon line");
-        assert_eq!(weapon.name, "Bolt rifle");
-        assert_eq!(weapon.range, 24);
-        assert_eq!(weapon.attacks, ValueExpr::Flat(2));
-        assert_eq!(weapon.skill, 3);
-        assert_eq!(weapon.strength, 4);
-        assert_eq!(weapon.ap, 1);
-        assert_eq!(weapon.damage, ValueExpr::Flat(1));
-        assert!(weapon.has_heavy());
-
-        let unit_raw = r#"
-Intercessor Squad
-M 6" T 4 SV 3+ W 2
-KEYWORDS: INFANTRY, IMPERIUM, TACTICUS
-INVULNERABLE SAVE: 4+
-FEEL NO PAIN: 6+
-MODELS: 10
-"#;
-        let unit = parse_wahapedia_unit(unit_raw).expect("Failed to parse unit");
-        assert_eq!(unit.name, "Intercessor Squad");
-        assert_eq!(unit.toughness, 4);
-        assert_eq!(unit.total_models(), 10);
-        let expanded = unit.expanded_models();
-        assert_eq!(expanded.len(), 10);
-        assert_eq!(expanded[0].save, 3);
-        assert_eq!(expanded[0].wounds, 2);
-        assert_eq!(expanded[0].invulnerable_save, Some(4));
-        assert_eq!(expanded[0].feel_no_pain, Some(6));
-        assert!(unit.has_keyword(&Keyword::Infantry));
-    }
 }
+

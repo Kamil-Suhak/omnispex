@@ -13,8 +13,6 @@ pub struct Cli {
 pub enum Commands {
     /// Run an ad-hoc combat simulation from manual parameters
     Simulate(SimulateArgs),
-    /// Parse raw Wahapedia text table into structured JSON
-    ParseWaha(ParseWahaArgs),
     /// Run simulation between two JSON profile files and print ASCII distribution report
     RunMatchup(RunMatchupArgs),
 }
@@ -86,15 +84,6 @@ pub struct SimulateArgs {
 
     #[arg(long)]
     pub in_engagement: bool,
-}
-
-#[derive(Args, Debug)]
-pub struct ParseWahaArgs {
-    #[arg(short, long)]
-    pub file: Option<PathBuf>,
-
-    #[arg(long)]
-    pub unit: bool,
 }
 
 #[derive(Args, Debug)]
