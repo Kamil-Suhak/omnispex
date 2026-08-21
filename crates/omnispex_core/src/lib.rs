@@ -371,5 +371,96 @@ mod tests {
 
         assert_eq!(outcome.attacks_generated, 8);
     }
+
+    #[test]
+    fn test_bsdata_parser_unit_and_weapons() {
+        use parser::BsDataParser;
+
+        let sample_json = r#"{
+            "catalogue": {
+                "id": "ork-cat-1",
+                "name": "Xenos - Orks",
+                "revision": 2,
+                "sharedSelectionEntries": [
+                    {
+                        "name": "Battlewagon",
+                        "type": "model",
+                        "costs": [{ "name": "pts", "value": 160 }],
+                        "categoryLinks": [
+                            { "name": "Vehicle" },
+                            { "name": "Transport" }
+                        ],
+                        "profiles": [
+                            {
+                                "name": "Battlewagon",
+                                "typeName": "Unit",
+                                "characteristics": [
+                                    { "name": "M", "$text": "10\"" },
+                                    { "name": "T", "$text": "10" },
+                                    { "name": "Sv", "$text": "3+" },
+                                    { "name": "W", "$text": "16" },
+                                    { "name": "InSv", "$text": "6+" }
+                                ]
+                            },
+                            {
+                                "name": "Ramshackle but Rugged",
+                                "typeName": "Abilities",
+                                "characteristics": [
+                                    { "name": "Description", "$text": "worsen the Armour Penetration characteristic of that attack by 1." }
+                                ]
+                            }
+                        ],
+                        "selectionEntryGroups": [
+                            {
+                                "selectionEntries": [
+                                    {
+                                        "name": "Killkannon",
+                                        "type": "upgrade",
+                                        "profiles": [
+                                            {
+                                                "name": "Killkannon",
+                                                "typeName": "Ranged Weapons",
+                                                "characteristics": [
+                                                    { "name": "Range", "$text": "24\"" },
+                                                    { "name": "A", "$text": "D6+1" },
+                                                    { "name": "BS", "$text": "5+" },
+                                                    { "name": "S", "$text": "9" },
+                                                    { "name": "AP", "$text": "-2" },
+                                                    { "name": "D", "$text": "2" },
+                                                    { "name": "Keywords", "$text": "BLAST" }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+        let faction = BsDataParser::parse_catalogue_json(sample_json).expect("Parse failed");
+        assert_eq!(faction.name, "Xenos - Orks");
+        assert_eq!(faction.units.len(), 1);
+
+        let unit = &faction.units[0];
+        assert_eq!(unit.name, "Battlewagon");
+        assert_eq!(unit.points_cost, Some(160));
+        assert_eq!(unit.profile.toughness, 10);
+        let models = unit.profile.expanded_models();
+        assert_eq!(models[0].save, 3);
+        assert_eq!(models[0].wounds, 16);
+        assert_eq!(models[0].invulnerable_save, Some(6));
+        assert!(unit.profile.defensive_abilities.contains(&domain::DefensiveAbility::MinusOneAp));
+
+        assert_eq!(unit.weapons.len(), 1);
+        let weapon = &unit.weapons[0];
+        assert_eq!(weapon.name, "Killkannon");
+        assert_eq!(weapon.range, 24);
+        assert_eq!(weapon.strength, 9);
+        assert_eq!(weapon.ap, 2);
+        assert!(weapon.has_blast());
+    }
 }
 

@@ -5,6 +5,7 @@ import 'package:flutter_ui/screens/in_battle_screen.dart';
 import 'package:flutter_ui/screens/list_building_screen.dart';
 import 'package:flutter_ui/screens/main_shell.dart';
 import 'package:flutter_ui/screens/settings_screen.dart';
+import 'package:flutter_ui/screens/unit_browser_screen.dart';
 import 'package:flutter_ui/theme/omnispex_theme.dart';
 import 'package:flutter_ui/widgets/scannable_metric_card.dart';
 import 'package:flutter_ui/widgets/stat_badge.dart';
@@ -112,5 +113,21 @@ void main() {
     expect(find.text("SETTINGS & ARCHETYPES"), findsOneWidget);
     expect(find.text("1. SIMULATION ENGINE PARAMETERS"), findsOneWidget);
     expect(find.text("2. CUSTOMIZABLE DEFENSIVE ARCHETYPES"), findsOneWidget);
+  });
+
+  testWidgets('UnitBrowserScreen renders search bar and bundled 40k units', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: UnitBrowserScreen()),
+        ),
+      ),
+    );
+
+    expect(find.text("BSDATA UNIT & WEAPON BROWSER"), findsOneWidget);
+    expect(find.text("SEARCH & ROSTER FILTERS"), findsOneWidget);
+    expect(find.text("Battlewagon"), findsOneWidget);
+    expect(find.text("Terminator Squad"), findsOneWidget);
+    expect(find.text("Leman Russ Battle Tank"), findsOneWidget);
   });
 }

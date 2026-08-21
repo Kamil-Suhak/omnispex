@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'in_battle_screen.dart';
 import 'list_building_screen.dart';
 import 'settings_screen.dart';
+import 'unit_browser_screen.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
@@ -66,11 +67,7 @@ class MainShell extends ConsumerWidget {
     final pages = [
       const InBattleScreen(),
       const ListBuildingScreen(),
-      _buildPlaceholderTab(
-        title: "BSDATA UNIT BROWSER",
-        subtitle: "Search and inspect 40k faction units, datasheets & wargear",
-        icon: Icons.library_books,
-      ),
+      const UnitBrowserScreen(),
       const SettingsScreen(),
     ];
 

@@ -33,6 +33,15 @@ final weaponCountProvider = StateProvider<int>((ref) => 1);
 final selectedSquadPresetIndexProvider = StateProvider<int>((ref) => 0);
 
 final selectedTargetIndexProvider = StateProvider<int>((ref) => 0);
+final isCustomTargetModeProvider = StateProvider<bool>((ref) => false);
+final customTargetProfileProvider = StateProvider<UnitUiProfile>((ref) => const UnitUiProfile(
+      name: "Custom Target",
+      toughness: 4,
+      save: 3,
+      woundsPerModel: 2,
+      modelCount: 5,
+      keywords: ["INFANTRY"],
+    ));
 final isStationaryProvider = StateProvider<bool>((ref) => true);
 final hasChargedProvider = StateProvider<bool>((ref) => false);
 final targetInCoverProvider = StateProvider<bool>((ref) => false);
@@ -85,12 +94,15 @@ class InBattleScreen extends ConsumerWidget {
     final defGrantMinusDmg1 = ref.watch(defensiveGrantMinusDamage1Provider);
     final defGrantHalfDmg = ref.watch(defensiveGrantHalfDamageProvider);
 
+    final isCustomTarget = ref.watch(isCustomTargetModeProvider);
+    final customTarget = ref.watch(customTargetProfileProvider);
+
     final weapons = SimulationService.defaultWeapons;
     final squadPresets = SimulationService.defaultSquadPresets;
     final targets = SimulationService.defaultTargets;
 
     final activeWeapon = isCustomWeapon ? customWeapon : weapons[weaponIdx % weapons.length];
-    final activeTarget = targets[targetIdx % targets.length];
+    final activeTarget = isCustomTarget ? customTarget : targets[targetIdx % targets.length];
     final activeSquad = squadPresets[squadIdx % squadPresets.length];
 
     final SimulationUiReport report;
