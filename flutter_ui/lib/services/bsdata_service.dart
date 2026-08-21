@@ -29,9 +29,28 @@ class BsDataService {
     final results = <BsDataUnit>[];
 
     for (final faction in _bundledFactions) {
-      if (factionFilter != "All Factions" &&
-          !faction.name.toLowerCase().contains(factionFilter.toLowerCase())) {
-        continue;
+      if (factionFilter != "All Factions") {
+        if (factionFilter == "Space Marines" && faction.id != "sm-1") {
+          continue;
+        } else if (factionFilter == "Chaos Space Marines" && faction.id != "csm-1") {
+          continue;
+        } else if (factionFilter == "Astra Militarum" && faction.id != "am-1") {
+          continue;
+        } else if (factionFilter == "Orks" && faction.id != "ork-1") {
+          continue;
+        } else if (factionFilter == "Necrons" && faction.id != "nec-1") {
+          continue;
+        } else if (factionFilter == "Tyranids" && faction.id != "tyr-1") {
+          continue;
+        } else if (factionFilter == "Adeptus Custodes" && faction.id != "cust-1") {
+          continue;
+        } else if (factionFilter == "T'au Empire" && faction.id != "tau-1") {
+          continue;
+        } else if (factionFilter == "Aeldari" && faction.id != "ael-1") {
+          continue;
+        } else if (!faction.name.toLowerCase().contains(factionFilter.toLowerCase())) {
+          continue;
+        }
       }
 
       for (final unit in faction.units) {

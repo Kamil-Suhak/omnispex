@@ -11,3 +11,7 @@ final customArchetypesProvider = StateProvider<List<ArchetypeEntryUi>>((ref) => 
 
 final simulationIterationsProvider = StateProvider<int>((ref) => 10000);
 final confidenceThresholdProvider = StateProvider<int>((ref) => 80);
+
+final loadedAttackerNameProvider = StateProvider<String?>((ref) => null);
+final loadedDefenderNameProvider = StateProvider<String?>((ref) => null);
+

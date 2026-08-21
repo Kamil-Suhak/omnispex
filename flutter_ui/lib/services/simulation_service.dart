@@ -353,6 +353,7 @@ class SimulationService {
     bool defensiveGrantHalfDamage = false,
     bool defensiveGrantMinusDamage1 = false,
     int iterations = 10000,
+    int seed = 42,
   }) {
     return runSquadSimulation(
       loadout: [WeaponLoadoutEntry(weapon: weapon, count: weaponCount)],
@@ -373,6 +374,7 @@ class SimulationService {
       defensiveGrantHalfDamage: defensiveGrantHalfDamage,
       defensiveGrantMinusDamage1: defensiveGrantMinusDamage1,
       iterations: iterations,
+      seed: seed,
     );
   }
 
@@ -395,8 +397,9 @@ class SimulationService {
     bool defensiveGrantHalfDamage = false,
     bool defensiveGrantMinusDamage1 = false,
     int iterations = 10000,
+    int seed = 42,
   }) {
-    final rng = Random();
+    final rng = Random(seed);
     int totalKills = 0;
     int totalDamage = 0;
     int totalRawDamage = 0;

@@ -16,6 +16,7 @@ enum AttackMode { singleWeapon, squadBundle }
 
 final attackModeProvider = StateProvider<AttackMode>((ref) => AttackMode.singleWeapon);
 final selectedWeaponIndexProvider = StateProvider<int>((ref) => 0);
+final selectedProfileIndexProvider = StateProvider<int>((ref) => 0);
 final isCustomWeaponModeProvider = StateProvider<bool>((ref) => false);
 final customWeaponProfileProvider = StateProvider<WeaponUiProfile>((ref) => const WeaponUiProfile(
       name: "Custom Weapon",
@@ -70,6 +71,7 @@ class InBattleScreen extends ConsumerWidget {
     final isDeepAnalytics = ref.watch(isDeepAnalyticsModeProvider);
     final attackMode = ref.watch(attackModeProvider);
     final weaponIdx = ref.watch(selectedWeaponIndexProvider);
+    final profileIdx = ref.watch(selectedProfileIndexProvider);
     final isCustomWeapon = ref.watch(isCustomWeaponModeProvider);
     final customWeapon = ref.watch(customWeaponProfileProvider);
     final weaponCount = ref.watch(weaponCountProvider);
@@ -96,12 +98,31 @@ class InBattleScreen extends ConsumerWidget {
 
     final isCustomTarget = ref.watch(isCustomTargetModeProvider);
     final customTarget = ref.watch(customTargetProfileProvider);
+    final loadedAttackerName = ref.watch(loadedAttackerNameProvider);
+    final loadedDefenderName = ref.watch(loadedDefenderNameProvider);
 
     final weapons = SimulationService.defaultWeapons;
     final squadPresets = SimulationService.defaultSquadPresets;
     final targets = SimulationService.defaultTargets;
 
-    final activeWeapon = isCustomWeapon ? customWeapon : weapons[weaponIdx % weapons.length];
+    // Group weapons by unique base name
+    final Map<String, List<WeaponUiProfile>> groupedWeapons = {};
+    for (final w in weapons) {
+      groupedWeapons.putIfAbsent(w.name, () => []).add(w);
+    }
+    final weaponNames = groupedWeapons.keys.toList();
+
+    final List<WeaponUiProfile> currentProfiles;
+    if (isCustomWeapon) {
+      currentProfiles = [customWeapon];
+    } else {
+      final wName = weaponNames.isNotEmpty ? weaponNames[weaponIdx % weaponNames.length] : "";
+      currentProfiles = groupedWeapons[wName] ?? [weapons.first];
+    }
+
+    final activeWeapon = isCustomWeapon
+        ? customWeapon
+        : currentProfiles[profileIdx % currentProfiles.length];
     final activeTarget = isCustomTarget ? customTarget : targets[targetIdx % targets.length];
     final activeSquad = squadPresets[squadIdx % squadPresets.length];
 
@@ -149,39 +170,30 @@ class InBattleScreen extends ConsumerWidget {
       );
     }
 
-    WeaponUiProfile? altWeapon;
-    SimulationUiReport? altReport;
-    if (attackMode == AttackMode.singleWeapon && !isCustomWeapon) {
-      if (weaponIdx == 0) {
-        altWeapon = weapons[1];
-      } else if (weaponIdx == 1) {
-        altWeapon = weapons[0];
-      } else if (weaponIdx == 2) {
-        altWeapon = weapons[3];
-      } else if (weaponIdx == 3) {
-        altWeapon = weapons[2];
-      }
-
-      if (altWeapon != null) {
-        altReport = SimulationService.runSimulation(
-          weapon: altWeapon,
-          target: activeTarget,
-          isStationary: isStationary,
-          hasCharged: hasCharged,
-          targetInCover: targetInCover,
-          weaponCount: weaponCount,
-          distance: distance,
-          extraAbilities: whatIfAbilities,
-          hitReroll: hitReroll,
-          woundReroll: woundReroll,
-          bonusStrength: bonusStrength,
-          bonusAp: bonusAp,
-          defensiveArmorOfContempt: defArmorOfContempt,
-          defensiveMinusWound: defMinusWound,
-          defensiveGrantInvuln4: defGrantInvuln4,
-          defensiveGrantFnp5: defGrantFnp5,
-          defensiveGrantMinusDamage1: defGrantMinusDmg1,
-          defensiveGrantHalfDamage: defGrantHalfDmg,
+    final List<SimulationUiReport> currentProfileReports = [];
+    if (attackMode == AttackMode.singleWeapon && !isCustomWeapon && currentProfiles.length > 1) {
+      for (final p in currentProfiles) {
+        currentProfileReports.add(
+          SimulationService.runSimulation(
+            weapon: p,
+            target: activeTarget,
+            isStationary: isStationary,
+            hasCharged: hasCharged,
+            targetInCover: targetInCover,
+            weaponCount: weaponCount,
+            distance: distance,
+            extraAbilities: whatIfAbilities,
+            hitReroll: hitReroll,
+            woundReroll: woundReroll,
+            bonusStrength: bonusStrength,
+            bonusAp: bonusAp,
+            defensiveArmorOfContempt: defArmorOfContempt,
+            defensiveMinusWound: defMinusWound,
+            defensiveGrantInvuln4: defGrantInvuln4,
+            defensiveGrantFnp5: defGrantFnp5,
+            defensiveGrantMinusDamage1: defGrantMinusDmg1,
+            defensiveGrantHalfDamage: defGrantHalfDmg,
+          ),
         );
       }
     }
@@ -228,7 +240,10 @@ class InBattleScreen extends ConsumerWidget {
                         context,
                         ref,
                         attackMode,
-                        weapons,
+                        groupedWeapons,
+                        weaponNames,
+                        currentProfiles,
+                        profileIdx,
                         squadPresets,
                         targets,
                         weaponIdx,
@@ -237,6 +252,9 @@ class InBattleScreen extends ConsumerWidget {
                         weaponCount,
                         squadIdx,
                         targetIdx,
+                        isCustomTarget,
+                        loadedAttackerName,
+                        loadedDefenderName,
                         isStationary,
                         hasCharged,
                         targetInCover,
@@ -262,9 +280,9 @@ class InBattleScreen extends ConsumerWidget {
                         report,
                         activeWeapon,
                         activeTarget,
-                        altWeapon,
-                        altReport,
-                        weaponIdx,
+                        currentProfiles,
+                        currentProfileReports,
+                        profileIdx,
                         isDeepAnalytics,
                         attackMode,
                         ref,
@@ -277,7 +295,10 @@ class InBattleScreen extends ConsumerWidget {
                   context,
                   ref,
                   attackMode,
-                  weapons,
+                  groupedWeapons,
+                  weaponNames,
+                  currentProfiles,
+                  profileIdx,
                   squadPresets,
                   targets,
                   weaponIdx,
@@ -286,6 +307,9 @@ class InBattleScreen extends ConsumerWidget {
                   weaponCount,
                   squadIdx,
                   targetIdx,
+                  isCustomTarget,
+                  loadedAttackerName,
+                  loadedDefenderName,
                   isStationary,
                   hasCharged,
                   targetInCover,
@@ -308,9 +332,9 @@ class InBattleScreen extends ConsumerWidget {
                   report,
                   activeWeapon,
                   activeTarget,
-                  altWeapon,
-                  altReport,
-                  weaponIdx,
+                  currentProfiles,
+                  currentProfileReports,
+                  profileIdx,
                   isDeepAnalytics,
                   attackMode,
                   ref,
@@ -326,7 +350,11 @@ class InBattleScreen extends ConsumerWidget {
   void _resetAll(WidgetRef ref) {
     ref.read(attackModeProvider.notifier).state = AttackMode.singleWeapon;
     ref.read(selectedWeaponIndexProvider.notifier).state = 0;
+    ref.read(selectedProfileIndexProvider.notifier).state = 0;
     ref.read(isCustomWeaponModeProvider.notifier).state = false;
+    ref.read(isCustomTargetModeProvider.notifier).state = false;
+    ref.read(loadedAttackerNameProvider.notifier).state = null;
+    ref.read(loadedDefenderNameProvider.notifier).state = null;
     ref.read(weaponCountProvider.notifier).state = 1;
     ref.read(selectedSquadPresetIndexProvider.notifier).state = 0;
     ref.read(selectedTargetIndexProvider.notifier).state = 0;
@@ -351,7 +379,10 @@ class InBattleScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     AttackMode attackMode,
-    List<WeaponUiProfile> weapons,
+    Map<String, List<WeaponUiProfile>> groupedWeapons,
+    List<String> weaponNames,
+    List<WeaponUiProfile> currentProfiles,
+    int profileIdx,
     List<SquadPreset> squadPresets,
     List<UnitUiProfile> targets,
     int weaponIdx,
@@ -360,6 +391,9 @@ class InBattleScreen extends ConsumerWidget {
     int weaponCount,
     int squadIdx,
     int targetIdx,
+    bool isCustomTarget,
+    String? loadedAttackerName,
+    String? loadedDefenderName,
     bool isStationary,
     bool hasCharged,
     bool targetInCover,
@@ -406,22 +440,26 @@ class InBattleScreen extends ConsumerWidget {
         // 1. Attacker Weapon / Squad Loadout
         if (attackMode == AttackMode.singleWeapon)
           TacticalCard(
-            title: "1. ATTACKER WEAPON LOADOUT",
+            title: loadedAttackerName != null
+                ? "1. ATTACKER: ${loadedAttackerName.toUpperCase()}"
+                : "1. ATTACKER WEAPON LOADOUT",
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<int>(
-                  value: isCustomWeapon ? -1 : weaponIdx,
+                  value: isCustomWeapon ? -1 : (weaponIdx % (weaponNames.isNotEmpty ? weaponNames.length : 1)),
                   isExpanded: true,
                   dropdownColor: OmnispexColors.surfaceCard,
-                  decoration: const InputDecoration(labelText: "SELECT WEAPON PROFILE"),
+                  decoration: const InputDecoration(labelText: "SELECT WEAPON LOADOUT"),
                   items: [
-                    ...List.generate(weapons.length, (i) {
-                      final w = weapons[i];
+                    ...List.generate(weaponNames.length, (i) {
+                      final name = weaponNames[i];
+                      final profiles = groupedWeapons[name] ?? [];
+                      final profileLabel = profiles.length > 1 ? " (${profiles.length} Profiles)" : "";
                       return DropdownMenuItem(
                         value: i,
                         child: Text(
-                          "${w.name} [${w.profileName}]",
+                          "$name$profileLabel",
                           style: OmnispexTypography.monoData.copyWith(fontSize: 13),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -442,6 +480,7 @@ class InBattleScreen extends ConsumerWidget {
                     } else if (val != null) {
                       ref.read(isCustomWeaponModeProvider.notifier).state = false;
                       ref.read(selectedWeaponIndexProvider.notifier).state = val;
+                      ref.read(selectedProfileIndexProvider.notifier).state = 0;
                     }
                   },
                 ),
@@ -487,11 +526,18 @@ class InBattleScreen extends ConsumerWidget {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      StatBadge(
-                        label: "TYPE",
-                        value: activeWeapon.isMelee ? "MELEE" : '${activeWeapon.range}"',
-                        accentColor: activeWeapon.isMelee ? OmnispexColors.amber : OmnispexColors.cyan,
-                      ),
+                      if (activeWeapon.isMelee)
+                        const StatBadge(
+                          label: "TYPE",
+                          value: "MELEE",
+                          accentColor: OmnispexColors.amber,
+                        )
+                      else
+                        StatBadge(
+                          label: "RANGED",
+                          value: '${activeWeapon.range}"',
+                          accentColor: OmnispexColors.cyan,
+                        ),
                       StatBadge(label: "A", value: activeWeapon.attacks),
                       StatBadge(label: "BS/WS", value: '${activeWeapon.skill}+'),
                       StatBadge(label: "S", value: '${activeWeapon.strength}'),
@@ -577,24 +623,41 @@ class InBattleScreen extends ConsumerWidget {
 
         // 2. Defender Target Datasheet
         TacticalCard(
-          title: "2. DEFENDER TARGET DATASHEET",
+          title: loadedDefenderName != null
+              ? "2. DEFENDER: ${loadedDefenderName.toUpperCase()}"
+              : "2. DEFENDER TARGET DATASHEET",
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DropdownButtonFormField<int>(
-                value: targetIdx,
+                value: isCustomTarget ? -1 : targetIdx,
                 isExpanded: true,
                 dropdownColor: OmnispexColors.surfaceCard,
                 decoration: const InputDecoration(labelText: "SELECT TARGET UNIT"),
-                items: List.generate(targets.length, (i) {
-                  final t = targets[i];
-                  return DropdownMenuItem(
-                    value: i,
-                    child: Text(t.name, style: OmnispexTypography.monoData, overflow: TextOverflow.ellipsis),
-                  );
-                }),
+                items: [
+                  if (isCustomTarget)
+                    DropdownMenuItem(
+                      value: -1,
+                      child: Text(
+                        "${activeTarget.name} (Datasheet)",
+                        style: OmnispexTypography.monoData.copyWith(color: OmnispexColors.amber),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ...List.generate(targets.length, (i) {
+                    final t = targets[i];
+                    return DropdownMenuItem(
+                      value: i,
+                      child: Text(t.name, style: OmnispexTypography.monoData, overflow: TextOverflow.ellipsis),
+                    );
+                  }),
+                ],
                 onChanged: (val) {
-                  if (val != null) ref.read(selectedTargetIndexProvider.notifier).state = val;
+                  if (val != null && val != -1) {
+                    ref.read(isCustomTargetModeProvider.notifier).state = false;
+                    ref.read(selectedTargetIndexProvider.notifier).state = val;
+                    ref.read(loadedDefenderNameProvider.notifier).state = null;
+                  }
                 },
               ),
               const SizedBox(height: 12),
@@ -994,9 +1057,9 @@ class InBattleScreen extends ConsumerWidget {
     SimulationUiReport report,
     WeaponUiProfile activeWeapon,
     UnitUiProfile activeTarget,
-    WeaponUiProfile? altWeapon,
-    SimulationUiReport? altReport,
-    int weaponIdx,
+    List<WeaponUiProfile> currentProfiles,
+    List<SimulationUiReport> currentProfileReports,
+    int profileIdx,
     bool isDeepAnalytics,
     AttackMode attackMode,
     WidgetRef ref,
@@ -1060,19 +1123,13 @@ class InBattleScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
 
-        if (attackMode == AttackMode.singleWeapon && altWeapon != null && altReport != null) ...[
+        if (attackMode == AttackMode.singleWeapon && currentProfiles.length > 1 && currentProfileReports.length == currentProfiles.length) ...[
           ProfileDuelBar(
-            profileA: activeWeapon,
-            reportA: report,
-            profileB: altWeapon,
-            reportB: altReport,
-            isASelected: true,
-            onSelectA: () {},
-            onSelectB: () {
-              final targetAltIdx = SimulationService.defaultWeapons.indexOf(altWeapon!);
-              if (targetAltIdx != -1) {
-                ref.read(selectedWeaponIndexProvider.notifier).state = targetAltIdx;
-              }
+            profiles: currentProfiles,
+            reports: currentProfileReports,
+            selectedIndex: profileIdx % currentProfiles.length,
+            onSelectProfile: (idx) {
+              ref.read(selectedProfileIndexProvider.notifier).state = idx;
             },
           ),
           const SizedBox(height: 12),

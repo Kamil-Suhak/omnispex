@@ -4,41 +4,56 @@ import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
 
 class ProfileDuelBar extends StatelessWidget {
-  final WeaponUiProfile profileA;
-  final SimulationUiReport reportA;
-  final WeaponUiProfile profileB;
-  final SimulationUiReport reportB;
-  final VoidCallback? onSelectA;
-  final VoidCallback? onSelectB;
-  final bool isASelected;
+  final List<WeaponUiProfile> profiles;
+  final List<SimulationUiReport> reports;
+  final int selectedIndex;
+  final ValueChanged<int>? onSelectProfile;
 
   const ProfileDuelBar({
     super.key,
-    required this.profileA,
-    required this.reportA,
-    required this.profileB,
-    required this.reportB,
-    this.onSelectA,
-    this.onSelectB,
-    required this.isASelected,
+    required this.profiles,
+    required this.reports,
+    required this.selectedIndex,
+    this.onSelectProfile,
   });
 
   @override
   Widget build(BuildContext context) {
-    final scoreA = reportA.expectedModelsKilled * 100 + reportA.expectedDamageDealt;
-    final scoreB = reportB.expectedModelsKilled * 100 + reportB.expectedDamageDealt;
-    final aIsBetter = scoreA >= scoreB;
+    if (profiles.isEmpty || reports.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Find best profile score
+    int bestIndex = 0;
+    double bestScore = -1;
+    final scores = <double>[];
+
+    for (int i = 0; i < reports.length; i++) {
+      final rep = reports[i];
+      final score = rep.expectedModelsKilled * 100 + rep.expectedDamageDealt;
+      scores.add(score);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = i;
+      }
+    }
+
+    // Find second best or comparison baseline to calculate delta
+    double runnerUpScore = 0;
+    for (int i = 0; i < scores.length; i++) {
+      if (i != bestIndex && scores[i] > runnerUpScore) {
+        runnerUpScore = scores[i];
+      }
+    }
 
     final double deltaPercent;
-    if (aIsBetter && scoreB > 0) {
-      deltaPercent = ((scoreA - scoreB) / scoreB) * 100;
-    } else if (!aIsBetter && scoreA > 0) {
-      deltaPercent = ((scoreB - scoreA) / scoreA) * 100;
+    if (runnerUpScore > 0 && bestScore > runnerUpScore) {
+      deltaPercent = ((bestScore - runnerUpScore) / runnerUpScore) * 100;
     } else {
       deltaPercent = 0;
     }
 
-    final winningProfileName = aIsBetter ? profileA.profileName : profileB.profileName;
+    final winningProfile = profiles[bestIndex];
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -56,7 +71,10 @@ class ProfileDuelBar extends StatelessWidget {
             spacing: 8,
             runSpacing: 6,
             children: [
-              Text("PROFILE DUEL COMPARISON", style: OmnispexTypography.label),
+              Text(
+                profiles.length == 2 ? "PROFILE DUEL COMPARISON" : "MULTI-PROFILE COMPARISON (${profiles.length} PROFILES)",
+                style: OmnispexTypography.label,
+              ),
               if (deltaPercent > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -66,38 +84,59 @@ class ProfileDuelBar extends StatelessWidget {
                     border: Border.all(color: OmnispexColors.greenKill.withOpacity(0.4)),
                   ),
                   child: Text(
-                    "★ RECOMMEND: $winningProfileName (+${deltaPercent.toStringAsFixed(0)}% DELTA)",
+                    "★ RECOMMEND: ${winningProfile.profileName.toUpperCase()} (+${deltaPercent.toStringAsFixed(0)}% OUTPUT)",
                     style: OmnispexTypography.monoStatBadge.copyWith(
                       color: OmnispexColors.greenKill,
                       fontSize: 10,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _buildProfileCard(
-                  profile: profileA,
-                  report: reportA,
-                  isSelected: isASelected,
-                  isWinner: aIsBetter,
-                  onTap: onSelectA,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildProfileCard(
-                  profile: profileB,
-                  report: reportB,
-                  isSelected: !isASelected,
-                  isWinner: !aIsBetter,
-                  onTap: onSelectB,
-                ),
-              ),
-            ],
+
+          // Render Profiles in STABLE, FIXED order
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (profiles.length <= 2) {
+                return Row(
+                  children: List.generate(profiles.length, (i) {
+                    return Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: i < profiles.length - 1 ? 8 : 0),
+                        child: _buildProfileCard(
+                          profile: profiles[i],
+                          report: reports[i],
+                          isSelected: i == selectedIndex,
+                          isWinner: i == bestIndex && deltaPercent > 0,
+                          onTap: () => onSelectProfile?.call(i),
+                        ),
+                      ),
+                    );
+                  }),
+                );
+              }
+
+              // 3 or more profiles: wrap or grid
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: List.generate(profiles.length, (i) {
+                  final cardWidth = (constraints.maxWidth - (profiles.length - 1) * 8) / profiles.length;
+                  return SizedBox(
+                    width: cardWidth.clamp(160.0, 320.0),
+                    child: _buildProfileCard(
+                      profile: profiles[i],
+                      report: reports[i],
+                      isSelected: i == selectedIndex,
+                      isWinner: i == bestIndex && deltaPercent > 0,
+                      onTap: () => onSelectProfile?.call(i),
+                    ),
+                  );
+                }),
+              );
+            },
           ),
         ],
       ),
@@ -118,14 +157,14 @@ class ProfileDuelBar extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: isSelected
-              ? OmnispexColors.cyan.withOpacity(0.12)
+              ? OmnispexColors.cyan.withOpacity(0.14)
               : OmnispexColors.surfaceCard,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: isSelected
                 ? OmnispexColors.cyan
-                : (isWinner ? OmnispexColors.greenKill.withOpacity(0.5) : OmnispexColors.border),
-            width: isSelected ? 1.5 : 1.0,
+                : (isWinner ? OmnispexColors.greenKill.withOpacity(0.6) : OmnispexColors.border),
+            width: isSelected ? 1.8 : 1.0,
           ),
         ),
         child: Column(
@@ -140,23 +179,53 @@ class ProfileDuelBar extends StatelessWidget {
                     style: OmnispexTypography.h3.copyWith(
                       fontSize: 13,
                       color: isSelected ? OmnispexColors.cyan : OmnispexColors.textPrimary,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (isWinner)
-                  const Icon(Icons.check_circle, size: 14, color: OmnispexColors.greenKill),
+                if (isSelected)
+                  Container(
+                    margin: const EdgeInsets.only(left: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: OmnispexColors.cyan,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: Text(
+                      "ACTIVE",
+                      style: OmnispexTypography.monoStatBadge.copyWith(
+                        fontSize: 8,
+                        color: OmnispexColors.background,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  )
+                else if (isWinner)
+                  const Icon(Icons.star, size: 14, color: OmnispexColors.greenKill),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              "A: ${profile.attacks} | S: ${profile.strength} | AP: ${profile.ap} | D: ${profile.damage}",
+              "A:${profile.attacks} | S:${profile.strength} | AP:${profile.ap} | D:${profile.damage}",
               style: OmnispexTypography.monoStatBadge.copyWith(
                 fontSize: 10,
                 color: OmnispexColors.textSecondary,
               ),
               overflow: TextOverflow.ellipsis,
             ),
+            if (profile.abilities.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                profile.abilities.join(", "),
+                style: OmnispexTypography.monoStatBadge.copyWith(
+                  fontSize: 8,
+                  color: OmnispexColors.amber,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
             const SizedBox(height: 6),
             Wrap(
               alignment: WrapAlignment.spaceBetween,
@@ -165,13 +234,16 @@ class ProfileDuelBar extends StatelessWidget {
               children: [
                 Text(
                   "Kills: ${report.expectedModelsKilled.toStringAsFixed(1)}",
-                  style: OmnispexTypography.monoData.copyWith(fontSize: 11),
-                ),
-                Text(
-                  "Wipe: ${(report.wipeProbability * 100).toStringAsFixed(0)}%",
                   style: OmnispexTypography.monoData.copyWith(
                     fontSize: 11,
-                    color: report.wipeProbability > 0.5 ? OmnispexColors.greenKill : OmnispexColors.textMuted,
+                    color: isSelected ? OmnispexColors.cyan : OmnispexColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  "Dmg: ${report.expectedDamageDealt.toStringAsFixed(1)}",
+                  style: OmnispexTypography.monoData.copyWith(
+                    fontSize: 11,
+                    color: OmnispexColors.textSecondary,
                   ),
                 ),
               ],

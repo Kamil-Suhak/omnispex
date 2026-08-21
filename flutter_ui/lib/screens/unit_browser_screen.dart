@@ -332,6 +332,7 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () {
+                  ref.read(loadedAttackerNameProvider.notifier).state = unit.name;
                   if (unit.weapons.isNotEmpty) {
                     ref.read(customWeaponProfileProvider.notifier).state = unit.weapons.first;
                     ref.read(isCustomWeaponModeProvider.notifier).state = true;
@@ -355,6 +356,7 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () {
+                  ref.read(loadedDefenderNameProvider.notifier).state = unit.name;
                   ref.read(customTargetProfileProvider.notifier).state = unit.unitProfile;
                   ref.read(isCustomTargetModeProvider.notifier).state = true;
                   ref.read(currentNavIndexProvider.notifier).state = 0;

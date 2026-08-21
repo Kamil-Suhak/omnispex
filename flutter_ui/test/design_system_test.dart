@@ -6,6 +6,7 @@ import 'package:flutter_ui/screens/list_building_screen.dart';
 import 'package:flutter_ui/screens/main_shell.dart';
 import 'package:flutter_ui/screens/settings_screen.dart';
 import 'package:flutter_ui/screens/unit_browser_screen.dart';
+import 'package:flutter_ui/services/bsdata_service.dart';
 import 'package:flutter_ui/theme/omnispex_theme.dart';
 import 'package:flutter_ui/widgets/scannable_metric_card.dart';
 import 'package:flutter_ui/widgets/stat_badge.dart';
@@ -129,5 +130,16 @@ void main() {
     expect(find.text("Battlewagon"), findsOneWidget);
     expect(find.text("Terminator Squad"), findsOneWidget);
     expect(find.text("Leman Russ Battle Tank"), findsOneWidget);
+  });
+
+  test('BsDataService accurately isolates Space Marines from Chaos Space Marines', () {
+    final smUnits = BsDataService.searchUnits(factionFilter: "Space Marines");
+    final csmUnits = BsDataService.searchUnits(factionFilter: "Chaos Space Marines");
+
+    expect(smUnits.any((u) => u.name == "Terminator Squad"), isTrue);
+    expect(smUnits.any((u) => u.name == "Chaos Terminator Squad"), isFalse);
+
+    expect(csmUnits.any((u) => u.name == "Chaos Terminator Squad"), isTrue);
+    expect(csmUnits.any((u) => u.name == "Terminator Squad"), isFalse);
   });
 }
