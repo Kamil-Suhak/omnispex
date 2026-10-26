@@ -234,3 +234,4 @@ jobs:
             - **Faction Wishlists**: Plan unit acquisition and track hobby progress states.
             - **Match History**: 5-round 40K scoring and 4-Turning-Point Kill Team scoring models.
             - **Cloudflare Edge D1 Sync Gateway**: Real-time cloud sync for armies and wishlists.
+
