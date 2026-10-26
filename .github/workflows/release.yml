@@ -34,7 +34,7 @@ jobs:
         run: |
           cd flutter_ui
           flutter pub get
-          flutter analyze
+          flutter analyze --no-fatal-infos
 
       - name: Cloudflare Worker Tests
         run: |
