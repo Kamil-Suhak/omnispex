@@ -3,9 +3,8 @@ import 'package:http/http.dart' as http;
 import '../bridge/omnispex_rust_bridge.dart';
 import '../models/bsdata_models.dart';
 import '../models/omnispex_models.dart';
-import 'storage_adapter_stub.dart'
-    if (dart.library.io) 'storage_adapter_native.dart'
-    if (dart.library.js_interop) 'storage_adapter_web.dart';
+import 'auth_service.dart';
+import 'storage_adapter.dart';
 
 class PersonalDataService {
   static const List<String> defaultKillTeamFactions = [
@@ -43,6 +42,19 @@ class PersonalDataService {
   ];
 
   static Future<PersonalDataStoreUi> loadPersonalStore() async {
+    // 1. Cloud-authoritative: attempt to pull latest cloud state
+    try {
+      final creds = await AuthService.getOrCreateCredentials();
+      final cloudStore = await pullFromCloudSync(
+        userId: creds.userId,
+        secretKey: creds.secretKey,
+      );
+      if (cloudStore != null) {
+        return cloudStore;
+      }
+    } catch (_) {}
+
+    // 2. Offline safety net mirror
     final raw = await readPersonalStoreRaw();
     if (raw == null || raw.trim().isEmpty) {
       return const PersonalDataStoreUi();
@@ -62,7 +74,18 @@ class PersonalDataService {
   static Future<void> savePersonalStore(PersonalDataStoreUi store) async {
     final jsonStr =
         const JsonEncoder.withIndent('  ').convert(store.toRustJson());
+    // 1. Write offline mirror
     await writePersonalStoreRaw(jsonStr);
+
+    // 2. Cloud-authoritative write-through immediately
+    try {
+      final creds = await AuthService.getOrCreateCredentials();
+      await pushToCloudSync(
+        userId: creds.userId,
+        secretKey: creds.secretKey,
+        store: store,
+      );
+    } catch (_) {}
   }
 
   static String exportBackupJson(PersonalDataStoreUi store) {
@@ -387,16 +410,23 @@ class PersonalDataService {
   /// Synchronize the local PersonalDataStore to the Cloudflare Worker D1 storage
   static Future<bool> pushToCloudSync({
     required String userId,
+    required String secretKey,
+    PersonalDataStoreUi? store,
     String endpoint = defaultCloudSyncEndpoint,
   }) async {
     try {
-      final raw = await readPersonalStoreRaw();
-      if (raw == null || raw.trim().isEmpty) return false;
+      final payload = store != null
+          ? jsonEncode(store.toRustJson())
+          : await readPersonalStoreRaw();
+      if (payload == null || payload.trim().isEmpty) return false;
       final uri = Uri.parse('$endpoint/api/sync/$userId');
       final res = await http.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
-        body: raw,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $secretKey',
+        },
+        body: payload,
       );
       return res.statusCode == 200;
     } catch (_) {
@@ -407,20 +437,31 @@ class PersonalDataService {
   /// Pull user data from Cloudflare Worker D1 storage into local storage
   static Future<PersonalDataStoreUi?> pullFromCloudSync({
     required String userId,
+    required String secretKey,
     String endpoint = defaultCloudSyncEndpoint,
   }) async {
     try {
       final uri = Uri.parse('$endpoint/api/sync/$userId');
-      final res = await http.get(uri);
+      final res = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $secretKey',
+        },
+      );
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
         if (decoded is Map<String, dynamic> &&
             decoded['ok'] == true &&
             decoded['exists'] == true) {
           final data = decoded['data'];
-          final rawJson = jsonEncode(data);
-          await writePersonalStoreRaw(rawJson);
-          return await loadPersonalStore();
+          if (data is Map<String, dynamic>) {
+            final rawJson = jsonEncode(data);
+            await writePersonalStoreRaw(rawJson);
+            if (OmnispexRustBridge.isReady) {
+              return OmnispexRustBridge.migratePersonalStore(rawJson);
+            }
+            return PersonalDataStoreUi.fromRustJson(data);
+          }
         }
       }
     } catch (_) {}

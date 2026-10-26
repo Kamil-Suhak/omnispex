@@ -7,6 +7,7 @@ import '../providers/app_state_provider.dart';
 import '../screens/in_battle_screen.dart';
 import '../screens/list_building_screen.dart';
 import '../services/bsdata_service.dart';
+import '../services/faction_registry.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
 import '../widgets/stat_badge.dart';
@@ -25,6 +26,8 @@ class UnitBrowserScreen extends ConsumerStatefulWidget {
 
 class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
   late TextEditingController _searchController;
+  bool _isDownloading = false;
+  String _downloadingFactionName = '';
 
   @override
   void initState() {
@@ -36,6 +39,92 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleFactionSelect(String factionName) async {
+    if (factionName == "All Factions") {
+      ref.read(unitFactionFilterProvider.notifier).state = "All Factions";
+      return;
+    }
+
+    final meta = FactionRegistry.find(factionName);
+    if (meta == null) {
+      ref.read(unitFactionFilterProvider.notifier).state = factionName;
+      return;
+    }
+
+    if (BsDataService.isFactionCached(meta.slug)) {
+      await BsDataService.scopeMemoryToBrowser(meta.name);
+      ref.read(unitFactionFilterProvider.notifier).state = meta.name;
+      if (mounted) setState(() {});
+      return;
+    }
+
+    // Prompt user to download
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: OmnispexColors.surfaceElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: OmnispexColors.border),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.cloud_download, color: OmnispexColors.cyan, size: 20),
+            const SizedBox(width: 8),
+            Text("DOWNLOAD FACTION DATA", style: OmnispexTypography.h3),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Datasheet catalogue for ${meta.name} is not cached on this device.",
+              style: OmnispexTypography.body,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "• Expected datasheets: ~${meta.expectedUnits}\n• Size: ~250 KB\n• Memory scope: Strictly 1 faction loaded in RAM",
+              style: OmnispexTypography.bodyMuted.copyWith(fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            child: Text("CANCEL", style: OmnispexTypography.monoData.copyWith(color: OmnispexColors.textMuted)),
+            onPressed: () => Navigator.pop(ctx, false),
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.download, size: 16),
+            label: Text("DOWNLOAD & LOAD", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11, color: OmnispexColors.background)),
+            style: ElevatedButton.styleFrom(backgroundColor: OmnispexColors.cyan),
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() {
+        _isDownloading = true;
+        _downloadingFactionName = meta.name;
+      });
+      try {
+        await BsDataService.downloadAndCacheFaction(meta.slug);
+        await BsDataService.scopeMemoryToBrowser(meta.name);
+        ref.read(unitFactionFilterProvider.notifier).state = meta.name;
+        ref.read(catalogueRevisionEpochProvider.notifier).state++;
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isDownloading = false;
+            _downloadingFactionName = '';
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -102,7 +191,9 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                       controller: _searchController,
                       style: OmnispexTypography.monoData.copyWith(fontSize: 13),
                       decoration: InputDecoration(
-                        hintText: "Search units, weapons, or abilities (e.g. 'Terminators', 'Leman Russ', 'Melta', 'Ramshackle')...",
+                        hintText: factionFilter != "All Factions"
+                            ? "Search $factionFilter units, weapons, or abilities..."
+                            : "Search units, weapons, or abilities (e.g. 'Terminators', 'Leman Russ', 'Melta', 'Ramshackle')...",
                         hintStyle: OmnispexTypography.bodyMuted.copyWith(fontSize: 12),
                         prefixIcon: const Icon(Icons.search, size: 18, color: OmnispexColors.cyan),
                         suffixIcon: query.isNotEmpty
@@ -140,7 +231,7 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                               padding: EdgeInsets.zero,
                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               onSelected: (sel) {
-                                if (sel) ref.read(unitFactionFilterProvider.notifier).state = f;
+                                if (sel) _handleFactionSelect(f);
                               },
                             ),
                           );
@@ -172,6 +263,72 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+
+              if (_isDownloading) ...[
+                TacticalCard(
+                  title: "DOWNLOADING FACTION FROM BSDATA...",
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          const CircularProgressIndicator(color: OmnispexColors.cyan),
+                          const SizedBox(height: 16),
+                          Text("Ingesting $_downloadingFactionName from BSData repository...", style: OmnispexTypography.monoData),
+                          const SizedBox(height: 4),
+                          Text("Caching to client storage & scoping strictly 1 faction in memory", style: OmnispexTypography.bodyMuted),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ] else if (factionFilter != "All Factions") ...[
+                // Active Faction Header & Switcher
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: OmnispexColors.cyan.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: OmnispexColors.cyan.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.shield_outlined, color: OmnispexColors.cyan, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "ACTIVE FACTION: $factionFilter",
+                              style: OmnispexTypography.h3.copyWith(fontSize: 14, color: OmnispexColors.cyan),
+                            ),
+                            Text(
+                              "MEMORY SCOPE: 1 FACTION IN RAM // ${units.length} DATASHEETS LOADED",
+                              style: OmnispexTypography.monoData.copyWith(fontSize: 10, color: OmnispexColors.greenKill),
+                            ),
+                          ],
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.sync_alt, size: 14),
+                        label: Text(
+                          "SWITCH FACTION",
+                          style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.cyan),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: OmnispexColors.cyan),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                        onPressed: () => _handleFactionSelect("All Factions"),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               const SizedBox(height: 16),
 
               // Faction Army Rules & Detachments Inspector (when a faction is selected)
@@ -245,23 +402,23 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                 ),
               ],
 
-              // Unit Datasheets Feed
-              if (units.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(40),
-                  alignment: Alignment.center,
-                  child: Column(
-                    children: [
-                      const Icon(Icons.search_off, size: 48, color: OmnispexColors.textMuted),
-                      const SizedBox(height: 12),
-                      Text("No matching units found", style: OmnispexTypography.h2),
-                      const SizedBox(height: 4),
-                      Text("Try clearing search filters or changing the faction selection.", style: OmnispexTypography.bodyMuted),
-                    ],
-                  ),
-                )
-              else
-                ...displayedUnits.map((u) => _buildUnitCard(context, ref, u)),
+                // Unit Datasheets Feed
+                if (units.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(40),
+                    alignment: Alignment.center,
+                    child: Column(
+                      children: [
+                        const Icon(Icons.search_off, size: 48, color: OmnispexColors.textMuted),
+                        const SizedBox(height: 12),
+                        Text("No matching units found", style: OmnispexTypography.h2),
+                        const SizedBox(height: 4),
+                        Text("Try clearing search filters or changing the faction selection.", style: OmnispexTypography.bodyMuted),
+                      ],
+                    ),
+                  )
+                else
+                  ...displayedUnits.map((u) => _buildUnitCard(context, ref, u)),
             ],
           ),
         ),

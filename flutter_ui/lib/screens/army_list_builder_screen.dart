@@ -39,6 +39,15 @@ class ArmyListBuilderScreen extends ConsumerWidget {
             (factions.isNotEmpty ? factions.first : null))
         : (factions.isNotEmpty ? factions.first : null);
 
+    if (activeList != null && activeFaction != null) {
+      if (BsDataService.loadedFactionsMap.length != 1 ||
+          !BsDataService.loadedFactionsMap.containsKey(activeFaction.id)) {
+        BsDataService.scopeMemoryToListBuilder(activeList.factionId.isNotEmpty
+            ? activeList.factionId
+            : activeList.factionName);
+      }
+    }
+
     final ArmyListEvaluationUi? evaluation = activeList != null
         ? PersonalDataService.evaluateArmyList(
             list: activeList,

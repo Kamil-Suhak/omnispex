@@ -1,19 +1,262 @@
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:http/http.dart' as http;
 import '../bridge/omnispex_rust_bridge.dart';
 import '../models/bsdata_models.dart';
 import '../models/simulation_models.dart';
+import 'faction_registry.dart';
+import 'storage_adapter.dart';
 
 class BsDataService {
-  static List<BsDataFaction> _bundledFactions = _initBundledFactions();
+  static List<BsDataFaction> _fallbackFactions = _initBundledFactions();
+  static final Map<String, BsDataFaction> _loadedFactions = {};
+  static final Set<String> _cachedFactionSlugs = {};
   static DataProvenanceUi _provenance = const DataProvenanceUi();
   static bool _fullBundleLoaded = false;
+  static CatalogueDatabaseUi? _masterBundleCache;
+  static bool _isCheckingUpdates = false;
+  static String? _updateStatusMessage;
 
-  static List<BsDataFaction> get bundledFactions => _bundledFactions;
+  static List<BsDataFaction> get bundledFactions =>
+      _loadedFactions.isNotEmpty ? _loadedFactions.values.toList() : _fallbackFactions;
+
+  static Map<String, BsDataFaction> get loadedFactionsMap => _loadedFactions;
+  static Set<String> get cachedFactionSlugs => _cachedFactionSlugs;
   static DataProvenanceUi get provenance => _provenance;
   static bool get isFullBundleLoaded => _fullBundleLoaded;
+  static String? get updateStatusMessage => _updateStatusMessage;
+
+  static Future<void> initOnStartup() async {
+    // 1. Populate cached faction slugs from disk/storage
+    try {
+      final cached = await listCachedFactionSlugs();
+      _cachedFactionSlugs.clear();
+      _cachedFactionSlugs.addAll(cached);
+    } catch (_) {}
+
+    // 2. Load Universal MFM upfront
+    await loadUniversalMfm();
+
+    // 3. Check for upstream updates asynchronously
+    checkForCatalogUpdates().catchError((_) => false);
+  }
+
+  static Future<void> loadUniversalMfm() async {
+    try {
+      final cachedRaw = await readMfmCacheRaw();
+      if (cachedRaw != null && cachedRaw.trim().isNotEmpty) {
+        final decoded = jsonDecode(cachedRaw);
+        if (decoded is Map<String, dynamic>) {
+          _provenance = DataProvenanceUi.fromRustJson(decoded);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      if (_masterBundleCache == null) {
+        final raw = await rootBundle.loadString('assets/data/wh40k_11e_bundle.json');
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          _masterBundleCache = CatalogueDatabaseUi.fromRustJson(decoded);
+        }
+      }
+      if (_masterBundleCache != null) {
+        _provenance = _masterBundleCache!.provenance;
+        await writeMfmCacheRaw(jsonEncode(_provenance.toRustJson()));
+      }
+    } catch (_) {}
+  }
+
+  static bool isFactionCached(String idOrSlugOrName) {
+    final meta = FactionRegistry.find(idOrSlugOrName);
+    if (meta == null) return false;
+    return _cachedFactionSlugs.contains(meta.slug);
+  }
+
+  static Future<BsDataFaction?> downloadAndCacheFaction(
+    String idOrSlugOrName, {
+    bool force = false,
+  }) async {
+    final meta = FactionRegistry.find(idOrSlugOrName);
+    if (meta == null) return null;
+
+    if (!force && _cachedFactionSlugs.contains(meta.slug)) {
+      final cachedRaw = await readFactionCacheRaw(meta.slug);
+      if (cachedRaw != null && cachedRaw.trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(cachedRaw);
+          if (decoded is Map<String, dynamic>) {
+            return BsDataFaction.fromRustJson(decoded);
+          }
+        } catch (_) {}
+      }
+    }
+
+    BsDataFaction? faction;
+
+    // 1. Try remote GitHub BSData
+    try {
+      final url = Uri.parse(
+          'https://raw.githubusercontent.com/BSData/wh40k-11e/refs/heads/main/${meta.remoteFile}');
+      final res = await http.get(url).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200 && res.body.trim().isNotEmpty) {
+        faction = OmnispexRustBridge.isReady
+            ? OmnispexRustBridge.parseBsDataCatalogue(res.body)
+            : parseFactionJson(res.body);
+      }
+    } catch (_) {}
+
+    // 2. Fallback to bundle extraction
+    if (faction == null) {
+      if (_masterBundleCache == null) {
+        try {
+          final raw =
+              await rootBundle.loadString('assets/data/wh40k_11e_bundle.json');
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) {
+            _masterBundleCache = CatalogueDatabaseUi.fromRustJson(decoded);
+          }
+        } catch (_) {}
+      }
+      if (_masterBundleCache != null) {
+        faction = _masterBundleCache!.factions.cast<BsDataFaction?>().firstWhere(
+              (f) =>
+                  f != null &&
+                  (f.id.toLowerCase() == meta.id.toLowerCase() ||
+                      f.name.toLowerCase() == meta.name.toLowerCase() ||
+                      f.name
+                          .toLowerCase()
+                          .contains(meta.slug.replaceAll('-', ' '))),
+              orElse: () => null,
+            );
+      }
+    }
+
+    if (faction != null) {
+      final jsonStr = jsonEncode(faction.toRustJson());
+      await writeFactionCacheRaw(meta.slug, jsonStr);
+      _cachedFactionSlugs.add(meta.slug);
+      return faction;
+    }
+
+    return null;
+  }
+
+  static Future<void> deleteFactionCache(String idOrSlugOrName) async {
+    final meta = FactionRegistry.find(idOrSlugOrName);
+    if (meta == null) return;
+
+    await deleteFactionCacheRaw(meta.slug);
+    _cachedFactionSlugs.remove(meta.slug);
+    _loadedFactions.remove(meta.id);
+    _loadedFactions.remove(meta.slug);
+  }
+
+  /// List Builder Scope: strictly ONLY the list's chosen faction in memory
+  static Future<BsDataFaction?> scopeMemoryToListBuilder(
+      String factionIdOrName) async {
+    _loadedFactions.clear();
+    final faction = await loadFactionIntoMemory(factionIdOrName);
+    return faction;
+  }
+
+  /// Live Match Scope: at most 2 factions in memory
+  static Future<void> scopeMemoryToMatch(
+    String factionA, [
+    String? factionB,
+  ]) async {
+    final keepSlugs = <String>{};
+    final metaA = FactionRegistry.find(factionA);
+    if (metaA != null) keepSlugs.add(metaA.id);
+    if (factionB != null) {
+      final metaB = FactionRegistry.find(factionB);
+      if (metaB != null) keepSlugs.add(metaB.id);
+    }
+
+    _loadedFactions.removeWhere((k, _) => !keepSlugs.contains(k));
+    if (metaA != null) await loadFactionIntoMemory(metaA.id);
+    if (factionB != null) await loadFactionIntoMemory(factionB);
+  }
+
+  /// Datasheet Browser Scope: strictly the 1 selected faction in memory
+  static Future<BsDataFaction?> scopeMemoryToBrowser(
+      String factionIdOrName) async {
+    _loadedFactions.clear();
+    final faction = await loadFactionIntoMemory(factionIdOrName);
+    return faction;
+  }
+
+  static Future<BsDataFaction?> loadFactionIntoMemory(
+      String idOrSlugOrName) async {
+    final meta = FactionRegistry.find(idOrSlugOrName);
+    if (meta != null && _loadedFactions.containsKey(meta.id)) {
+      return _loadedFactions[meta.id];
+    }
+
+    final faction = await downloadAndCacheFaction(idOrSlugOrName);
+    if (faction != null) {
+      _loadedFactions[faction.id] = faction;
+      return faction;
+    }
+
+    final fallback = findFaction(idOrSlugOrName);
+    if (fallback != null) {
+      _loadedFactions[fallback.id] = fallback;
+      return fallback;
+    }
+    return null;
+  }
+
+  static Future<bool> checkForCatalogUpdates() async {
+    if (_isCheckingUpdates) return false;
+    _isCheckingUpdates = true;
+    try {
+      final url = Uri.parse(
+          'https://api.github.com/repos/BSData/wh40k-11e/commits/main');
+      final res = await http.get(url, headers: {'User-Agent': 'Omnispex-App'}).timeout(
+        const Duration(seconds: 4),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final latestSha = data['sha']?.toString() ?? '';
+        if (latestSha.isNotEmpty &&
+            !latestSha.startsWith(_provenance.bsdataRevision)) {
+          _updateStatusMessage = 'New 11e data update available (${latestSha.substring(0, 7)})';
+          return true;
+        } else {
+          _updateStatusMessage = 'Data up to date (BSData 11e @ ${_provenance.bsdataRevision.substring(0, 7)})';
+        }
+      }
+    } catch (_) {
+      _updateStatusMessage = 'Checked offline // using local BSData cache';
+    } finally {
+      _isCheckingUpdates = false;
+    }
+    return false;
+  }
+
+  static Future<bool> checkForMfmUpdates() async {
+    try {
+      final url = Uri.parse(
+          'https://api.github.com/repos/BSData/wh40k-11e-mfm/commits/main');
+      final res = await http.get(url, headers: {'User-Agent': 'Omnispex-App'}).timeout(
+        const Duration(seconds: 4),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final latestSha = data['sha']?.toString() ?? '';
+        if (latestSha.isNotEmpty &&
+            !latestSha.startsWith(_provenance.mfmRevision)) {
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
 
   static Future<void> loadFull11eCatalogueBundle() async {
+    await initOnStartup();
     if (_fullBundleLoaded) return;
     try {
       final rawJson =
@@ -22,9 +265,15 @@ class BsDataService {
       if (decoded is Map<String, dynamic>) {
         final db = CatalogueDatabaseUi.fromRustJson(decoded);
         if (db.factions.isNotEmpty) {
-          _bundledFactions = db.factions;
+          _fallbackFactions = db.factions;
           _provenance = db.provenance;
           _fullBundleLoaded = true;
+          for (final f in db.factions) {
+            final meta = FactionRegistry.find(f.id) ?? FactionRegistry.find(f.name);
+            if (meta != null) {
+              _cachedFactionSlugs.add(meta.slug);
+            }
+          }
         }
       }
     } catch (_) {
@@ -33,7 +282,8 @@ class BsDataService {
   }
 
   static void resetToDefaultFallback() {
-    _bundledFactions = _initBundledFactions();
+    _fallbackFactions = _initBundledFactions();
+    _loadedFactions.clear();
     _provenance = const DataProvenanceUi();
     _fullBundleLoaded = false;
   }
@@ -42,7 +292,8 @@ class BsDataService {
     final BsDataFaction parsed = OmnispexRustBridge.isReady
         ? OmnispexRustBridge.parseBsDataCatalogue(jsonStr)
         : parseFactionJson(jsonStr);
-    final updated = List<BsDataFaction>.from(_bundledFactions);
+    _loadedFactions[parsed.id] = parsed;
+    final updated = List<BsDataFaction>.from(_fallbackFactions);
     final idx = updated.indexWhere((f) =>
         f.id == parsed.id ||
         f.name.toLowerCase() == parsed.name.toLowerCase());
@@ -51,13 +302,20 @@ class BsDataService {
     } else {
       updated.insert(0, parsed);
     }
-    _bundledFactions = updated;
+    _fallbackFactions = updated;
     return parsed;
   }
 
   static BsDataFaction? findFaction(String idOrName) {
     final clean = idOrName.trim().toLowerCase();
-    for (final f in _bundledFactions) {
+    for (final f in _loadedFactions.values) {
+      if (f.id.toLowerCase() == clean ||
+          f.name.toLowerCase() == clean ||
+          f.name.toLowerCase().contains(clean)) {
+        return f;
+      }
+    }
+    for (final f in _fallbackFactions) {
       if (f.id.toLowerCase() == clean ||
           f.name.toLowerCase() == clean ||
           f.name.toLowerCase().contains(clean)) {
@@ -68,22 +326,8 @@ class BsDataService {
   }
 
   static List<String> get availableFactions {
-    if (_fullBundleLoaded && _bundledFactions.isNotEmpty) {
-      final names = _bundledFactions.map((f) => f.name).toList();
-      return ["All Factions", ...names];
-    }
-    return [
-      "All Factions",
-      "Space Marines",
-      "Astra Militarum",
-      "Orks",
-      "Necrons",
-      "Tyranids",
-      "Chaos Space Marines",
-      "Adeptus Custodes",
-      "T'au Empire",
-      "Aeldari",
-    ];
+    final names = FactionRegistry.allFactions.map((f) => f.name).toList();
+    return ["All Factions", ...names];
   }
 
   static List<BsDataUnit> searchUnits({
@@ -95,7 +339,7 @@ class BsDataService {
     final cleanQuery = query.trim().toLowerCase();
     final results = <BsDataUnit>[];
 
-    for (final faction in _bundledFactions) {
+    for (final faction in bundledFactions) {
       if (factionFilter != "All Factions") {
         if (factionFilter == "Space Marines" && faction.id == "sm-1") {
           // matched fallback
@@ -177,7 +421,7 @@ class BsDataService {
   }
 
   static BsDataUnit? findUnitById(String id) {
-    for (final f in _bundledFactions) {
+    for (final f in bundledFactions) {
       for (final u in f.units) {
         if (u.id == id) return u;
       }

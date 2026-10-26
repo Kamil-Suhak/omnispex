@@ -28,7 +28,7 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   Future<void> _initServices() async {
     await OmnispexRustBridge.initialize();
-    await BsDataService.loadFull11eCatalogueBundle();
+    await BsDataService.initOnStartup();
     await ref.read(personalStoreProvider.notifier).loadFromDisk();
     if (mounted) {
       ref.read(catalogueRevisionEpochProvider.notifier).state++;

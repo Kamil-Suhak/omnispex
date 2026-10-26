@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/simulation_models.dart';
 import '../providers/app_state_provider.dart';
+import '../services/auth_service.dart';
 import '../services/bsdata_service.dart';
+import '../services/faction_registry.dart';
 import '../services/personal_data_service.dart';
 import '../services/simulation_service.dart';
 import '../theme/omnispex_colors.dart';
@@ -11,14 +13,50 @@ import '../theme/omnispex_typography.dart';
 import '../widgets/stat_badge.dart';
 import '../widgets/tactical_card.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  DeviceCredentials? _credentials;
+  bool _isCheckingCatalog = false;
+  bool _isCheckingMfm = false;
+  bool _isSyncingCloud = false;
+  String _factionFilter = '';
+  final Set<String> _downloadingSlugs = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCredentials();
+  }
+
+  Future<void> _loadCredentials() async {
+    try {
+      final creds = await AuthService.getOrCreateCredentials();
+      if (mounted) {
+        setState(() {
+          _credentials = creds;
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(catalogueRevisionEpochProvider);
     final iterations = ref.watch(simulationIterationsProvider);
     final confidence = ref.watch(confidenceThresholdProvider);
     final archetypes = ref.watch(customArchetypesProvider);
+
+    final filteredFactions = FactionRegistry.allFactions.where((f) {
+      if (_factionFilter.trim().isEmpty) return true;
+      return f.name.toLowerCase().contains(_factionFilter.trim().toLowerCase()) ||
+          f.slug.toLowerCase().contains(_factionFilter.trim().toLowerCase());
+    }).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -38,7 +76,7 @@ class SettingsScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("SETTINGS & ARCHETYPES", style: OmnispexTypography.h2),
-                      Text("Engine Configuration & Custom Benchmark Roster", style: OmnispexTypography.bodyMuted),
+                      Text("Client Authentication, Lazy BSData Ingestion & Simulation Benchmarks", style: OmnispexTypography.bodyMuted),
                     ],
                   ),
                   OutlinedButton.icon(
@@ -52,10 +90,11 @@ class SettingsScreen extends ConsumerWidget {
                     onPressed: () {
                       ref.read(simulationIterationsProvider.notifier).state = 10000;
                       ref.read(confidenceThresholdProvider.notifier).state = 80;
-                      ref.read(customArchetypesProvider.notifier).state = List.from(SimulationService.defaultArchetypes);
+                      ref.read(customArchetypesProvider.notifier).state =
+                          List.from(SimulationService.defaultArchetypes);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("All settings and archetypes reset to defaults!"),
+                          content: Text("Settings restored to defaults."),
                           backgroundColor: OmnispexColors.surfaceElevated,
                         ),
                       );
@@ -71,28 +110,35 @@ class SettingsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("MONTE CARLO ITERATIONS:", style: OmnispexTypography.label.copyWith(fontSize: 11)),
-                    const SizedBox(height: 6),
+                    Text(
+                      "Monte Carlo Iteration Count (Discrete Wound Allocation Rollouts):",
+                      style: OmnispexTypography.label.copyWith(fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
-                      runSpacing: 6,
+                      runSpacing: 8,
                       children: [
-                        _buildIterationChip(ref, 1000, "1,000 (Fast)", iterations),
-                        _buildIterationChip(ref, 10000, "10,000 (Standard)", iterations),
-                        _buildIterationChip(ref, 50000, "50,000 (Precision)", iterations),
+                        _buildIterationChip(ref, 2500, "2,500 (FAST)", iterations),
+                        _buildIterationChip(ref, 10000, "10,000 (STANDARD)", iterations),
+                        _buildIterationChip(ref, 25000, "25,000 (TOURNAMENT)", iterations),
+                        _buildIterationChip(ref, 50000, "50,000 (LAB BENCHMARK)", iterations),
                       ],
                     ),
-                    const SizedBox(height: 14),
-
-                    Text("SAFE BET CONFIDENCE THRESHOLD:", style: OmnispexTypography.label.copyWith(fontSize: 11)),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Defensive Elimination Confidence Interval:",
+                      style: OmnispexTypography.label.copyWith(fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
-                      runSpacing: 6,
+                      runSpacing: 8,
                       children: [
-                        _buildConfidenceChip(ref, 75, "75% Confidence", confidence),
-                        _buildConfidenceChip(ref, 80, "80% Confidence (Standard)", confidence),
-                        _buildConfidenceChip(ref, 90, "90% Confidence (Conservative)", confidence),
+                        _buildConfidenceChip(ref, 80, "80% (AGGRESSIVE)", confidence),
+                        _buildConfidenceChip(ref, 90, "90% (BALANCED)", confidence),
+                        _buildConfidenceChip(ref, 95, "95% (STRICT / COMPETITIVE)", confidence),
+                        _buildConfidenceChip(ref, 99, "99% (CONSERVATIVE)", confidence),
                       ],
                     ),
                   ],
@@ -115,12 +161,17 @@ class SettingsScreen extends ConsumerWidget {
               }),
               const SizedBox(height: 16),
 
-              // 3. Game Data Provenance & Catalogue Management
+              // 3. Game Data & Factions Manager (Lazy Ingestion Architecture)
               TacticalCard(
                 title: "3. WARHAMMER 11E GAME DATA & PROVENANCE",
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      "Game data is downloaded lazily per-faction directly to this client. Munitorum Field Manual (MFM) points are universal and checked on startup. Only active factions are held in RAM.",
+                      style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
+                    ),
+                    const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
@@ -143,68 +194,329 @@ class SettingsScreen extends ConsumerWidget {
                           accentColor: OmnispexColors.purple,
                         ),
                         StatBadge(
-                          label: "FACTIONS",
-                          value: "${BsDataService.bundledFactions.length}",
+                          label: "CACHED FACTIONS",
+                          value: "${BsDataService.cachedFactionSlugs.length} / ${FactionRegistry.allFactions.length}",
                           accentColor: OmnispexColors.greenKill,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      BsDataService.provenance.attributionNotice,
-                      style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.upload_file, size: 14),
-                          label: Text(
-                            "IMPORT CUSTOM BSDATA JSON",
-                            style: OmnispexTypography.monoStatBadge.copyWith(
-                              fontSize: 10,
-                              color: OmnispexColors.background,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: OmnispexColors.cyan,
-                          ),
-                          onPressed: () => _showImportCatalogueDialog(context, ref),
+                        StatBadge(
+                          label: "ACTIVE IN RAM",
+                          value: "${BsDataService.loadedFactionsMap.length} Faction(s)",
+                          accentColor: OmnispexColors.cyan,
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-
-              // 4. Local-First Personal Data Backup & Restore
-              TacticalCard(
-                title: "4. PERSONAL DATA BACKUP & RESTORE (ISOLATED FROM GAME DATA)",
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Your Army Lists, Wishlists, Match History, and Saved Calculations are stored locally and isolated from game catalogue updates.",
-                      style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
-                    ),
-                    const SizedBox(height: 10),
+                    if (BsDataService.updateStatusMessage != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: OmnispexColors.cyan.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: OmnispexColors.cyan.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline, size: 16, color: OmnispexColors.cyan),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                BsDataService.updateStatusMessage!,
+                                style: OmnispexTypography.monoData.copyWith(fontSize: 11, color: OmnispexColors.cyan),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
                         ElevatedButton.icon(
+                          icon: _isCheckingCatalog
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: OmnispexColors.background),
+                                )
+                              : const Icon(Icons.sync, size: 14),
+                          label: Text(
+                            "CHECK 11E CATALOG UPDATES",
+                            style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.background),
+                          ),
+                          style: ElevatedButton.styleFrom(backgroundColor: OmnispexColors.cyan),
+                          onPressed: _isCheckingCatalog
+                              ? null
+                              : () async {
+                                  setState(() => _isCheckingCatalog = true);
+                                  await BsDataService.checkForCatalogUpdates();
+                                  if (mounted) setState(() => _isCheckingCatalog = false);
+                                },
+                        ),
+                        OutlinedButton.icon(
+                          icon: _isCheckingMfm
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: OmnispexColors.purple),
+                                )
+                              : const Icon(Icons.price_check, size: 14),
+                          label: Text(
+                            "CHECK MFM POINTS UPDATES",
+                            style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.purple),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: OmnispexColors.purple),
+                          ),
+                          onPressed: _isCheckingMfm
+                              ? null
+                              : () async {
+                                  setState(() => _isCheckingMfm = true);
+                                  final hasUpdate = await BsDataService.checkForMfmUpdates();
+                                  if (mounted) {
+                                    setState(() => _isCheckingMfm = false);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(hasUpdate
+                                            ? "New MFM points update detected upstream!"
+                                            : "Munitorum Field Manual points are up to date (v1.6)."),
+                                        backgroundColor: OmnispexColors.surfaceElevated,
+                                      ),
+                                    );
+                                  }
+                                },
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.upload_file, size: 14),
+                          label: Text(
+                            "IMPORT CUSTOM BSDATA JSON",
+                            style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.amber),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: OmnispexColors.amber),
+                          ),
+                          onPressed: () => _showImportCatalogueDialog(context, ref),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Faction Manager Search & Feed
+                    Text("MANAGE ALL 35 FACTIONS INDIVIDUALLY:", style: OmnispexTypography.label.copyWith(fontSize: 11)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      style: OmnispexTypography.monoData.copyWith(fontSize: 12),
+                      decoration: InputDecoration(
+                        hintText: "Filter factions (e.g. 'Orks', 'Space Marines', 'Tyranids')...",
+                        hintStyle: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
+                        prefixIcon: const Icon(Icons.search, size: 16, color: OmnispexColors.cyan),
+                        fillColor: OmnispexColors.surfaceElevated,
+                        filled: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: OmnispexColors.border)),
+                      ),
+                      onChanged: (val) => setState(() => _factionFilter = val),
+                    ),
+                    const SizedBox(height: 10),
+
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 360),
+                      decoration: BoxDecoration(
+                        color: OmnispexColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: OmnispexColors.border),
+                      ),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: filteredFactions.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1, color: OmnispexColors.border),
+                        itemBuilder: (ctx, idx) {
+                          final f = filteredFactions[idx];
+                          final isCached = BsDataService.isFactionCached(f.slug);
+                          final isDownloading = _downloadingSlugs.contains(f.slug);
+
+                          return ListTile(
+                            dense: true,
+                            leading: Icon(
+                              isCached ? Icons.check_circle : Icons.cloud_outlined,
+                              color: isCached ? OmnispexColors.greenKill : OmnispexColors.textMuted,
+                              size: 18,
+                            ),
+                            title: Text(f.name, style: OmnispexTypography.monoData.copyWith(fontSize: 12, fontWeight: FontWeight.w700)),
+                            subtitle: Text("~${f.expectedUnits} datasheets • ${f.remoteFile}", style: OmnispexTypography.bodyMuted.copyWith(fontSize: 10)),
+                            trailing: isDownloading
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: OmnispexColors.cyan))
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isCached) ...[
+                                        TextButton(
+                                          child: Text("RE-FETCH", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.cyan)),
+                                          onPressed: () async {
+                                            setState(() => _downloadingSlugs.add(f.slug));
+                                            await BsDataService.downloadAndCacheFaction(f.slug, force: true);
+                                            ref.read(catalogueRevisionEpochProvider.notifier).state++;
+                                            if (mounted) setState(() => _downloadingSlugs.remove(f.slug));
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete_outline, size: 16, color: OmnispexColors.redIneffective),
+                                          tooltip: "Delete local cache",
+                                          onPressed: () async {
+                                            await BsDataService.deleteFactionCache(f.slug);
+                                            ref.read(catalogueRevisionEpochProvider.notifier).state++;
+                                            if (mounted) setState(() {});
+                                          },
+                                        ),
+                                      ] else ...[
+                                        ElevatedButton.icon(
+                                          icon: const Icon(Icons.download, size: 12),
+                                          label: Text("DOWNLOAD", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.background)),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: OmnispexColors.cyan,
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          ),
+                                          onPressed: () async {
+                                            setState(() => _downloadingSlugs.add(f.slug));
+                                            await BsDataService.downloadAndCacheFaction(f.slug);
+                                            ref.read(catalogueRevisionEpochProvider.notifier).state++;
+                                            if (mounted) setState(() => _downloadingSlugs.remove(f.slug));
+                                          },
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 4. Cloud-Authoritative User Store & Multi-Device Pairing
+              TacticalCard(
+                title: "4. CLOUD-AUTHORITATIVE ACCOUNT & MULTI-DEVICE PAIRING",
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Your army rosters, wishlists, and match histories are cloud-authoritative and synchronized via Cloudflare D1 edge database with cryptographic bearer tokens. Local storage acts strictly as an offline read mirror.",
+                      style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_credentials != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: OmnispexColors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: OmnispexColors.cyan.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text("DEVICE ACCOUNT PAIRING KEY:", style: OmnispexTypography.label.copyWith(fontSize: 11, color: OmnispexColors.cyan)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: OmnispexColors.greenKill.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text("AUTHENTICATED", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.greenKill)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            SelectableText(
+                              _credentials!.accountKey,
+                              style: OmnispexTypography.monoData.copyWith(fontSize: 12, color: OmnispexColors.textPrimary),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Copy this key to pair your rosters & wishlists seamlessly to another phone, tablet, or browser.",
+                              style: OmnispexTypography.bodyMuted.copyWith(fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.copy, size: 14),
+                          label: Text(
+                            "COPY ACCOUNT PAIRING KEY",
+                            style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.background),
+                          ),
+                          style: ElevatedButton.styleFrom(backgroundColor: OmnispexColors.cyan),
+                          onPressed: _credentials == null
+                              ? null
+                              : () {
+                                  Clipboard.setData(ClipboardData(text: _credentials!.accountKey));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Account Pairing Key copied to clipboard!"),
+                                      backgroundColor: OmnispexColors.surfaceElevated,
+                                    ),
+                                  );
+                                },
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.devices, size: 14),
+                          label: Text(
+                            "PAIR ANOTHER DEVICE / IMPORT KEY",
+                            style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.cyan),
+                          ),
+                          style: OutlinedButton.styleFrom(side: const BorderSide(color: OmnispexColors.cyan)),
+                          onPressed: () => _showPairDeviceDialog(context, ref),
+                        ),
+                        ElevatedButton.icon(
+                          icon: _isSyncingCloud
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: OmnispexColors.background),
+                                )
+                              : const Icon(Icons.cloud_upload, size: 14),
+                          label: Text(
+                            "FORCE SYNC TO CLOUD NOW",
+                            style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.background),
+                          ),
+                          style: ElevatedButton.styleFrom(backgroundColor: OmnispexColors.greenKill),
+                          onPressed: _isSyncingCloud
+                              ? null
+                              : () async {
+                                  setState(() => _isSyncingCloud = true);
+                                  try {
+                                    final store = ref.read(personalStoreProvider);
+                                    await PersonalDataService.savePersonalStore(store);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("All army rosters and wishlists synchronized to Cloudflare edge!"),
+                                          backgroundColor: OmnispexColors.surfaceElevated,
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) setState(() => _isSyncingCloud = false);
+                                  }
+                                },
+                        ),
+                        OutlinedButton.icon(
                           icon: const Icon(Icons.download, size: 14),
                           label: Text(
                             "EXPORT PERSONAL BACKUP JSON",
-                            style: OmnispexTypography.monoStatBadge.copyWith(
-                              fontSize: 10,
-                              color: OmnispexColors.background,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: OmnispexColors.greenKill,
+                            style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.textPrimary),
                           ),
                           onPressed: () {
                             final store = ref.read(personalStoreProvider);
@@ -216,10 +528,7 @@ class SettingsScreen extends ConsumerWidget {
                           icon: const Icon(Icons.restore_page, size: 14),
                           label: Text(
                             "RESTORE FROM BACKUP JSON",
-                            style: OmnispexTypography.monoStatBadge.copyWith(
-                              fontSize: 10,
-                              color: OmnispexColors.amber,
-                            ),
+                            style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.amber),
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: OmnispexColors.amber,
@@ -235,6 +544,77 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showPairDeviceDialog(BuildContext context, WidgetRef ref) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: OmnispexColors.surfaceCard,
+        title: Text("PAIR DEVICE WITH ACCOUNT KEY", style: OmnispexTypography.h3),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Enter your Account Key (formatted as 'USER_ID:SECRET_KEY') from another device to load and synchronize your cloud rosters:",
+                style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                style: OmnispexTypography.monoData.copyWith(fontSize: 12),
+                decoration: const InputDecoration(
+                  hintText: 'Paste usr_...:sec_... key here',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("CANCEL"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: OmnispexColors.cyan,
+              foregroundColor: OmnispexColors.background,
+            ),
+            onPressed: () async {
+              final key = ctrl.text.trim();
+              final success = await AuthService.importCredentials(key);
+              if (success) {
+                await _loadCredentials();
+                await ref.read(personalStoreProvider.notifier).loadFromDisk();
+                if (ctx.mounted) Navigator.of(ctx).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Account paired! Roster and wishlist data synced from cloud."),
+                      backgroundColor: OmnispexColors.surfaceElevated,
+                    ),
+                  );
+                }
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Invalid Account Key or cloud verification failed."),
+                      backgroundColor: OmnispexColors.redIneffective,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text("PAIR & SYNC"),
+          ),
+        ],
       ),
     );
   }
