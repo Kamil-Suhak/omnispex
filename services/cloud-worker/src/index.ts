@@ -151,7 +151,7 @@ export default {
   </style>
 </head>
 <body>
-  <div class="badge">SYSTEM ONLINE // OMNISPEX CLOUD v1.0.0 (AUTHENTICATED)</div>
+  <div class="badge">SYSTEM ONLINE // OMNISPEX CLOUD v1.1.0 (AUTHENTICATED)</div>
   <h1>Omnispex Cloud Cogitator & Sync Gateway</h1>
   <p>Edge cloud storage and synchronization service for Warhammer 40,000 & Kill Team army rosters, wishlists, and match analytics.</p>
   <div class="card">
@@ -188,7 +188,7 @@ async function handleApiRequest(url: URL, request: Request, env: Env): Promise<R
       return jsonResponse({
         status: "ok",
         service: "omnispex-cloud",
-        version: "1.0.0",
+        version: "1.1.0",
         database: dbCheck?.alive === 1 ? "connected" : "unknown",
         active_users: userCount?.count ?? 0,
         timestamp: new Date().toISOString(),
@@ -197,7 +197,7 @@ async function handleApiRequest(url: URL, request: Request, env: Env): Promise<R
       return jsonResponse({
         status: "degraded",
         service: "omnispex-cloud",
-        version: "1.0.0",
+        version: "1.1.0",
         database_error: err instanceof Error ? err.message : String(err),
         timestamp: new Date().toISOString(),
       });
