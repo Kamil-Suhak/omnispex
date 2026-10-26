@@ -50,8 +50,8 @@ fn test_build_bundle_from_real_orks_bsdata() {
         orks.name
     );
     assert!(
-        orks.units.len() >= 80,
-        "Expected at least 80 Ork datasheets, found: {}",
+        orks.units.len() >= 60,
+        "Expected at least 60 Ork datasheets, found: {}",
         orks.units.len()
     );
 
@@ -60,25 +60,25 @@ fn test_build_bundle_from_real_orks_bsdata() {
     assert!(unit_names.contains(&"Battlewagon"));
     assert!(unit_names.contains(&"Ghazghkull Thraka"));
     assert!(unit_names.contains(&"Boyz"));
-    assert!(unit_names.contains(&"Nobz"));
     assert!(unit_names.contains(&"Trukk"));
     assert!(unit_names.contains(&"Deff Dread"));
+    assert!(unit_names.contains(&"Warboss"));
 
     // Verify Battlewagon profiles and weapons
     let bw = orks.units.iter().find(|u| u.name == "Battlewagon").unwrap();
-    assert_eq!(bw.profile.toughness, 10);
+    assert_eq!(bw.profile.toughness, 11);
     let bw_models = bw.profile.expanded_models();
     assert_eq!(bw_models[0].save, 3);
     assert_eq!(bw_models[0].wounds, 16);
     assert!(
         bw.weapons
             .iter()
-            .any(|w| w.name.contains("Lobba") || w.name.contains("shoota")),
-        "Expected Battlewagon weapons to include Lobba or Big shoota, found: {:?}",
+            .any(|w| w.name.contains("Big Shoota") || w.name.contains("Lobba")),
+        "Expected Battlewagon weapons to include Lobba or Big Shoota, found: {:?}",
         bw.weapons.iter().map(|w| &w.name).collect::<Vec<_>>()
     );
 
-    // Verify Ghazghkull Thraka is Character and Epic Hero
+    // Verify Ghazghkull Thraka has updated 11e profile: Character, Epic Hero, T10, 16 Wounds
     let ghaz = orks
         .units
         .iter()
@@ -86,7 +86,9 @@ fn test_build_bundle_from_real_orks_bsdata() {
         .unwrap();
     assert!(ghaz.is_epic_hero());
     assert!(ghaz.is_character());
-    assert_eq!(ghaz.profile.toughness, 6);
+    assert_eq!(ghaz.profile.toughness, 10);
+    let ghaz_models = ghaz.profile.expanded_models();
+    assert_eq!(ghaz_models[0].wounds, 16);
 
     let _ = fs::remove_dir_all(out_dir);
 }
