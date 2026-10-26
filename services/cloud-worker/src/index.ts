@@ -2,7 +2,8 @@
  * Omnispex Cloudflare Worker
  *
  * Responsibilities:
- * 1. Cloud storage & sync API for user army lists, wishlists, and match histories via Cloudflare D1 SQLite.
+ * 1. Cryptographically authenticated cloud storage & sync API for user army lists,
+ *    wishlists, and match histories via Cloudflare D1 SQLite.
  * 2. Static asset hosting for the compiled Flutter Web application & WebAssembly engine (`omnispex_flutter.wasm`).
  */
 
@@ -30,6 +31,67 @@ function jsonResponse(data: unknown, status = 200): Response {
 
 function errorResponse(message: string, status = 400): Response {
   return jsonResponse({ ok: false, error: message }, status);
+}
+
+async function hashSecret(secret: string): Promise<string> {
+  const msgUint8 = new TextEncoder().encode(secret);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Authenticates the request against the D1 `users` table using a Bearer token secret.
+ * On first use for a new user_id, auto-registers the user with the provided secret.
+ */
+async function authenticateUser(
+  request: Request,
+  userId: string,
+  env: Env
+): Promise<{ ok: boolean; error?: string }> {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return { ok: false, error: "Missing or malformed Authorization header. Expected 'Bearer <secret_key>'" };
+  }
+
+  const secretKey = authHeader.substring(7).trim();
+  if (secretKey.length < 8) {
+    return { ok: false, error: "Secret key must be at least 8 characters long" };
+  }
+
+  const secretHash = await hashSecret(secretKey);
+
+  try {
+    const user = await env.DB.prepare(
+      "SELECT user_id, secret_hash FROM users WHERE user_id = ?"
+    )
+      .bind(userId)
+      .first<{ user_id: string; secret_hash: string }>();
+
+    if (!user) {
+      // First time this user_id is seen: auto-register with this secret
+      await env.DB.prepare(
+        "INSERT INTO users (user_id, secret_hash, created_at, last_active_at) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+      )
+        .bind(userId, secretHash)
+        .run();
+      return { ok: true };
+    }
+
+    if (user.secret_hash !== secretHash) {
+      return { ok: false, error: "Unauthorized: Invalid secret key for this user" };
+    }
+
+    // Touch last_active_at asynchronously
+    env.DB.prepare("UPDATE users SET last_active_at = CURRENT_TIMESTAMP WHERE user_id = ?")
+      .bind(userId)
+      .run()
+      .catch(() => {});
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, error: `Authentication error: ${err instanceof Error ? err.message : String(err)}` };
+  }
 }
 
 export default {
@@ -89,19 +151,21 @@ export default {
   </style>
 </head>
 <body>
-  <div class="badge">SYSTEM ONLINE // OMNISPEX CLOUD v1.0.0</div>
+  <div class="badge">SYSTEM ONLINE // OMNISPEX CLOUD v1.0.0 (AUTHENTICATED)</div>
   <h1>Omnispex Cloud Cogitator & Sync Gateway</h1>
   <p>Edge cloud storage and synchronization service for Warhammer 40,000 & Kill Team army rosters, wishlists, and match analytics.</p>
   <div class="card">
     <h3>Active Endpoints</h3>
     <ul>
       <li><code>GET /api/health</code> — Gateway health and database status</li>
-      <li><code>GET /api/sync/:userId</code> — Retrieve full synchronized user store</li>
-      <li><code>POST /api/sync/:userId</code> — Upsert full user personal data store</li>
-      <li><code>GET /api/rosters/:userId</code> — Query user army rosters</li>
-      <li><code>POST /api/rosters/:userId</code> — Upsert individual army roster</li>
-      <li><code>GET /api/wishlists/:userId</code> — Query faction wishlists</li>
-      <li><code>POST /api/wishlists/:userId</code> — Upsert faction wishlists</li>
+      <li><code>POST /api/auth/register</code> — Register or verify client device credentials</li>
+      <li><code>GET /api/sync/:userId</code> — Retrieve full synchronized user store [Auth Required]</li>
+      <li><code>POST /api/sync/:userId</code> — Upsert full user personal data store [Auth Required]</li>
+      <li><code>GET /api/rosters/:userId</code> — Query user army rosters [Auth Required]</li>
+      <li><code>POST /api/rosters/:userId</code> — Upsert individual army roster [Auth Required]</li>
+      <li><code>DELETE /api/rosters/:userId/:rosterId</code> — Delete individual army roster [Auth Required]</li>
+      <li><code>GET /api/wishlists/:userId</code> — Query faction wishlists [Auth Required]</li>
+      <li><code>POST /api/wishlists/:userId</code> — Upsert faction wishlists [Auth Required]</li>
     </ul>
   </div>
 </body>
@@ -120,11 +184,13 @@ async function handleApiRequest(url: URL, request: Request, env: Env): Promise<R
   if (path === "/api/health") {
     try {
       const dbCheck = await env.DB.prepare("SELECT 1 as alive").first<{ alive: number }>();
+      const userCount = await env.DB.prepare("SELECT count(*) as count FROM users").first<{ count: number }>();
       return jsonResponse({
         status: "ok",
         service: "omnispex-cloud",
         version: "1.0.0",
         database: dbCheck?.alive === 1 ? "connected" : "unknown",
+        active_users: userCount?.count ?? 0,
         timestamp: new Date().toISOString(),
       });
     } catch (err: unknown) {
@@ -138,10 +204,48 @@ async function handleApiRequest(url: URL, request: Request, env: Env): Promise<R
     }
   }
 
+  // POST /api/auth/register
+  if (path === "/api/auth/register" && request.method === "POST") {
+    interface AuthPayload {
+      user_id?: string;
+      secret_key?: string;
+    }
+    let payload: AuthPayload;
+    try {
+      payload = (await request.json()) as AuthPayload;
+    } catch {
+      return errorResponse("Invalid JSON payload");
+    }
+
+    const userId = payload.user_id || `user_${crypto.randomUUID().replace(/-/g, "").substring(0, 16)}`;
+    const secretKey = payload.secret_key || `sec_${crypto.randomUUID().replace(/-/g, "")}`;
+
+    const authRes = await authenticateUser(
+      new Request(request.url, {
+        headers: { Authorization: `Bearer ${secretKey}` },
+      }),
+      userId,
+      env
+    );
+
+    if (!authRes.ok) {
+      return errorResponse(authRes.error || "Authentication failed", 401);
+    }
+
+    return jsonResponse({
+      ok: true,
+      user_id: userId,
+      secret_key: secretKey,
+      message: "Device authenticated successfully",
+    });
+  }
+
   // --- /api/sync/:userId ---
   const syncMatch = path.match(/^\/api\/sync\/([^/]+)$/);
   if (syncMatch) {
     const userId = decodeURIComponent(syncMatch[1]);
+    const auth = await authenticateUser(request, userId, env);
+    if (!auth.ok) return errorResponse(auth.error || "Unauthorized", 401);
 
     if (request.method === "GET") {
       const row = await env.DB.prepare("SELECT data, updated_at FROM user_sync WHERE user_id = ?")
@@ -196,6 +300,8 @@ async function handleApiRequest(url: URL, request: Request, env: Env): Promise<R
   const rostersMatch = path.match(/^\/api\/rosters\/([^/]+)$/);
   if (rostersMatch) {
     const userId = decodeURIComponent(rostersMatch[1]);
+    const auth = await authenticateUser(request, userId, env);
+    if (!auth.ok) return errorResponse(auth.error || "Unauthorized", 401);
 
     if (request.method === "GET") {
       const { results } = await env.DB.prepare(
@@ -271,6 +377,8 @@ async function handleApiRequest(url: URL, request: Request, env: Env): Promise<R
   if (singleRosterMatch) {
     const userId = decodeURIComponent(singleRosterMatch[1]);
     const rosterId = decodeURIComponent(singleRosterMatch[2]);
+    const auth = await authenticateUser(request, userId, env);
+    if (!auth.ok) return errorResponse(auth.error || "Unauthorized", 401);
 
     if (request.method === "DELETE") {
       await env.DB.prepare("DELETE FROM user_rosters WHERE user_id = ? AND roster_id = ?")
@@ -284,6 +392,8 @@ async function handleApiRequest(url: URL, request: Request, env: Env): Promise<R
   const wishlistsMatch = path.match(/^\/api\/wishlists\/([^/]+)$/);
   if (wishlistsMatch) {
     const userId = decodeURIComponent(wishlistsMatch[1]);
+    const auth = await authenticateUser(request, userId, env);
+    if (!auth.ok) return errorResponse(auth.error || "Unauthorized", 401);
 
     if (request.method === "GET") {
       const { results } = await env.DB.prepare(
@@ -340,4 +450,3 @@ async function handleApiRequest(url: URL, request: Request, env: Env): Promise<R
 
   return errorResponse("Endpoint not found", 404);
 }
-

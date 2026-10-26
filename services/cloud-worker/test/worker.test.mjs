@@ -2,9 +2,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import worker from "../src/index.ts";
 
-// Mock D1 database implementation for local testing
+// Mock D1 database implementation with users table
 class MockD1Database {
   constructor() {
+    this.usersStore = new Map();
     this.syncStore = new Map();
     this.rosterStore = new Map();
     this.wishlistStore = new Map();
@@ -22,6 +23,13 @@ class MockD1Database {
       async first() {
         if (query.includes("SELECT 1 as alive")) {
           return { alive: 1 };
+        }
+        if (query.includes("SELECT count(*) as count FROM users")) {
+          return { count: db.usersStore.size };
+        }
+        if (query.includes("SELECT user_id, secret_hash FROM users WHERE user_id = ?")) {
+          const userId = bound[0];
+          return db.usersStore.get(userId) || null;
         }
         if (query.includes("FROM user_sync WHERE user_id = ?")) {
           const userId = bound[0];
@@ -48,6 +56,14 @@ class MockD1Database {
         return { results: [] };
       },
       async run() {
+        if (query.includes("INSERT INTO users")) {
+          const [userId, secretHash] = bound;
+          db.usersStore.set(userId, { user_id: userId, secret_hash: secretHash });
+          return { success: true };
+        }
+        if (query.includes("UPDATE users SET last_active_at")) {
+          return { success: true };
+        }
         if (query.includes("INSERT INTO user_sync")) {
           const [userId, data] = bound;
           db.syncStore.set(userId, { data, updated_at: new Date().toISOString() });
@@ -89,9 +105,15 @@ class MockD1Database {
   }
 }
 
-describe("Omnispex Cloudflare Worker API", () => {
+describe("Omnispex Cloudflare Worker Authenticated API", () => {
   const env = {
     DB: new MockD1Database(),
+  };
+
+  const validSecret = "sec_test_secret_12345678";
+  const authHeaders = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${validSecret}`,
   };
 
   it("handles CORS OPTIONS preflight", async () => {
@@ -101,7 +123,7 @@ describe("Omnispex Cloudflare Worker API", () => {
     assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
   });
 
-  it("GET /api/health returns database status ok", async () => {
+  it("GET /api/health returns database status ok without auth", async () => {
     const req = new Request("http://localhost/api/health", { method: "GET" });
     const res = await worker.fetch(req, env);
     assert.equal(res.status, 200);
@@ -111,7 +133,15 @@ describe("Omnispex Cloudflare Worker API", () => {
     assert.equal(data.database, "connected");
   });
 
-  it("POST /api/sync/:userId saves and GET retrieves user data", async () => {
+  it("rejects sync request without Authorization header", async () => {
+    const req = new Request("http://localhost/api/sync/user_unauth", { method: "GET" });
+    const res = await worker.fetch(req, env);
+    assert.equal(res.status, 401);
+    const data = await res.json();
+    assert.equal(data.ok, false);
+  });
+
+  it("auto-registers user on first valid call and stores data", async () => {
     const userId = "inquisitor_kamil";
     const payload = {
       schema_version: 1,
@@ -121,7 +151,7 @@ describe("Omnispex Cloudflare Worker API", () => {
 
     const postReq = new Request(`http://localhost/api/sync/${userId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify(payload),
     });
     const postRes = await worker.fetch(postReq, env);
@@ -129,7 +159,10 @@ describe("Omnispex Cloudflare Worker API", () => {
     const postData = await postRes.json();
     assert.equal(postData.ok, true);
 
-    const getReq = new Request(`http://localhost/api/sync/${userId}`, { method: "GET" });
+    const getReq = new Request(`http://localhost/api/sync/${userId}`, {
+      method: "GET",
+      headers: authHeaders,
+    });
     const getRes = await worker.fetch(getReq, env);
     assert.equal(getRes.status, 200);
     const getData = await getRes.json();
@@ -138,7 +171,19 @@ describe("Omnispex Cloudflare Worker API", () => {
     assert.equal(getData.data.rosters[0].name, "Speed Freeks");
   });
 
-  it("POST /api/rosters/:userId upserts and GET returns rosters", async () => {
+  it("rejects request if wrong secret is supplied for registered user", async () => {
+    const userId = "inquisitor_kamil";
+    const wrongReq = new Request(`http://localhost/api/sync/${userId}`, {
+      method: "GET",
+      headers: {
+        Authorization: "Bearer sec_wrong_secret_999999",
+      },
+    });
+    const wrongRes = await worker.fetch(wrongReq, env);
+    assert.equal(wrongRes.status, 401);
+  });
+
+  it("POST /api/rosters/:userId upserts and GET returns rosters when authenticated", async () => {
     const userId = "warlord_thraka";
     const roster = {
       id: "da_great_waaagh",
@@ -150,13 +195,16 @@ describe("Omnispex Cloudflare Worker API", () => {
 
     const postReq = new Request(`http://localhost/api/rosters/${userId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify(roster),
     });
     const postRes = await worker.fetch(postReq, env);
     assert.equal(postRes.status, 200);
 
-    const getReq = new Request(`http://localhost/api/rosters/${userId}`, { method: "GET" });
+    const getReq = new Request(`http://localhost/api/rosters/${userId}`, {
+      method: "GET",
+      headers: authHeaders,
+    });
     const getRes = await worker.fetch(getReq, env);
     assert.equal(getRes.status, 200);
     const getData = await getRes.json();
@@ -164,21 +212,25 @@ describe("Omnispex Cloudflare Worker API", () => {
     assert.equal(getData.rosters[0].name, "Da Great Waaagh!");
   });
 
-  it("DELETE /api/rosters/:userId/:rosterId deletes the roster", async () => {
+  it("DELETE /api/rosters/:userId/:rosterId deletes the roster when authenticated", async () => {
     const userId = "warlord_thraka";
     const delReq = new Request(`http://localhost/api/rosters/${userId}/da_great_waaagh`, {
       method: "DELETE",
+      headers: authHeaders,
     });
     const delRes = await worker.fetch(delReq, env);
     assert.equal(delRes.status, 200);
 
-    const getReq = new Request(`http://localhost/api/rosters/${userId}`, { method: "GET" });
+    const getReq = new Request(`http://localhost/api/rosters/${userId}`, {
+      method: "GET",
+      headers: authHeaders,
+    });
     const getRes = await worker.fetch(getReq, env);
     const getData = await getRes.json();
     assert.equal(getData.rosters.length, 0);
   });
 
-  it("POST /api/wishlists/:userId saves and GET retrieves wishlists", async () => {
+  it("POST /api/wishlists/:userId saves and GET retrieves wishlists when authenticated", async () => {
     const userId = "iron_priest";
     const wishlist = {
       faction_id: "space_wolves",
@@ -187,13 +239,16 @@ describe("Omnispex Cloudflare Worker API", () => {
 
     const postReq = new Request(`http://localhost/api/wishlists/${userId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify(wishlist),
     });
     const postRes = await worker.fetch(postReq, env);
     assert.equal(postRes.status, 200);
 
-    const getReq = new Request(`http://localhost/api/wishlists/${userId}`, { method: "GET" });
+    const getReq = new Request(`http://localhost/api/wishlists/${userId}`, {
+      method: "GET",
+      headers: authHeaders,
+    });
     const getRes = await worker.fetch(getReq, env);
     assert.equal(getRes.status, 200);
     const getData = await getRes.json();
@@ -201,4 +256,3 @@ describe("Omnispex Cloudflare Worker API", () => {
     assert.equal(getData.wishlists[0].faction_id, "space_wolves");
   });
 });
-
