@@ -17,3 +17,16 @@ target
 
 # rustc will dump stack traces when hitting an internal compiler error to PWD
 rustc-ice-*.txt
+
+# Secrets & Environment Variables (Local-only, strictly never committed)
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+wrangler.toml.local
+*.key
+*.jks
+*.keystore
+services/cloud-worker/.wrangler/
+services/cloud-worker/node_modules/
+services/cloud-worker/dist/

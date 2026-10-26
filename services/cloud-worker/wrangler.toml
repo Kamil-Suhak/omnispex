@@ -1,0 +1,15 @@
+name = "omnispex-cloud"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "../../flutter_ui/build/web"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "omnispex-db"
+database_id = "42626453-b94a-4f19-9c7e-7521738890e3"
+

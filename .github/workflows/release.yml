@@ -1,0 +1,236 @@
+name: Omnispex Release & Deployment Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verification (Rust & Dart)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Rust Workspace Unit & Integration Tests
+        run: cargo test --workspace
+
+      - name: Flutter Static Analysis
+        run: |
+          cd flutter_ui
+          flutter pub get
+          flutter analyze
+
+      - name: Cloudflare Worker Tests
+        run: |
+          cd services/cloud-worker
+          npm install
+          npm test
+
+  build-android:
+    name: Build Android APK
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, x86_64-linux-android
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26d
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Cross-compile Rust JNI Libraries
+        run: |
+          cargo ndk -t arm64-v8a -t x86_64 -o flutter_ui/android/app/src/main/jniLibs build --release -p omnispex_flutter
+
+      - name: Build Android Release APK
+        run: |
+          cd flutter_ui
+          flutter pub get
+          flutter build apk --release --split-per-abi
+
+      - name: Stage APK Artifacts
+        run: |
+          mkdir -p release-apks
+          cp flutter_ui/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk release-apks/omnispex-android-arm64-v8a.apk
+          cp flutter_ui/build/app/outputs/flutter-apk/app-release.apk release-apks/omnispex-android-universal.apk || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: release-apks/*
+
+  build-cli:
+    name: Build CLI Binaries
+    needs: verify
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            bin_name: omnispex_cli
+            archive_name: omnispex-cli-linux-x86_64.tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            bin_name: omnispex_cli.exe
+            archive_name: omnispex-cli-windows-x86_64.zip
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            bin_name: omnispex_cli
+            archive_name: omnispex-cli-macos-x86_64.tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Compile Release CLI
+        run: cargo build --release --target ${{ matrix.target }} -p omnispex_cli
+
+      - name: Package CLI Archive (Linux / macOS)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p package/data
+          cp target/${{ matrix.target }}/release/${{ matrix.bin_name }} package/
+          cp flutter_ui/assets/data/wh40k_11e_bundle.json package/data/
+          tar -czvf ${{ matrix.archive_name }} -C package .
+
+      - name: Package CLI Archive (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Path package\data -Force
+          Copy-Item target\${{ matrix.target }}\release\${{ matrix.bin_name }} package\
+          Copy-Item flutter_ui\assets\data\wh40k_11e_bundle.json package\data\
+          Compress-Archive -Path package\* -DestinationPath ${{ matrix.archive_name }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive_name }}
+          path: ${{ matrix.archive_name }}
+
+  deploy-web-worker:
+    name: Deploy Flutter Web & Cloudflare Worker
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Compile Rust WebAssembly Module
+        run: |
+          cargo build --target wasm32-unknown-unknown --release -p omnispex_flutter
+          cp target/wasm32-unknown-unknown/release/omnispex_flutter.wasm flutter_ui/web/omnispex_flutter.wasm
+
+      - name: Build Flutter Web Bundle
+        run: |
+          cd flutter_ui
+          flutter pub get
+          flutter build web --release --base-href /
+
+      - name: Deploy Cloudflare Worker & Web Assets
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          cd services/cloud-worker
+          npm install
+          npx wrangler deploy
+
+  create-github-release:
+    name: Publish GitHub Release
+    needs: [build-android, build-cli, deploy-web-worker]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apks
+          path: release-assets/
+
+      - name: Download Linux CLI
+        uses: actions/download-artifact@v4
+        with:
+          name: omnispex-cli-linux-x86_64.tar.gz
+          path: release-assets/
+
+      - name: Download Windows CLI
+        uses: actions/download-artifact@v4
+        with:
+          name: omnispex-cli-windows-x86_64.zip
+          path: release-assets/
+
+      - name: Download macOS CLI
+        uses: actions/download-artifact@v4
+        with:
+          name: omnispex-cli-macos-x86_64.tar.gz
+          path: release-assets/
+
+      - name: Copy Bundle Reference Data
+        run: |
+          cp flutter_ui/assets/data/wh40k_11e_bundle.json release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Omnispex ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: release-assets/*
+          body: |
+            ## Omnispex Tactical Companion — Release ${{ github.ref_name }}
+
+            Omnispex is a high-performance Warhammer 40,000 (11th Edition) & Kill Team companion engine.
+
+            ### Downloads & Deployment
+            - 📱 **Android APK (arm64-v8a)**: Download `omnispex-android-arm64-v8a.apk` attached below for physical Android devices.
+            - 📱 **Android Universal APK**: Download `omnispex-android-universal.apk` for multi-architecture devices.
+            - 🌐 **Web Live App**: Hosted on Cloudflare Edge: [https://omnispex-cloud.kamilsuhak.workers.dev](https://omnispex-cloud.kamilsuhak.workers.dev)
+            - 💻 **CLI Binaries**: Standalone release archives attached below for Windows (`.zip`), Linux (`.tar.gz`), and macOS (`.tar.gz`).
+            - 📦 **11th Edition Catalogue Bundle**: `wh40k_11e_bundle.json` (35 factions, 690 detachments, 1,531 datasheets).
+
+            ### Highlights
+            - **Mathematical Certainty**: Exact analytical probabilities ($P(\text{Hit})$, $P(\text{Wound})$, $P(\text{Unsaved})$) combined with Monte Carlo discrete wound allocation.
+            - **Updated 11th Edition Profiles**: Aligned with the official community BSData repository (including Ghazghkull Thraka T10 / 16 Wounds / 290 pts).
+            - **Army Builder & Validator**: Full 11e legality validation (points budgets, Detachment DP, Enhancements, Warlord, Epic Hero uniqueness, and transport limits).
+            - **Faction Wishlists**: Plan unit acquisition and track hobby progress states.
+            - **Match History**: 5-round 40K scoring and 4-Turning-Point Kill Team scoring models.
+            - **Cloudflare Edge D1 Sync Gateway**: Real-time cloud sync for armies and wishlists.

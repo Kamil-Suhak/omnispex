@@ -211,7 +211,25 @@ Output directory: `flutter_ui/build/web/`.
 
 For WebAssembly to load securely and quickly, the hosting server must serve `.wasm` with `Content-Type: application/wasm`.
 
-#### NGINX Configuration (`/etc/nginx/conf.d/omnispex.conf`):
+#### Cloudflare Worker & D1 Edge Deployment:
+Omnispex deploys its Web SPA and Edge Cloud Sync Gateway via Cloudflare Workers and Cloudflare D1:
+- **Live Production URL**: `https://omnispex-cloud.kamilsuhak.workers.dev`
+- **Configuration**: [`services/cloud-worker/wrangler.toml`](../services/cloud-worker/wrangler.toml)
+- **Edge SQLite Database**: Cloudflare D1 `omnispex-db` (`42626453-b94a-4f19-9c7e-7521738890e3`)
+- **Direct Deployment**:
+  ```bash
+  cd services/cloud-worker
+  npm install
+  npx wrangler deploy
+  ```
+- **Sync Endpoints**:
+  - `GET /api/health` — Edge status & D1 connectivity
+  - `GET /api/sync/:userId` — Retrieve user's synced armies & wishlists
+  - `POST /api/sync/:userId` — Upsert user's synced data
+  - `GET|POST|DELETE /api/rosters/:userId` — Manage cloud rosters
+  - `GET|POST /api/wishlists/:userId` — Manage faction wishlists
+
+#### NGINX Configuration (Alternative Self-Hosted Server):
 ```nginx
 server {
     listen 80;
@@ -406,3 +424,4 @@ Prior to distributing any release:
 - [ ] Check catalogue data provenance: Verify edition header and commit hash in `wh40k_11e_bundle.json`.
 - [ ] Validate user data isolation: Verify that installing a new version of the app retains existing user lists and match histories (`PersonalDataStore`).
 - [ ] Test offline behavior: Verify unit browsing and combat simulations with network connectivity disabled.
+

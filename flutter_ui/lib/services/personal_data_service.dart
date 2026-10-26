@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../bridge/omnispex_rust_bridge.dart';
 import '../models/bsdata_models.dart';
 import '../models/omnispex_models.dart';
@@ -378,5 +379,51 @@ class PersonalDataService {
       ),
       killTeamFactions: defaultKillTeamFactions,
     );
+  }
+
+  static const String defaultCloudSyncEndpoint =
+      'https://omnispex-cloud.kamilsuhak.workers.dev';
+
+  /// Synchronize the local PersonalDataStore to the Cloudflare Worker D1 storage
+  static Future<bool> pushToCloudSync({
+    required String userId,
+    String endpoint = defaultCloudSyncEndpoint,
+  }) async {
+    try {
+      final raw = await readPersonalStoreRaw();
+      if (raw == null || raw.trim().isEmpty) return false;
+      final uri = Uri.parse('$endpoint/api/sync/$userId');
+      final res = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: raw,
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Pull user data from Cloudflare Worker D1 storage into local storage
+  static Future<PersonalDataStoreUi?> pullFromCloudSync({
+    required String userId,
+    String endpoint = defaultCloudSyncEndpoint,
+  }) async {
+    try {
+      final uri = Uri.parse('$endpoint/api/sync/$userId');
+      final res = await http.get(uri);
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map<String, dynamic> &&
+            decoded['ok'] == true &&
+            decoded['exists'] == true) {
+          final data = decoded['data'];
+          final rawJson = jsonEncode(data);
+          await writePersonalStoreRaw(rawJson);
+          return await loadPersonalStore();
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 }
