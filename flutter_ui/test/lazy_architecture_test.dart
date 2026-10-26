@@ -8,8 +8,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Lazy Game Data & In-Memory Scoping Architecture', () {
-    test('FactionRegistry contains all 35 Warhammer 40k 11e factions', () {
-      expect(FactionRegistry.allFactions.length, equals(35));
+    test('FactionRegistry contains all 36 Warhammer 40k 11e factions', () {
+      expect(FactionRegistry.allFactions.length, equals(36));
 
       final orks = FactionRegistry.find('orks');
       expect(orks, isNotNull);
@@ -17,9 +17,13 @@ void main() {
       expect(orks.remoteFile, equals('Orks.json'));
       expect(orks.expectedUnits, equals(65));
 
+      final rootAstartes = FactionRegistry.find('adeptus-astartes');
+      expect(rootAstartes, isNotNull);
+      expect(rootAstartes!.name, equals('Adeptus Astartes'));
+
       final sm = FactionRegistry.find('space-marines');
       expect(sm, isNotNull);
-      expect(sm!.name, equals('Adeptus Astartes - Space Marines'));
+      expect(sm!.name, equals('Adeptus Astartes - Compliant Chapters'));
 
       final nec = FactionRegistry.find('necrons');
       expect(nec, isNotNull);

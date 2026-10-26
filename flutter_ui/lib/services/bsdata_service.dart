@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import '../bridge/omnispex_rust_bridge.dart';
 import '../models/bsdata_models.dart';
@@ -13,7 +12,6 @@ class BsDataService {
   static final Set<String> _cachedFactionSlugs = {};
   static DataProvenanceUi _provenance = const DataProvenanceUi();
   static bool _fullBundleLoaded = false;
-  static CatalogueDatabaseUi? _masterBundleCache;
   static bool _isCheckingUpdates = false;
   static String? _updateStatusMessage;
 
@@ -53,18 +51,17 @@ class BsDataService {
       }
     } catch (_) {}
 
+    _provenance = const DataProvenanceUi(
+      edition: 'Warhammer 40,000 11th Edition',
+      bsdataRevision: 'b4dc3f40ca39ae551e480228186e769344a36194',
+      mfmVersion: '1.6',
+      mfmRevision: '11c45c5f062d26d6468b8b2156c7a8e258013ef5',
+      mfmLastUpdated: '2026-10-22',
+      attributionNotice:
+          'Community-maintained game data via BSData/wh40k-11e and points from the Munitorum Field Manual via BSData/wh40k-11e-mfm.',
+    );
     try {
-      if (_masterBundleCache == null) {
-        final raw = await rootBundle.loadString('assets/data/wh40k_11e_bundle.json');
-        final decoded = jsonDecode(raw);
-        if (decoded is Map<String, dynamic>) {
-          _masterBundleCache = CatalogueDatabaseUi.fromRustJson(decoded);
-        }
-      }
-      if (_masterBundleCache != null) {
-        _provenance = _masterBundleCache!.provenance;
-        await writeMfmCacheRaw(jsonEncode(_provenance.toRustJson()));
-      }
+      await writeMfmCacheRaw(jsonEncode(_provenance.toRustJson()));
     } catch (_) {}
   }
 
@@ -107,30 +104,18 @@ class BsDataService {
       }
     } catch (_) {}
 
-    // 2. Fallback to bundle extraction
+    // 2. Fallback to built-in fallback models if offline/uncached
     if (faction == null) {
-      if (_masterBundleCache == null) {
-        try {
-          final raw =
-              await rootBundle.loadString('assets/data/wh40k_11e_bundle.json');
-          final decoded = jsonDecode(raw);
-          if (decoded is Map<String, dynamic>) {
-            _masterBundleCache = CatalogueDatabaseUi.fromRustJson(decoded);
-          }
-        } catch (_) {}
-      }
-      if (_masterBundleCache != null) {
-        faction = _masterBundleCache!.factions.cast<BsDataFaction?>().firstWhere(
-              (f) =>
-                  f != null &&
-                  (f.id.toLowerCase() == meta.id.toLowerCase() ||
-                      f.name.toLowerCase() == meta.name.toLowerCase() ||
-                      f.name
-                          .toLowerCase()
-                          .contains(meta.slug.replaceAll('-', ' '))),
-              orElse: () => null,
-            );
-      }
+      faction = _fallbackFactions.cast<BsDataFaction?>().firstWhere(
+            (f) =>
+                f != null &&
+                (f.id.toLowerCase() == meta.id.toLowerCase() ||
+                    f.name.toLowerCase() == meta.name.toLowerCase() ||
+                    f.name
+                        .toLowerCase()
+                        .contains(meta.slug.replaceAll('-', ' '))),
+            orElse: () => null,
+          );
     }
 
     if (faction != null) {
@@ -258,27 +243,19 @@ class BsDataService {
   static Future<void> loadFull11eCatalogueBundle() async {
     await initOnStartup();
     if (_fullBundleLoaded) return;
-    try {
-      final rawJson =
-          await rootBundle.loadString('assets/data/wh40k_11e_bundle.json');
-      final decoded = jsonDecode(rawJson);
-      if (decoded is Map<String, dynamic>) {
-        final db = CatalogueDatabaseUi.fromRustJson(decoded);
-        if (db.factions.isNotEmpty) {
-          _fallbackFactions = db.factions;
-          _provenance = db.provenance;
-          _fullBundleLoaded = true;
-          for (final f in db.factions) {
-            final meta = FactionRegistry.find(f.id) ?? FactionRegistry.find(f.name);
-            if (meta != null) {
-              _cachedFactionSlugs.add(meta.slug);
-            }
+    for (final slug in _cachedFactionSlugs) {
+      try {
+        final raw = await readFactionCacheRaw(slug);
+        if (raw != null && raw.trim().isNotEmpty) {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) {
+            final f = BsDataFaction.fromRustJson(decoded);
+            _loadedFactions[f.id] = f;
           }
         }
-      }
-    } catch (_) {
-      // Fallback to built-in factions in test environments without assets
+      } catch (_) {}
     }
+    _fullBundleLoaded = true;
   }
 
   static void resetToDefaultFallback() {

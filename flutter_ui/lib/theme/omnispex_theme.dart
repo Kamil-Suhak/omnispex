@@ -44,29 +44,39 @@ class OmnispexTheme {
         labelStyle: OmnispexTypography.label,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor: OmnispexColors.textPrimary,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: OmnispexColors.cyan,
+        ),
+      ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: OmnispexColors.surface,
-        indicatorColor: OmnispexColors.cyan.withOpacity(0.15),
-        labelTextStyle: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        indicatorColor: OmnispexColors.cyan.withValues(alpha: 0.15),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return OmnispexTypography.label.copyWith(color: OmnispexColors.cyan);
           }
-          return OmnispexTypography.label.copyWith(color: OmnispexColors.textMuted);
+          return OmnispexTypography.label.copyWith(color: OmnispexColors.textSecondary);
         }),
-        iconTheme: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return const IconThemeData(color: OmnispexColors.cyan, size: 22);
           }
-          return const IconThemeData(color: OmnispexColors.textMuted, size: 20);
+          return const IconThemeData(color: OmnispexColors.textSecondary, size: 20);
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: OmnispexColors.surface,
-        indicatorColor: OmnispexColors.cyan.withOpacity(0.15),
+        indicatorColor: OmnispexColors.cyan.withValues(alpha: 0.15),
         selectedIconTheme: const IconThemeData(color: OmnispexColors.cyan, size: 24),
-        unselectedIconTheme: const IconThemeData(color: OmnispexColors.textMuted, size: 22),
+        unselectedIconTheme: const IconThemeData(color: OmnispexColors.textSecondary, size: 22),
         selectedLabelTextStyle: OmnispexTypography.label.copyWith(color: OmnispexColors.cyan),
-        unselectedLabelTextStyle: OmnispexTypography.label.copyWith(color: OmnispexColors.textMuted),
+        unselectedLabelTextStyle: OmnispexTypography.label.copyWith(color: OmnispexColors.textSecondary),
       ),
     );
   }

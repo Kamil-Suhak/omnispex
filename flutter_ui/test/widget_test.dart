@@ -79,8 +79,8 @@ void main() {
     notifier.upsertWishlistItem(
       WishlistItemUi(
         id: 'wl-redemptor-dup',
-        factionId: 'sm-1',
-        factionName: 'Space Marines',
+        factionId: 'compliant-chapters',
+        factionName: 'Adeptus Astartes - Compliant Chapters',
         unitId: 'sm_redemptor',
         unitName: 'Redemptor Dreadnought',
         quantityDesired: 3,

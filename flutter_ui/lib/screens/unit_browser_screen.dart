@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/bsdata_models.dart';
 import '../models/omnispex_models.dart';
-import '../models/simulation_models.dart';
 import '../providers/app_state_provider.dart';
 import '../screens/in_battle_screen.dart';
-import '../screens/list_building_screen.dart';
 import '../services/bsdata_service.dart';
 import '../services/faction_registry.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
-import '../widgets/stat_badge.dart';
 import '../widgets/tactical_card.dart';
+import '../widgets/unit_details_modal.dart';
 
 final unitSearchQueryProvider = StateProvider<String>((ref) => "");
 final unitFactionFilterProvider = StateProvider<String>((ref) => "All Factions");
@@ -28,6 +26,7 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
   late TextEditingController _searchController;
   bool _isDownloading = false;
   String _downloadingFactionName = '';
+  int _selectedTab = 0; // 0: Datasheets, 1: Army Rules, 2: Detachments
 
   @override
   void initState() {
@@ -60,7 +59,7 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
       return;
     }
 
-    // Prompt user to download
+    // Prompt user to download with clean copy
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -76,20 +75,9 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
             Text("DOWNLOAD FACTION DATA", style: OmnispexTypography.h3),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Datasheet catalogue for ${meta.name} is not cached on this device.",
-              style: OmnispexTypography.body,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "• Expected datasheets: ~${meta.expectedUnits}\n• Size: ~250 KB\n• Memory scope: Strictly 1 faction loaded in RAM",
-              style: OmnispexTypography.bodyMuted.copyWith(fontSize: 12),
-            ),
-          ],
+        content: Text(
+          "Datasheet catalogue for ${meta.name} is not cached on this device. Would you like to download it now?",
+          style: OmnispexTypography.body,
         ),
         actions: [
           TextButton(
@@ -162,7 +150,7 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("BSDATA UNIT & WEAPON BROWSER", style: OmnispexTypography.h2),
-                      Text("Instant 40k Datasheets, Wargear & Defensive Rules", style: OmnispexTypography.bodyMuted),
+                      Text("Datasheets, Detachments & Army Rules", style: OmnispexTypography.bodyMuted),
                     ],
                   ),
                   Container(
@@ -193,7 +181,7 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                       decoration: InputDecoration(
                         hintText: factionFilter != "All Factions"
                             ? "Search $factionFilter units, weapons, or abilities..."
-                            : "Search units, weapons, or abilities (e.g. 'Terminators', 'Leman Russ', 'Melta', 'Ramshackle')...",
+                            : "Search units, weapons, or abilities (e.g. 'Terminators', 'Leman Russ', 'Melta')...",
                         hintStyle: OmnispexTypography.bodyMuted.copyWith(fontSize: 12),
                         prefixIcon: const Icon(Icons.search, size: 18, color: OmnispexColors.cyan),
                         suffixIcon: query.isNotEmpty
@@ -214,31 +202,97 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Faction Chips
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: BsDataService.availableFactions.map((f) {
-                          final isSel = factionFilter == f;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: ChoiceChip(
-                              label: Text(f, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: isSel ? OmnispexColors.background : OmnispexColors.cyan)),
-                              selected: isSel,
-                              selectedColor: OmnispexColors.cyan,
-                              backgroundColor: OmnispexColors.surfaceElevated,
-                              side: BorderSide(color: isSel ? OmnispexColors.cyan : OmnispexColors.border),
-                              padding: EdgeInsets.zero,
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              onSelected: (sel) {
-                                if (sel) _handleFactionSelect(f);
-                              },
+                    // Faction Selector Dropdown
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: BsDataService.availableFactions.contains(factionFilter)
+                                ? factionFilter
+                                : "All Factions",
+                            isExpanded: true,
+                            dropdownColor: OmnispexColors.surfaceElevated,
+                            decoration: InputDecoration(
+                              labelText: "FACTION SELECTION",
+                              labelStyle: OmnispexTypography.monoData.copyWith(
+                                color: OmnispexColors.cyan,
+                                fontSize: 11,
+                              ),
+                              prefixIcon: const Icon(Icons.shield_outlined,
+                                  size: 18, color: OmnispexColors.cyan),
+                              fillColor: OmnispexColors.surfaceElevated,
+                              filled: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: OmnispexColors.border),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: OmnispexColors.border),
+                              ),
                             ),
-                          );
-                        }).toList(),
-                      ),
+                            items: BsDataService.availableFactions.map((f) {
+                              final isCached = f == "All Factions" ||
+                                  BsDataService.isFactionCached(
+                                      FactionRegistry.find(f)?.slug ?? "");
+                              return DropdownMenuItem<String>(
+                                value: f,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        f,
+                                        style: OmnispexTypography.monoData.copyWith(
+                                          fontSize: 12,
+                                          color: f == factionFilter
+                                              ? OmnispexColors.cyan
+                                              : OmnispexColors.textPrimary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (f != "All Factions")
+                                      Container(
+                                        margin: const EdgeInsets.only(left: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 5, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: isCached
+                                              ? OmnispexColors.greenKill.withOpacity(0.15)
+                                              : OmnispexColors.surfaceCard,
+                                          borderRadius: BorderRadius.circular(3),
+                                        ),
+                                        child: Text(
+                                          isCached ? "CACHED" : "DOWNLOAD",
+                                          style: OmnispexTypography.monoStatBadge.copyWith(
+                                            fontSize: 8,
+                                            color: isCached
+                                                ? OmnispexColors.greenKill
+                                                : OmnispexColors.textMuted,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) _handleFactionSelect(val);
+                            },
+                          ),
+                        ),
+                        if (factionFilter != "All Factions") ...[
+                          const SizedBox(width: 8),
+                          IconButton(
+                            tooltip: "Clear Faction Filter",
+                            icon: const Icon(Icons.clear, color: OmnispexColors.textMuted),
+                            onPressed: () => _handleFactionSelect("All Factions"),
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
 
                     // Role Filters
                     Wrap(
@@ -275,9 +329,9 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                         children: [
                           const CircularProgressIndicator(color: OmnispexColors.cyan),
                           const SizedBox(height: 16),
-                          Text("Ingesting $_downloadingFactionName from BSData repository...", style: OmnispexTypography.monoData),
+                          Text("Ingesting $_downloadingFactionName from repository...", style: OmnispexTypography.monoData),
                           const SizedBox(height: 4),
-                          Text("Caching to client storage & scoping strictly 1 faction in memory", style: OmnispexTypography.bodyMuted),
+                          Text("Downloading and caching catalogue...", style: OmnispexTypography.bodyMuted),
                         ],
                       ),
                     ),
@@ -306,7 +360,7 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                               style: OmnispexTypography.h3.copyWith(fontSize: 14, color: OmnispexColors.cyan),
                             ),
                             Text(
-                              "MEMORY SCOPE: 1 FACTION IN RAM // ${units.length} DATASHEETS LOADED",
+                              "${units.length} DATASHEETS LOADED",
                               style: OmnispexTypography.monoData.copyWith(fontSize: 10, color: OmnispexColors.greenKill),
                             ),
                           ],
@@ -329,79 +383,21 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
+
+              // Sub-navigation Tabs (Datasheets, Army Rules, Detachments)
+              Row(
+                children: [
+                  _buildTabButton(0, "DATASHEETS (${units.length})", Icons.list_alt),
+                  const SizedBox(width: 8),
+                  _buildTabButton(1, "ARMY RULES (${selectedFactionObj?.armyRules.length ?? 0})", Icons.menu_book),
+                  const SizedBox(width: 8),
+                  _buildTabButton(2, "DETACHMENTS (${selectedFactionObj?.detachments.length ?? 0})", Icons.shield),
+                ],
+              ),
               const SizedBox(height: 16),
 
-              // Faction Army Rules & Detachments Inspector (when a faction is selected)
-              if (selectedFactionObj != null &&
-                  (selectedFactionObj.armyRules.isNotEmpty ||
-                      selectedFactionObj.detachments.isNotEmpty)) ...[
-                TacticalCard(
-                  title:
-                      "FACTION DETACHMENTS & ARMY RULES — ${selectedFactionObj.name.toUpperCase()}",
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (selectedFactionObj.armyRules.isNotEmpty) ...[
-                        Text("ARMY RULES:",
-                            style: OmnispexTypography.label
-                                .copyWith(fontSize: 10, color: OmnispexColors.cyan)),
-                        const SizedBox(height: 4),
-                        ...selectedFactionObj.armyRules.take(4).map((r) => Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Text(
-                                "• ${r.name}: ${r.description}",
-                                style: OmnispexTypography.bodyMuted
-                                    .copyWith(fontSize: 11),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            )),
-                        const SizedBox(height: 8),
-                      ],
-                      if (selectedFactionObj.detachments.isNotEmpty) ...[
-                        Text(
-                            "DETACHMENTS (${selectedFactionObj.detachments.length}):",
-                            style: OmnispexTypography.label.copyWith(
-                                fontSize: 10, color: OmnispexColors.amber)),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: selectedFactionObj.detachments.take(12).map((det) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: OmnispexColors.surfaceElevated,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: OmnispexColors.border),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    "${det.name} (${det.dpCost} DP)",
-                                    style: OmnispexTypography.monoData
-                                        .copyWith(fontSize: 11, color: OmnispexColors.cyan),
-                                  ),
-                                  if (det.enhancements.isNotEmpty)
-                                    Text(
-                                      "${det.enhancements.length} Enhancements",
-                                      style: OmnispexTypography.bodyMuted
-                                          .copyWith(fontSize: 10),
-                                    ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-
+              // Sub-navigation Content
+              if (_selectedTab == 0) ...[
                 // Unit Datasheets Feed
                 if (units.isEmpty)
                   Container(
@@ -418,7 +414,12 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                     ),
                   )
                 else
-                  ...displayedUnits.map((u) => _buildUnitCard(context, ref, u)),
+                  ...displayedUnits.map((u) => _buildCompactUnitTile(context, ref, u)),
+              ] else if (_selectedTab == 1) ...[
+                _buildArmyRulesTab(selectedFactionObj),
+              ] else ...[
+                _buildDetachmentsTab(selectedFactionObj),
+              ],
             ],
           ),
         ),
@@ -426,143 +427,185 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
     );
   }
 
-  Widget _buildUnitCard(BuildContext context, WidgetRef ref, BsDataUnit unit) {
+  Widget _buildTabButton(int index, String title, IconData icon) {
+    final isSelected = _selectedTab == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _selectedTab = index),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? OmnispexColors.cyan.withOpacity(0.15)
+                : OmnispexColors.surfaceCard,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? OmnispexColors.cyan : OmnispexColors.border,
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected ? OmnispexColors.cyan : OmnispexColors.textMuted,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  title,
+                  style: OmnispexTypography.monoData.copyWith(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? OmnispexColors.cyan : OmnispexColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactUnitTile(BuildContext context, WidgetRef ref, BsDataUnit unit) {
     final p = unit.unitProfile;
+    final pts = unit.pointsCost ??
+        (unit.legalSizeOptions.isNotEmpty
+            ? unit.legalSizeOptions.first.points
+            : null);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: OmnispexColors.surfaceCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: OmnispexColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 6,
+          // Row 1: Indicator, Unit Name, Points Badge, Details Button
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 4,
-                    height: 20,
-                    decoration: BoxDecoration(color: OmnispexColors.cyan, borderRadius: BorderRadius.circular(2)),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(unit.name, style: OmnispexTypography.h2.copyWith(fontSize: 15)),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: OmnispexColors.surfaceElevated,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: OmnispexColors.border),
-                    ),
-                    child: Text(unit.faction.toUpperCase(), style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.textMuted)),
-                  ),
-                ],
+              Container(
+                width: 3,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: OmnispexColors.cyan,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-              if (unit.pointsCost != null)
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  unit.name,
+                  style: OmnispexTypography.h3.copyWith(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (pts != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: BoxDecoration(
                     color: OmnispexColors.purple.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(color: OmnispexColors.purple.withOpacity(0.4)),
                   ),
-                  child: Text("${unit.pointsCost} PTS", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11, color: OmnispexColors.purple, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    "$pts PTS",
+                    style: OmnispexTypography.monoStatBadge.copyWith(
+                      fontSize: 11,
+                      color: OmnispexColors.purple,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
+                const SizedBox(width: 8),
+              ],
+              OutlinedButton.icon(
+                icon: const Icon(Icons.info_outline, size: 13),
+                label: const Text("DETAILS", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: OmnispexColors.cyan,
+                  side: const BorderSide(color: OmnispexColors.cyan),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => showUnitDetailsModal(context, unit),
+              ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
-          // Stat Badges
+          // Row 2: Categories & Core Identifiers Summary
           Wrap(
             spacing: 6,
-            runSpacing: 6,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              StatBadge(label: "M", value: unit.movement),
-              StatBadge(label: "T", value: '${p.toughness}'),
-              StatBadge(label: "SV", value: '${p.save}+'),
-              if (p.invuln != null) StatBadge(label: "INV", value: '${p.invuln}+', accentColor: OmnispexColors.amber),
-              if (p.fnp != null) StatBadge(label: "FNP", value: '${p.fnp}+', accentColor: OmnispexColors.greenKill),
-              StatBadge(label: "W", value: '${p.woundsPerModel}'),
-              StatBadge(label: "LD", value: unit.leadership),
-              StatBadge(label: "OC", value: '${unit.objectiveControl}'),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Keywords
-          if (unit.categories.isNotEmpty) ...[
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: unit.categories.map((cat) {
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: OmnispexColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: OmnispexColors.border),
+                ),
+                child: Text(
+                  unit.faction.toUpperCase(),
+                  style: OmnispexTypography.monoStatBadge.copyWith(
+                    fontSize: 9,
+                    color: OmnispexColors.textMuted,
+                  ),
+                ),
+              ),
+              ...unit.categories.take(3).map((cat) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
                     color: OmnispexColors.surfaceElevated,
                     borderRadius: BorderRadius.circular(3),
                     border: Border.all(color: OmnispexColors.border.withOpacity(0.6)),
                   ),
-                  child: Text(cat.toUpperCase(), style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 8, color: OmnispexColors.textSecondary)),
+                  child: Text(
+                    cat.toUpperCase(),
+                    style: OmnispexTypography.monoStatBadge.copyWith(
+                      fontSize: 8,
+                      color: OmnispexColors.textSecondary,
+                    ),
+                  ),
                 );
-              }).toList(),
-            ),
-            const SizedBox(height: 10),
-          ],
-
-          // Abilities
-          if (unit.abilities.isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: OmnispexColors.surfaceElevated,
-                borderRadius: BorderRadius.circular(6),
+              }),
+              Text(
+                "• M ${unit.movement} • T ${p.toughness} • Sv ${p.save}+ • W ${p.woundsPerModel}",
+                style: OmnispexTypography.monoData.copyWith(
+                  fontSize: 10,
+                  color: OmnispexColors.textMuted,
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: unit.abilities.map((ab) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text("• $ab", style: OmnispexTypography.bodyMuted.copyWith(fontSize: 10)),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
+            ],
+          ),
+          const SizedBox(height: 8),
 
-          // Weapons Roster
-          if (unit.weapons.isNotEmpty) ...[
-            Text("WARGEAR & WEAPON PROFILES (${unit.weapons.length}):", style: OmnispexTypography.label.copyWith(fontSize: 10)),
-            const SizedBox(height: 6),
-            ...unit.weapons.map((w) => _buildWeaponRow(w)),
-            const SizedBox(height: 12),
-          ],
-
-          const Divider(color: OmnispexColors.border, height: 1),
-          const SizedBox(height: 10),
-
-          // Action Buttons
+          // Row 3: Action Buttons
           Wrap(
-            spacing: 8,
+            spacing: 6,
             runSpacing: 6,
             children: [
               ElevatedButton.icon(
-                icon: const Icon(Icons.flash_on, size: 13),
-                label: Text("LOAD AS ATTACKER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.background)),
+                icon: const Icon(Icons.flash_on, size: 12),
+                label: Text("ATTACKER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.background)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: OmnispexColors.cyan,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () {
@@ -582,11 +625,12 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                 },
               ),
               ElevatedButton.icon(
-                icon: const Icon(Icons.shield_outlined, size: 13),
-                label: Text("LOAD AS DEFENDER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.background)),
+                icon: const Icon(Icons.shield_outlined, size: 12),
+                label: Text("DEFENDER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.background)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: OmnispexColors.amber,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () {
@@ -604,35 +648,13 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                 },
               ),
               OutlinedButton.icon(
-                icon: const Icon(Icons.grid_view, size: 13),
-                label: Text("SEND TO LIST-BUILDER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: OmnispexColors.textSecondary,
-                  side: const BorderSide(color: OmnispexColors.border),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () {
-                  if (unit.pointsCost != null) {
-                    ref.read(benchPointsAProvider.notifier).state = unit.pointsCost!;
-                  }
-                  ref.read(currentNavIndexProvider.notifier).state = 1;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Sent '${unit.name}' (${unit.pointsCost ?? 100} pts) to List-Building Benchmark!"),
-                      backgroundColor: OmnispexColors.surfaceElevated,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-              ),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.playlist_add, size: 13),
-                label: Text("ADD TO ARMY LIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.greenKill)),
+                icon: const Icon(Icons.playlist_add, size: 12),
+                label: Text("ADD TO LIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.greenKill)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: OmnispexColors.greenKill,
                   side: const BorderSide(color: OmnispexColors.greenKill),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () {
@@ -650,12 +672,13 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                 },
               ),
               OutlinedButton.icon(
-                icon: const Icon(Icons.bookmark_add_outlined, size: 13),
-                label: Text("ADD TO WISHLIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.purple)),
+                icon: const Icon(Icons.bookmark_add_outlined, size: 12),
+                label: Text("WISHLIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.purple)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: OmnispexColors.purple,
                   side: const BorderSide(color: OmnispexColors.purple),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () {
@@ -693,53 +716,238 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
     );
   }
 
-  Widget _buildWeaponRow(WeaponUiProfile w) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: OmnispexColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: OmnispexColors.border.withOpacity(0.5)),
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                w.profileName == "Standard" || w.profileName == "Melee" ? w.name : "${w.name} [${w.profileName}]",
-                style: OmnispexTypography.monoData.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-            ],
+  Widget _buildArmyRulesTab(BsDataFaction? faction) {
+    if (faction == null) {
+      return TacticalCard(
+        title: "ARMY RULES",
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: Column(
+              children: [
+                const Icon(Icons.shield_outlined, size: 36, color: OmnispexColors.textMuted),
+                const SizedBox(height: 8),
+                Text("Select a specific faction to view its Army Rules.", style: OmnispexTypography.bodyMuted),
+              ],
+            ),
           ),
-          Wrap(
-            spacing: 4,
-            runSpacing: 2,
+        ),
+      );
+    }
+
+    if (faction.armyRules.isEmpty) {
+      return TacticalCard(
+        title: "ARMY RULES — ${faction.name.toUpperCase()}",
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: Text("No army rules recorded for ${faction.name}.", style: OmnispexTypography.bodyMuted),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: faction.armyRules.map((rule) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: OmnispexColors.surfaceCard,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: OmnispexColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              StatBadge(label: "R", value: w.isMelee ? "MELEE" : '${w.range}"', accentColor: w.isMelee ? OmnispexColors.amber : OmnispexColors.cyan),
-              StatBadge(label: "A", value: w.attacks),
-              StatBadge(label: "BS", value: '${w.skill}+'),
-              StatBadge(label: "S", value: '${w.strength}'),
-              StatBadge(label: "AP", value: '-${w.ap}'),
-              StatBadge(label: "D", value: w.damage),
-              ...w.abilities.map((ab) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: OmnispexColors.surfaceCard,
-                      borderRadius: BorderRadius.circular(3),
-                      border: Border.all(color: OmnispexColors.border),
+              Row(
+                children: [
+                  const Icon(Icons.menu_book, size: 16, color: OmnispexColors.cyan),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      rule.name.toUpperCase(),
+                      style: OmnispexTypography.h3.copyWith(color: OmnispexColors.cyan, fontSize: 14),
                     ),
-                    child: Text(ab, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 8)),
-                  )),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(rule.description, style: OmnispexTypography.body),
             ],
           ),
-        ],
-      ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDetachmentsTab(BsDataFaction? faction) {
+    if (faction == null) {
+      return TacticalCard(
+        title: "DETACHMENTS",
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: Column(
+              children: [
+                const Icon(Icons.military_tech_outlined, size: 36, color: OmnispexColors.textMuted),
+                const SizedBox(height: 8),
+                Text("Select a specific faction to view its Detachments.", style: OmnispexTypography.bodyMuted),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (faction.detachments.isEmpty) {
+      return TacticalCard(
+        title: "DETACHMENTS — ${faction.name.toUpperCase()}",
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: Text("No detachments recorded for ${faction.name}.", style: OmnispexTypography.bodyMuted),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: faction.detachments.map((det) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: OmnispexColors.surfaceCard,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: OmnispexColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Detachment Header & DP Badge
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.shield, size: 16, color: OmnispexColors.amber),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            det.name.toUpperCase(),
+                            style: OmnispexTypography.h3.copyWith(fontSize: 14, color: OmnispexColors.amber),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: OmnispexColors.amber.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: OmnispexColors.amber.withOpacity(0.4)),
+                    ),
+                    child: Text(
+                      "${det.dpCost} DP",
+                      style: OmnispexTypography.monoStatBadge.copyWith(
+                        fontSize: 11,
+                        color: OmnispexColors.amber,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (det.rules.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ...det.rules.map((r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        r.description.isNotEmpty ? "${r.name}: ${r.description}" : r.name,
+                        style: OmnispexTypography.body,
+                      ),
+                    )),
+              ],
+              const SizedBox(height: 12),
+
+              // Enhancements List
+              if (det.enhancements.isNotEmpty) ...[
+                Text(
+                  "ENHANCEMENTS (${det.enhancements.length}):",
+                  style: OmnispexTypography.monoData.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: OmnispexColors.cyan,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...det.enhancements.map((enh) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: OmnispexColors.surfaceElevated,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: OmnispexColors.border.withOpacity(0.5)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                enh.name,
+                                style: OmnispexTypography.monoData.copyWith(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: OmnispexColors.cyan,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: OmnispexColors.purple.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                "+${enh.points} PTS",
+                                style: OmnispexTypography.monoStatBadge.copyWith(
+                                  fontSize: 9,
+                                  color: OmnispexColors.purple,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (enh.description.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            enh.description,
+                            style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }),
+              ] else ...[
+                Text(
+                  "No enhancements available for this detachment.",
+                  style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
+                ),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

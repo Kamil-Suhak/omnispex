@@ -37,13 +37,13 @@ Omnispex adopts a decentralized, lazy-loading data architecture rather than pack
 cargo run --release -p omnispex_cli -- build-catalogue-bundle \
   --bsdata-dir ./wh40k-11e \
   --mfm-dir ./wh40k-11e-mfm/data \
-  --output ./flutter_ui/assets/data/wh40k_11e_bundle.json
+  --output ./catalogue_bundle.json
 ```
 
 **Verification Checklist (CLI Local Evaluation)**:
 - Verify dataset contents via CLI:
   ```bash
-  cargo run -p omnispex_cli -- search-units -b flutter_ui/assets/data/wh40k_11e_bundle.json -q "Ghazghkull"
+  cargo run -p omnispex_cli -- search-units -b ./catalogue_bundle.json -q "Ghazghkull"
   ```
   Expected: `[Xenos - Orks] Ghazghkull Thraka | 290 pts | M:8" T:10 Sv:2+ W:16 OC:4`.
 

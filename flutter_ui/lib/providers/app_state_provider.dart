@@ -31,15 +31,15 @@ class PersonalStoreNotifier extends StateNotifier<PersonalDataStoreUi> {
     final starterList = ArmyListUi(
       id: 'starter-sm-gladius',
       name: '1st Company Strike Force',
-      factionId: 'sm-1',
-      factionName: 'Imperium - Space Marines',
+      factionId: 'compliant-chapters',
+      factionName: 'Adeptus Astartes - Compliant Chapters',
       battleSize: BattleSizeUi.strikeForce,
       pointsLimit: 2000,
       detachments: const [
         SelectedDetachmentUi(
           id: 'gladius_task_force',
           name: 'Gladius Task Force',
-          dpCost: 2,
+          dpCost: 3,
         ),
       ],
       units: const [
@@ -81,8 +81,8 @@ class PersonalStoreNotifier extends StateNotifier<PersonalDataStoreUi> {
     final starterWishlist = [
       WishlistItemUi(
         id: 'wl-redemptor',
-        factionId: 'sm-1',
-        factionName: 'Space Marines',
+        factionId: 'compliant-chapters',
+        factionName: 'Adeptus Astartes - Compliant Chapters',
         unitId: 'sm_redemptor',
         unitName: 'Redemptor Dreadnought',
         quantityDesired: 2,
@@ -95,8 +95,8 @@ class PersonalStoreNotifier extends StateNotifier<PersonalDataStoreUi> {
       ),
       WishlistItemUi(
         id: 'wl-land-raider',
-        factionId: 'sm-1',
-        factionName: 'Space Marines',
+        factionId: 'compliant-chapters',
+        factionName: 'Adeptus Astartes - Compliant Chapters',
         unitId: 'sm_land_raider',
         unitName: 'Land Raider',
         quantityDesired: 1,

@@ -260,13 +260,30 @@ impl BsDataParser {
                     rules: Vec::new(),
                     enhancements: standalone_enhancements,
                 });
-            } else {
+            } else if detachments.len() == 1 {
                 for enh in standalone_enhancements {
-                    if !detachments
+                    if !detachments[0]
+                        .enhancements
                         .iter()
-                        .any(|d| d.enhancements.iter().any(|e| e.name == enh.name))
+                        .any(|e| e.name == enh.name)
                     {
                         detachments[0].enhancements.push(enh);
+                    }
+                }
+            } else {
+                // When multiple detachments exist, do NOT dump all unassigned enhancements into detachments[0].
+                // Only associate if an enhancement's description explicitly matches a detachment.
+                for enh in standalone_enhancements {
+                    for det in &mut detachments {
+                        if !enh.description.is_empty()
+                            && enh
+                                .description
+                                .to_lowercase()
+                                .contains(&det.name.to_lowercase())
+                            && !det.enhancements.iter().any(|e| e.name == enh.name)
+                        {
+                            det.enhancements.push(enh.clone());
+                        }
                     }
                 }
             }
@@ -446,10 +463,11 @@ impl BsDataParser {
                                     existing.rules = det_rules;
                                 }
                             } else {
+                                let dp_cost = Self::infer_detachment_dp(&dname, detachments.is_empty());
                                 detachments.push(DetachmentData {
                                     id: did,
                                     name: dname,
-                                    dp_cost: 1,
+                                    dp_cost,
                                     force_dispositions: Vec::new(),
                                     unique_tag: None,
                                     rules: det_rules,
@@ -475,6 +493,18 @@ impl BsDataParser {
                         grp.get("selectionEntryGroups").and_then(|v| v.as_array())
                     {
                         for sub in subgroups {
+                            let sub_name = sub
+                                .get("name")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .trim();
+                            let target_det_name = sub_name
+                                .replace("Enhancements", "")
+                                .replace("Enhancement", "")
+                                .trim()
+                                .to_string();
+
+                            let mut parsed_sub_enhancements = Vec::new();
                             if let Some(entries) =
                                 sub.get("selectionEntries").and_then(|v| v.as_array())
                             {
@@ -484,19 +514,119 @@ impl BsDataParser {
                                         is_upgrade_group,
                                         index,
                                     ) {
-                                        if !standalone_enhancements
+                                        if !parsed_sub_enhancements
+                                            .iter()
+                                            .any(|e: &EnhancementData| e.name == enh.name)
+                                        {
+                                            parsed_sub_enhancements.push(enh);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Match enhancements strictly to their specific detachment
+                            if !target_det_name.is_empty() {
+                                if let Some(target_det) = detachments.iter_mut().find(|d| {
+                                    d.name.eq_ignore_ascii_case(&target_det_name)
+                                        || d.name
+                                            .to_lowercase()
+                                            .contains(&target_det_name.to_lowercase())
+                                        || target_det_name
+                                            .to_lowercase()
+                                            .contains(&d.name.to_lowercase())
+                                }) {
+                                    for enh in parsed_sub_enhancements {
+                                        if !target_det
+                                            .enhancements
                                             .iter()
                                             .any(|e| e.name == enh.name)
                                         {
-                                            standalone_enhancements.push(enh);
+                                            target_det.enhancements.push(enh);
                                         }
                                     }
+                                    continue;
+                                }
+                            }
+
+                            // If not matched to any specific detachment, keep in standalone
+                            for enh in parsed_sub_enhancements {
+                                if !standalone_enhancements.iter().any(|e| e.name == enh.name) {
+                                    standalone_enhancements.push(enh);
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+
+    fn infer_detachment_dp(name: &str, is_first: bool) -> u32 {
+        let norm = name.trim().to_lowercase();
+        // Flagship / primary 3 DP detachments
+        if norm == "war horde"
+            || norm == "gladius task force"
+            || norm == "invasion fleet"
+            || norm == "kauyon"
+            || norm == "combined arms"
+            || norm == "warhost"
+            || norm == "blade of ultramar"
+            || norm.contains("index / codex detachment")
+        {
+            return 3;
+        }
+
+        // Ork detachments
+        if norm == "taktikal brigade"
+            || norm == "blitz brigade"
+            || norm == "runt swarm"
+            || norm == "shoota boyz"
+            || norm == "wreckas"
+            || norm == "madcap meks"
+            || norm == "flyboyz"
+        {
+            return 1;
+        }
+        if norm == "da big hunt"
+            || norm == "dread mob"
+            || norm == "green tide"
+            || norm == "bully boyz"
+            || norm == "kult of speed"
+            || norm == "ramship raiders"
+            || norm == "kaptin killers"
+            || norm == "brute bosses"
+            || norm == "wurrband"
+        {
+            return 2;
+        }
+
+        // Space Marines detachments
+        if norm == "ironstorm spearhead"
+            || norm == "stormlance task force"
+            || norm == "forgefather's seekers"
+            || norm == "shadowmark talon"
+            || norm == "spearpoint task force"
+            || norm == "ceramite sentinels"
+            || norm == "medusa's wrath"
+        {
+            return 2;
+        }
+        if norm.contains("brethren")
+            || norm.contains("force") && (norm.contains("shock") || norm.contains("shadow") || norm.contains("firestorm") || norm.contains("attack"))
+            || norm.contains("support")
+        {
+            return 1;
+        }
+
+        // Generic heuristics
+        if norm.contains("brigade") || norm.contains("patrol") || norm.contains("runt") {
+            return 1;
+        }
+
+        if is_first {
+            3
+        } else {
+            2
         }
     }
 

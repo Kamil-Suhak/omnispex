@@ -4,6 +4,7 @@ class FactionMetadata {
   final String name;
   final String remoteFile;
   final int expectedUnits;
+  final String? parentFaction;
 
   const FactionMetadata({
     required this.id,
@@ -11,6 +12,7 @@ class FactionMetadata {
     required this.name,
     required this.remoteFile,
     required this.expectedUnits,
+    this.parentFaction,
   });
 }
 
@@ -24,9 +26,25 @@ class FactionRegistry {
       expectedUnits: 34,
     ),
     FactionMetadata(
+      id: 'astartes-root',
+      slug: 'adeptus-astartes',
+      name: 'Adeptus Astartes',
+      remoteFile: 'Adeptus_Astartes_Space_Marines.json',
+      expectedUnits: 168,
+    ),
+    FactionMetadata(
+      id: 'e0af-67df-9d63-8fb7',
+      slug: 'compliant-chapters',
+      name: 'Adeptus Astartes - Compliant Chapters',
+      parentFaction: 'Adeptus Astartes',
+      remoteFile: 'Adeptus_Astartes_Space_Marines.json',
+      expectedUnits: 168,
+    ),
+    FactionMetadata(
       id: '36d3-36bc-68dd-40ac',
       slug: 'black-templars',
       name: 'Adeptus Astartes - Black Templars',
+      parentFaction: 'Adeptus Astartes',
       remoteFile: 'Adeptus_Astartes_Black_Templars.json',
       expectedUnits: 16,
     ),
@@ -34,6 +52,7 @@ class FactionRegistry {
       id: '4ef9-15ce-e3e6-36de',
       slug: 'blood-angels',
       name: 'Adeptus Astartes - Blood Angels',
+      parentFaction: 'Adeptus Astartes',
       remoteFile: 'Adeptus_Astartes_Blood_Angels.json',
       expectedUnits: 27,
     ),
@@ -41,13 +60,23 @@ class FactionRegistry {
       id: '470a-6daa-9014-12df',
       slug: 'dark-angels',
       name: 'Adeptus Astartes - Dark Angels',
+      parentFaction: 'Adeptus Astartes',
       remoteFile: 'Adeptus_Astartes_Dark_Angels.json',
       expectedUnits: 17,
+    ),
+    FactionMetadata(
+      id: '94bb-3284-ee14-57a1',
+      slug: 'space-wolves',
+      name: 'Adeptus Astartes - Space Wolves',
+      parentFaction: 'Adeptus Astartes',
+      remoteFile: 'Adeptus_Astartes_Space_Wolves.json',
+      expectedUnits: 39,
     ),
     FactionMetadata(
       id: '5d6e-fd3-330a-11dd',
       slug: 'imperial-fists',
       name: 'Adeptus Astartes - Imperial Fists',
+      parentFaction: 'Adeptus Astartes - Compliant Chapters',
       remoteFile: 'Adeptus_Astartes_Imperial_Fists.json',
       expectedUnits: 3,
     ),
@@ -55,6 +84,7 @@ class FactionRegistry {
       id: 'f27e-18c0-b73e-748e',
       slug: 'iron-hands',
       name: 'Adeptus Astartes - Iron Hands',
+      parentFaction: 'Adeptus Astartes - Compliant Chapters',
       remoteFile: 'Adeptus_Astartes_Iron_Hands.json',
       expectedUnits: 2,
     ),
@@ -62,6 +92,7 @@ class FactionRegistry {
       id: '6e59-e1ee-47ad-6ce5',
       slug: 'raven-guard',
       name: 'Adeptus Astartes - Raven Guard',
+      parentFaction: 'Adeptus Astartes - Compliant Chapters',
       remoteFile: 'Adeptus_Astartes_Raven_Guard.json',
       expectedUnits: 2,
     ),
@@ -69,27 +100,15 @@ class FactionRegistry {
       id: '2261-79a5-19d9-1668',
       slug: 'salamanders',
       name: 'Adeptus Astartes - Salamanders',
+      parentFaction: 'Adeptus Astartes - Compliant Chapters',
       remoteFile: 'Adeptus_Astartes_Salamanders.json',
       expectedUnits: 2,
-    ),
-    FactionMetadata(
-      id: 'e0af-67df-9d63-8fb7',
-      slug: 'space-marines',
-      name: 'Adeptus Astartes - Space Marines',
-      remoteFile: 'Adeptus_Astartes_Space_Marines.json',
-      expectedUnits: 168,
-    ),
-    FactionMetadata(
-      id: '94bb-3284-ee14-57a1',
-      slug: 'space-wolves',
-      name: 'Adeptus Astartes - Space Wolves',
-      remoteFile: 'Adeptus_Astartes_Space_Wolves.json',
-      expectedUnits: 39,
     ),
     FactionMetadata(
       id: '4029-9237-e8db-af55',
       slug: 'ultramarines',
       name: 'Adeptus Astartes - Ultramarines',
+      parentFaction: 'Adeptus Astartes - Compliant Chapters',
       remoteFile: 'Adeptus_Astartes_Ultramarines.json',
       expectedUnits: 16,
     ),
@@ -97,6 +116,7 @@ class FactionRegistry {
       id: '67c1-fc13-f9a1-cbbf',
       slug: 'white-scars',
       name: 'Adeptus Astartes - White Scars',
+      parentFaction: 'Adeptus Astartes - Compliant Chapters',
       remoteFile: 'Adeptus_Astartes_White_Scars.json',
       expectedUnits: 2,
     ),
@@ -265,6 +285,9 @@ class FactionRegistry {
 
   static FactionMetadata? find(String idOrSlugOrName) {
     final clean = idOrSlugOrName.trim().toLowerCase();
+    if (clean == 'sm-1' || clean == 'space marines' || clean == 'space-marines') {
+      return allFactions.firstWhere((f) => f.slug == 'compliant-chapters');
+    }
     for (final f in allFactions) {
       if (f.id.toLowerCase() == clean ||
           f.slug.toLowerCase() == clean ||

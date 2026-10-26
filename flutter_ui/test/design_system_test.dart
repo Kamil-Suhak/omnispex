@@ -70,7 +70,7 @@ void main() {
     expect(find.text("4 models"), findsOneWidget);
   });
 
-  testWidgets('MainShell renders adaptive navigation and mode toggle', (WidgetTester tester) async {
+  testWidgets('MainShell renders adaptive navigation and header', (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
@@ -80,7 +80,7 @@ void main() {
     );
 
     expect(find.text("OMNISPEX"), findsOneWidget);
-    expect(find.text("SIMPLIFIED VIEW"), findsOneWidget);
+    expect(find.text("PROBABILITY ENGINE"), findsOneWidget);
   });
 
   testWidgets('ListBuildingScreen renders 5 archetypes and points efficiency', (WidgetTester tester) async {

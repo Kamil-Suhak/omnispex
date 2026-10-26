@@ -27,13 +27,13 @@ The standalone CLI (`crates/omnispex_cli`) provides command-line combat simulati
 cargo run -p omnispex_cli -- simulate --attacks 20 --bs 3 --str 4 --ap 0 --dmg 1 --target-t 4 --target-sv 3 --target-w 2 --target-count 5
 
 # 2. (Optional Developer Tool) Build local normalized catalogue bundle for CLI testing
-cargo run --release -p omnispex_cli -- build-catalogue-bundle --bsdata-dir ./wh40k-11e --mfm-dir ./wh40k-11e-mfm/data --output ./flutter_ui/assets/data/wh40k_11e_bundle.json
+cargo run --release -p omnispex_cli -- build-catalogue-bundle --bsdata-dir ./wh40k-11e --mfm-dir ./wh40k-11e-mfm/data --output ./catalogue_bundle.json
 
 # 3. Search units across a local bundle via CLI
-cargo run -p omnispex_cli -- search-units --bundle ./flutter_ui/assets/data/wh40k_11e_bundle.json --query "Terminator" --faction "Space Marines"
+cargo run -p omnispex_cli -- search-units --bundle ./catalogue_bundle.json --query "Terminator" --faction "Space Marines"
 
 # 4. Validate an 11th Edition Army List JSON file and print formatted roster
-cargo run -p omnispex_cli -- validate-list --list ./my_list.json --bundle ./flutter_ui/assets/data/wh40k_11e_bundle.json
+cargo run -p omnispex_cli -- validate-list --list ./my_list.json --bundle ./catalogue_bundle.json
 
 # 5. Compute Warhammer 40,000 & Kill Team match statistics from a PersonalDataStore backup
 cargo run -p omnispex_cli -- match-stats --file ./personal_backup.json

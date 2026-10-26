@@ -39,7 +39,6 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     final navIndex = ref.watch(currentNavIndexProvider);
-    final isDeepAnalytics = ref.watch(isDeepAnalyticsModeProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 820;
 
@@ -152,56 +151,28 @@ class _MainShellState extends ConsumerState<MainShell> {
             ),
           ],
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: FilterChip(
-              avatar: Icon(
-                isDeepAnalytics ? Icons.insights : Icons.bolt,
-                size: 14,
-                color:
-                    isDeepAnalytics ? OmnispexColors.amber : OmnispexColors.cyan,
-              ),
-              label: Text(
-                isDeepAnalytics ? "DEEP ANALYTICS" : "SIMPLIFIED VIEW",
-                style: OmnispexTypography.monoStatBadge.copyWith(
-                  color: isDeepAnalytics
-                      ? OmnispexColors.amber
-                      : OmnispexColors.cyan,
-                  fontSize: 11,
-                ),
-              ),
-              selected: isDeepAnalytics,
-              onSelected: (val) {
-                ref.read(isDeepAnalyticsModeProvider.notifier).state = val;
+      ),
+      body: Row(
+        children: [
+          if (isDesktop) ...[
+            NavigationRail(
+              selectedIndex: safeIndex,
+              onDestinationSelected: (idx) {
+                ref.read(currentNavIndexProvider.notifier).state = idx;
               },
-              backgroundColor: OmnispexColors.surfaceCard,
-              selectedColor: OmnispexColors.amber.withOpacity(0.2),
-              side: BorderSide(
-                color: isDeepAnalytics
-                    ? OmnispexColors.amber
-                    : OmnispexColors.cyan.withOpacity(0.5),
-              ),
+              destinations: railDestinations,
+              labelType: NavigationRailLabelType.all,
+            ),
+            const VerticalDivider(width: 1, color: OmnispexColors.border),
+          ],
+          Expanded(
+            child: IndexedStack(
+              index: safeIndex,
+              children: pages,
             ),
           ),
         ],
       ),
-      body: isDesktop
-          ? Row(
-              children: [
-                NavigationRail(
-                  selectedIndex: safeIndex,
-                  onDestinationSelected: (idx) {
-                    ref.read(currentNavIndexProvider.notifier).state = idx;
-                  },
-                  destinations: railDestinations,
-                  labelType: NavigationRailLabelType.all,
-                ),
-                const VerticalDivider(width: 1, color: OmnispexColors.border),
-                Expanded(child: pages[safeIndex]),
-              ],
-            )
-          : pages[safeIndex],
       bottomNavigationBar: isDesktop
           ? null
           : NavigationBar(

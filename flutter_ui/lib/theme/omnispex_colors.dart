@@ -21,9 +21,9 @@ class OmnispexColors {
   static const Color yellowContest = Color(0xFFFFD600);
   static const Color redIneffective = Color(0xFFFF3D00);
 
-  // Text Colors
+  // Text Colors (High Contrast WCAG AA / AAA)
   static const Color textPrimary = Color(0xFFF0F4F8);
-  static const Color textSecondary = Color(0xFF8B9CB3);
-  static const Color textMuted = Color(0xFF4F6177);
+  static const Color textSecondary = Color(0xFFA0B2C6);
+  static const Color textMuted = Color(0xFF8E9CAE);
   static const Color textAccent = Color(0xFF00E5FF);
 }

@@ -141,7 +141,17 @@ fn test_validate_legal_ork_strike_force_with_export() {
     fs::write(&list_file, serde_json::to_string(&list).unwrap()).unwrap();
 
     let root = project_root();
-    let bundle_path = root.join("flutter_ui/assets/data/wh40k_11e_bundle.json");
+    let ref_dir = root.join("reference");
+    let bundle_path = out_dir.join("test_ork_bundle.json");
+
+    let build_res = run_cli([
+        "build-catalogue-bundle",
+        "--bsdata-dir",
+        ref_dir.to_str().unwrap(),
+        "-o",
+        bundle_path.to_str().unwrap(),
+    ]);
+    assert!(build_res.status.success(), "Failed to build test bundle for list validation");
 
     let output = run_cli([
         "validate-list",

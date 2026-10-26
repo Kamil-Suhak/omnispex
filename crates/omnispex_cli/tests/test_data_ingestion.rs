@@ -152,12 +152,18 @@ fn test_build_bundle_corrupted_json_reports_error() {
 #[test]
 fn test_search_units_cli_filtering() {
     let root = project_root();
-    let bundle_path = root.join("flutter_ui/assets/data/wh40k_11e_bundle.json");
+    let ref_dir = root.join("reference");
+    let out_dir = temp_dir("test_search_units");
+    let bundle_path = out_dir.join("test_search_bundle.json");
 
-    assert!(
-        bundle_path.exists(),
-        "wh40k_11e_bundle.json must exist for CLI search tests"
-    );
+    let build_res = run_cli([
+        "build-catalogue-bundle",
+        "--bsdata-dir",
+        ref_dir.to_str().unwrap(),
+        "-o",
+        bundle_path.to_str().unwrap(),
+    ]);
+    assert!(build_res.status.success(), "Failed to build test bundle for search test");
 
     // 1. Search for Battlewagon
     let output = run_cli([
@@ -198,6 +204,8 @@ fn test_search_units_cli_filtering() {
         "ZzzUnknownOrkUnit999",
     ]);
     assert!(output_none.status.success());
+
+    let _ = fs::remove_dir_all(out_dir);
     let stdout_none = String::from_utf8_lossy(&output_none.stdout);
     assert!(stdout_none.contains("Found 0 matching units"));
 }
