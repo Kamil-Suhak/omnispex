@@ -1,7 +1,7 @@
 name: flutter_ui
-description: "Omnispex: High-Performance Warhammer 40k Attack Resolution & Probability Engine"
+description: "Omnispex: Warhammer 40,000 & Kill Team Companion (Mathematics, Catalogues, Army Builder, Match Tracker & Wishlist)"
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
@@ -13,6 +13,10 @@ dependencies:
   flutter_rust_bridge: 2.0.0
   fl_chart: ^0.68.0
   google_fonts: ^6.2.1
+  ffi: ^2.1.0
+  path_provider: ^2.1.0
+  web: ^0.5.1
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:
@@ -21,3 +25,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/data/wh40k_11e_bundle.json

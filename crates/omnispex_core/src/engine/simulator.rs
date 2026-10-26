@@ -1,7 +1,10 @@
 use crate::domain::unit::UnitProfile;
-use crate::domain::weapon::WeaponProfile;
+use crate::domain::weapon::{WeaponLoadoutEntry, WeaponProfile};
 use crate::engine::context::CombatContext;
-use crate::engine::pipeline::resolve_volley;
+use crate::engine::pipeline::{
+    compute_exact_stage_probabilities, resolve_squad_volley, resolve_volley, StageProbabilities,
+    VolleyOutcome,
+};
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
@@ -71,7 +74,11 @@ pub struct SimulationReport {
     pub raw_damage_generated: f64,
     pub spillover_damage_lost: f64,
     pub safe_bet_kills_80: u32,
+    #[serde(default)]
+    pub safe_bet_damage_80: u32,
     pub wipe_probability: f64,
+    #[serde(default)]
+    pub bracket_50_probability: f64,
     pub std_dev_kills: f64,
     pub std_dev_damage: f64,
     pub tactical_verdict: TacticalVerdict,
@@ -79,6 +86,27 @@ pub struct SimulationReport {
     pub keyword_audit: KeywordAudit,
     pub kill_distribution: Vec<(u32, f64)>,
     pub damage_distribution: Vec<(u32, f64)>,
+    #[serde(default)]
+    pub stage_probabilities: StageProbabilities,
+    #[serde(default)]
+    pub calculation_method: String,
+    #[serde(default)]
+    pub unsupported_notices: Vec<String>,
+}
+
+fn collect_unsupported_notices(weapons: &[&WeaponProfile]) -> Vec<String> {
+    let mut notices = Vec::new();
+    for w in weapons {
+        for ab in &w.abilities {
+            if let Some(msg) = ab.is_informational_or_unsupported_in_math() {
+                let entry = format!("{}: {}", w.name, msg);
+                if !notices.contains(&entry) {
+                    notices.push(entry);
+                }
+            }
+        }
+    }
+    notices
 }
 
 pub fn run_simulation(
@@ -87,10 +115,91 @@ pub fn run_simulation(
     context: &CombatContext,
     iterations: u32,
 ) -> SimulationReport {
-    let num_iterations = iterations.max(1);
+    let stage_probabilities = compute_exact_stage_probabilities(weapon, target, context);
+    let unsupported_notices = collect_unsupported_notices(&[weapon]);
     let mut rng = thread_rng();
+
+    run_monte_carlo_core(
+        target,
+        iterations,
+        stage_probabilities,
+        unsupported_notices,
+        |wounds| resolve_volley(weapon, target, context, wounds, &mut rng),
+    )
+}
+
+pub fn run_squad_simulation(
+    loadout: &[WeaponLoadoutEntry],
+    target: &UnitProfile,
+    context: &CombatContext,
+    iterations: u32,
+) -> SimulationReport {
+    let mut combined_stage = StageProbabilities::default();
+    let mut active_weapons: Vec<&WeaponProfile> = Vec::new();
+    let mut total_weight = 0.0;
+
+    for entry in loadout {
+        if !entry.enabled || entry.count == 0 {
+            continue;
+        }
+        active_weapons.push(&entry.weapon);
+        let st = compute_exact_stage_probabilities(&entry.weapon, target, context);
+        let mult = entry.count as f64;
+        let w_attacks = st.expected_attacks * mult;
+        combined_stage.expected_attacks += w_attacks;
+        combined_stage.expected_hits += st.expected_hits * mult;
+        combined_stage.expected_wounds += st.expected_wounds * mult;
+        combined_stage.expected_unsaved_wounds += st.expected_unsaved_wounds * mult;
+        combined_stage.expected_total_unclipped_damage +=
+            st.expected_total_unclipped_damage * mult;
+
+        combined_stage.hit_probability += st.hit_probability * w_attacks;
+        combined_stage.crit_hit_probability += st.crit_hit_probability * w_attacks;
+        combined_stage.wound_probability += st.wound_probability * w_attacks;
+        combined_stage.crit_wound_probability += st.crit_wound_probability * w_attacks;
+        combined_stage.unsaved_probability_given_normal_wound +=
+            st.unsaved_probability_given_normal_wound * w_attacks;
+        total_weight += w_attacks;
+    }
+
+    if total_weight > 0.0 {
+        combined_stage.hit_probability /= total_weight;
+        combined_stage.crit_hit_probability /= total_weight;
+        combined_stage.wound_probability /= total_weight;
+        combined_stage.crit_wound_probability /= total_weight;
+        combined_stage.unsaved_probability_given_normal_wound /= total_weight;
+    }
+    if combined_stage.expected_unsaved_wounds > 0.0 {
+        combined_stage.expected_damage_per_unsaved = combined_stage.expected_total_unclipped_damage
+            / combined_stage.expected_unsaved_wounds;
+    }
+
+    let unsupported_notices = collect_unsupported_notices(&active_weapons);
+    let mut rng = thread_rng();
+
+    run_monte_carlo_core(
+        target,
+        iterations,
+        combined_stage,
+        unsupported_notices,
+        |wounds| resolve_squad_volley(loadout, target, context, wounds, &mut rng),
+    )
+}
+
+fn run_monte_carlo_core<F>(
+    target: &UnitProfile,
+    iterations: u32,
+    stage_probabilities: StageProbabilities,
+    unsupported_notices: Vec<String>,
+    mut volley_fn: F,
+) -> SimulationReport
+where
+    F: FnMut(&mut [u32]) -> VolleyOutcome,
+{
+    let num_iterations = iterations.max(1);
     let total_models = target.total_models();
     let total_wounds: u32 = target.initial_wounds().iter().sum();
+    let half_wounds_threshold = (total_wounds as f64 / 2.0).ceil() as usize;
 
     let mut kill_counts = vec![0u32; total_models + 1];
     let mut max_damage_seen = 0usize;
@@ -103,13 +212,14 @@ pub fn run_simulation(
     let mut total_sustained_damage = 0u64;
     let mut total_devastating_damage = 0u64;
     let mut wipes = 0u64;
+    let mut half_brackets = 0u64;
 
     let mut kills_samples = Vec::with_capacity(num_iterations as usize);
     let mut damage_samples = Vec::with_capacity(num_iterations as usize);
 
     for _ in 0..num_iterations {
         let mut wounds = target.initial_wounds();
-        let outcome = resolve_volley(weapon, target, context, &mut wounds, &mut rng);
+        let outcome = volley_fn(&mut wounds);
 
         let kills = outcome.models_killed as usize;
         let damage = outcome.damage_dealt as usize;
@@ -137,6 +247,9 @@ pub fn run_simulation(
         if UnitProfile::is_destroyed(&wounds) {
             wipes += 1;
         }
+        if damage >= half_wounds_threshold && half_wounds_threshold > 0 {
+            half_brackets += 1;
+        }
 
         kills_samples.push(kills as u32);
         damage_samples.push(damage as f64);
@@ -148,11 +261,13 @@ pub fn run_simulation(
     let raw_damage_generated = total_raw_damage as f64 / n;
     let spillover_damage_lost = (raw_damage_generated - expected_damage_dealt).max(0.0);
     let wipe_probability = wipes as f64 / n;
+    let bracket_50_probability = half_brackets as f64 / n;
 
     let lethal_damage = total_lethal_damage as f64 / n;
     let sustained_damage = total_sustained_damage as f64 / n;
     let devastating_damage = total_devastating_damage as f64 / n;
-    let standard_damage = (expected_damage_dealt - (lethal_damage + sustained_damage + devastating_damage)).max(0.0);
+    let standard_damage =
+        (expected_damage_dealt - (lethal_damage + sustained_damage + devastating_damage)).max(0.0);
 
     let keyword_audit = KeywordAudit {
         lethal_damage,
@@ -191,14 +306,22 @@ pub fn run_simulation(
 
     let kill_distribution: Vec<(u32, f64)> = (0..=total_models)
         .map(|k| {
-            let count = if k < kill_counts.len() { kill_counts[k] } else { 0 };
+            let count = if k < kill_counts.len() {
+                kill_counts[k]
+            } else {
+                0
+            };
             (k as u32, count as f64 / n)
         })
         .collect();
 
     let damage_distribution: Vec<(u32, f64)> = (0..=max_damage_seen)
         .map(|d| {
-            let count = if d < damage_counts.len() { damage_counts[d] } else { 0 };
+            let count = if d < damage_counts.len() {
+                damage_counts[d]
+            } else {
+                0
+            };
             (d as u32, count as f64 / n)
         })
         .collect();
@@ -212,6 +335,19 @@ pub fn run_simulation(
             .sum();
         if prob_at_least_k >= 0.80 - 1e-6 {
             safe_bet_kills_80 = candidate;
+            break;
+        }
+    }
+
+    let mut safe_bet_damage_80 = 0u32;
+    for candidate in (0..=max_damage_seen as u32).rev() {
+        let prob_at_least_d: f64 = damage_distribution
+            .iter()
+            .filter(|&&(d, _)| d >= candidate)
+            .map(|&(_, p)| p)
+            .sum();
+        if prob_at_least_d >= 0.80 - 1e-6 {
+            safe_bet_damage_80 = candidate;
             break;
         }
     }
@@ -233,7 +369,9 @@ pub fn run_simulation(
         raw_damage_generated,
         spillover_damage_lost,
         safe_bet_kills_80,
+        safe_bet_damage_80,
         wipe_probability,
+        bracket_50_probability,
         std_dev_kills,
         std_dev_damage,
         tactical_verdict,
@@ -241,5 +379,11 @@ pub fn run_simulation(
         keyword_audit,
         kill_distribution,
         damage_distribution,
+        stage_probabilities,
+        calculation_method: format!(
+            "Exact Stage Probabilities + Monte Carlo Discrete Wound Allocation (N={})",
+            num_iterations
+        ),
+        unsupported_notices,
     }
 }

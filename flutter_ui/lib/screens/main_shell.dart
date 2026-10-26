@@ -2,74 +2,123 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'in_battle_screen.dart';
 import 'list_building_screen.dart';
+import 'matches_screen.dart';
 import 'settings_screen.dart';
 import 'unit_browser_screen.dart';
+import 'wishlist_screen.dart';
+import '../bridge/omnispex_rust_bridge.dart';
 import '../providers/app_state_provider.dart';
+import '../services/bsdata_service.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
 
-class MainShell extends ConsumerWidget {
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<MainShell> {
+  @override
+  void initState() {
+    super.initState();
+    _initServices();
+  }
+
+  Future<void> _initServices() async {
+    await OmnispexRustBridge.initialize();
+    await BsDataService.loadFull11eCatalogueBundle();
+    await ref.read(personalStoreProvider.notifier).loadFromDisk();
+    if (mounted) {
+      ref.read(catalogueRevisionEpochProvider.notifier).state++;
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final navIndex = ref.watch(currentNavIndexProvider);
     final isDeepAnalytics = ref.watch(isDeepAnalyticsModeProvider);
     final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 720;
+    final isDesktop = screenWidth >= 820;
 
-    final destinations = [
-      const NavigationDestination(
+    const destinations = [
+      NavigationDestination(
         icon: Icon(Icons.flash_on_outlined),
         selectedIcon: Icon(Icons.flash_on, color: OmnispexColors.cyan),
         label: 'In-Battle',
       ),
-      const NavigationDestination(
-        icon: Icon(Icons.grid_view_outlined),
-        selectedIcon: Icon(Icons.grid_view, color: OmnispexColors.cyan),
+      NavigationDestination(
+        icon: Icon(Icons.list_alt_outlined),
+        selectedIcon: Icon(Icons.list_alt, color: OmnispexColors.cyan),
         label: 'List-Build',
       ),
-      const NavigationDestination(
+      NavigationDestination(
         icon: Icon(Icons.library_books_outlined),
         selectedIcon: Icon(Icons.library_books, color: OmnispexColors.cyan),
         label: 'Datasheets',
       ),
-      const NavigationDestination(
+      NavigationDestination(
+        icon: Icon(Icons.bookmark_border),
+        selectedIcon: Icon(Icons.bookmark, color: OmnispexColors.cyan),
+        label: 'Wishlist',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.emoji_events_outlined),
+        selectedIcon: Icon(Icons.emoji_events, color: OmnispexColors.cyan),
+        label: 'Matches',
+      ),
+      NavigationDestination(
         icon: Icon(Icons.settings_outlined),
         selectedIcon: Icon(Icons.settings, color: OmnispexColors.cyan),
         label: 'Settings',
       ),
     ];
 
-    final railDestinations = [
-      const NavigationRailDestination(
+    const railDestinations = [
+      NavigationRailDestination(
         icon: Icon(Icons.flash_on_outlined),
         selectedIcon: Icon(Icons.flash_on, color: OmnispexColors.cyan),
         label: Text('In-Battle'),
       ),
-      const NavigationRailDestination(
-        icon: Icon(Icons.grid_view_outlined),
-        selectedIcon: Icon(Icons.grid_view, color: OmnispexColors.cyan),
+      NavigationRailDestination(
+        icon: Icon(Icons.list_alt_outlined),
+        selectedIcon: Icon(Icons.list_alt, color: OmnispexColors.cyan),
         label: Text('List-Build'),
       ),
-      const NavigationRailDestination(
+      NavigationRailDestination(
         icon: Icon(Icons.library_books_outlined),
         selectedIcon: Icon(Icons.library_books, color: OmnispexColors.cyan),
         label: Text('Datasheets'),
       ),
-      const NavigationRailDestination(
+      NavigationRailDestination(
+        icon: Icon(Icons.bookmark_border),
+        selectedIcon: Icon(Icons.bookmark, color: OmnispexColors.cyan),
+        label: Text('Wishlist'),
+      ),
+      NavigationRailDestination(
+        icon: Icon(Icons.emoji_events_outlined),
+        selectedIcon: Icon(Icons.emoji_events, color: OmnispexColors.cyan),
+        label: Text('Matches'),
+      ),
+      NavigationRailDestination(
         icon: Icon(Icons.settings_outlined),
         selectedIcon: Icon(Icons.settings, color: OmnispexColors.cyan),
         label: Text('Settings'),
       ),
     ];
 
-    final pages = [
-      const InBattleScreen(),
-      const ListBuildingScreen(),
-      const UnitBrowserScreen(),
-      const SettingsScreen(),
+    const pages = [
+      InBattleScreen(),
+      ListBuildingScreen(),
+      UnitBrowserScreen(),
+      WishlistScreen(),
+      MatchesScreen(),
+      SettingsScreen(),
     ];
+
+    final safeIndex = navIndex.clamp(0, pages.length - 1);
 
     return Scaffold(
       appBar: AppBar(
@@ -94,9 +143,12 @@ class MainShell extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              "PROBABILITY ENGINE",
-              style: OmnispexTypography.label.copyWith(fontSize: 11),
+            Flexible(
+              child: Text(
+                "PROBABILITY ENGINE",
+                style: OmnispexTypography.label.copyWith(fontSize: 11),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -107,12 +159,15 @@ class MainShell extends ConsumerWidget {
               avatar: Icon(
                 isDeepAnalytics ? Icons.insights : Icons.bolt,
                 size: 14,
-                color: isDeepAnalytics ? OmnispexColors.amber : OmnispexColors.cyan,
+                color:
+                    isDeepAnalytics ? OmnispexColors.amber : OmnispexColors.cyan,
               ),
               label: Text(
                 isDeepAnalytics ? "DEEP ANALYTICS" : "SIMPLIFIED VIEW",
                 style: OmnispexTypography.monoStatBadge.copyWith(
-                  color: isDeepAnalytics ? OmnispexColors.amber : OmnispexColors.cyan,
+                  color: isDeepAnalytics
+                      ? OmnispexColors.amber
+                      : OmnispexColors.cyan,
                   fontSize: 11,
                 ),
               ),
@@ -123,7 +178,9 @@ class MainShell extends ConsumerWidget {
               backgroundColor: OmnispexColors.surfaceCard,
               selectedColor: OmnispexColors.amber.withOpacity(0.2),
               side: BorderSide(
-                color: isDeepAnalytics ? OmnispexColors.amber : OmnispexColors.cyan.withOpacity(0.5),
+                color: isDeepAnalytics
+                    ? OmnispexColors.amber
+                    : OmnispexColors.cyan.withOpacity(0.5),
               ),
             ),
           ),
@@ -133,7 +190,7 @@ class MainShell extends ConsumerWidget {
           ? Row(
               children: [
                 NavigationRail(
-                  selectedIndex: navIndex,
+                  selectedIndex: safeIndex,
                   onDestinationSelected: (idx) {
                     ref.read(currentNavIndexProvider.notifier).state = idx;
                   },
@@ -141,45 +198,19 @@ class MainShell extends ConsumerWidget {
                   labelType: NavigationRailLabelType.all,
                 ),
                 const VerticalDivider(width: 1, color: OmnispexColors.border),
-                Expanded(child: pages[navIndex]),
+                Expanded(child: pages[safeIndex]),
               ],
             )
-          : pages[navIndex],
+          : pages[safeIndex],
       bottomNavigationBar: isDesktop
           ? null
           : NavigationBar(
-              selectedIndex: navIndex,
+              selectedIndex: safeIndex,
               onDestinationSelected: (idx) {
                 ref.read(currentNavIndexProvider.notifier).state = idx;
               },
               destinations: destinations,
             ),
-    );
-  }
-
-  Widget _buildPlaceholderTab({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 48, color: OmnispexColors.cyanMuted),
-            const SizedBox(height: 16),
-            Text(title, style: OmnispexTypography.h2),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: OmnispexTypography.bodyMuted,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

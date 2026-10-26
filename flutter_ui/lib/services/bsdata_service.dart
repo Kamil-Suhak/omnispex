@@ -1,63 +1,141 @@
 import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
+import '../bridge/omnispex_rust_bridge.dart';
 import '../models/bsdata_models.dart';
 import '../models/simulation_models.dart';
 
 class BsDataService {
-  static final List<BsDataFaction> _bundledFactions = _initBundledFactions();
+  static List<BsDataFaction> _bundledFactions = _initBundledFactions();
+  static DataProvenanceUi _provenance = const DataProvenanceUi();
+  static bool _fullBundleLoaded = false;
 
   static List<BsDataFaction> get bundledFactions => _bundledFactions;
+  static DataProvenanceUi get provenance => _provenance;
+  static bool get isFullBundleLoaded => _fullBundleLoaded;
 
-  static List<String> get availableFactions => [
-        "All Factions",
-        "Space Marines",
-        "Astra Militarum",
-        "Orks",
-        "Necrons",
-        "Tyranids",
-        "Chaos Space Marines",
-        "Adeptus Custodes",
-        "T'au Empire",
-        "Aeldari",
-      ];
+  static Future<void> loadFull11eCatalogueBundle() async {
+    if (_fullBundleLoaded) return;
+    try {
+      final rawJson =
+          await rootBundle.loadString('assets/data/wh40k_11e_bundle.json');
+      final decoded = jsonDecode(rawJson);
+      if (decoded is Map<String, dynamic>) {
+        final db = CatalogueDatabaseUi.fromRustJson(decoded);
+        if (db.factions.isNotEmpty) {
+          _bundledFactions = db.factions;
+          _provenance = db.provenance;
+          _fullBundleLoaded = true;
+        }
+      }
+    } catch (_) {
+      // Fallback to built-in factions in test environments without assets
+    }
+  }
+
+  static void resetToDefaultFallback() {
+    _bundledFactions = _initBundledFactions();
+    _provenance = const DataProvenanceUi();
+    _fullBundleLoaded = false;
+  }
+
+  static BsDataFaction importCatalogueJson(String jsonStr) {
+    final BsDataFaction parsed = OmnispexRustBridge.isReady
+        ? OmnispexRustBridge.parseBsDataCatalogue(jsonStr)
+        : parseFactionJson(jsonStr);
+    final updated = List<BsDataFaction>.from(_bundledFactions);
+    final idx = updated.indexWhere((f) =>
+        f.id == parsed.id ||
+        f.name.toLowerCase() == parsed.name.toLowerCase());
+    if (idx >= 0) {
+      updated[idx] = parsed;
+    } else {
+      updated.insert(0, parsed);
+    }
+    _bundledFactions = updated;
+    return parsed;
+  }
+
+  static BsDataFaction? findFaction(String idOrName) {
+    final clean = idOrName.trim().toLowerCase();
+    for (final f in _bundledFactions) {
+      if (f.id.toLowerCase() == clean ||
+          f.name.toLowerCase() == clean ||
+          f.name.toLowerCase().contains(clean)) {
+        return f;
+      }
+    }
+    return null;
+  }
+
+  static List<String> get availableFactions {
+    if (_fullBundleLoaded && _bundledFactions.isNotEmpty) {
+      final names = _bundledFactions.map((f) => f.name).toList();
+      return ["All Factions", ...names];
+    }
+    return [
+      "All Factions",
+      "Space Marines",
+      "Astra Militarum",
+      "Orks",
+      "Necrons",
+      "Tyranids",
+      "Chaos Space Marines",
+      "Adeptus Custodes",
+      "T'au Empire",
+      "Aeldari",
+    ];
+  }
 
   static List<BsDataUnit> searchUnits({
     String query = "",
     String factionFilter = "All Factions",
     String categoryFilter = "All Types",
+    bool includeLegends = false,
   }) {
     final cleanQuery = query.trim().toLowerCase();
     final results = <BsDataUnit>[];
 
     for (final faction in _bundledFactions) {
       if (factionFilter != "All Factions") {
-        if (factionFilter == "Space Marines" && faction.id != "sm-1") {
-          continue;
+        if (factionFilter == "Space Marines" && faction.id == "sm-1") {
+          // matched fallback
         } else if (factionFilter == "Chaos Space Marines" &&
-            faction.id != "csm-1") {
-          continue;
-        } else if (factionFilter == "Astra Militarum" && faction.id != "am-1") {
-          continue;
-        } else if (factionFilter == "Orks" && faction.id != "ork-1") {
-          continue;
-        } else if (factionFilter == "Necrons" && faction.id != "nec-1") {
-          continue;
-        } else if (factionFilter == "Tyranids" && faction.id != "tyr-1") {
-          continue;
+            faction.id == "csm-1") {
+          // matched fallback
+        } else if (factionFilter == "Astra Militarum" &&
+            faction.id == "am-1") {
+          // matched fallback
+        } else if (factionFilter == "Orks" && faction.id == "ork-1") {
+          // matched fallback
+        } else if (factionFilter == "Necrons" && faction.id == "nec-1") {
+          // matched fallback
+        } else if (factionFilter == "Tyranids" && faction.id == "tyr-1") {
+          // matched fallback
         } else if (factionFilter == "Adeptus Custodes" &&
-            faction.id != "cust-1") {
-          continue;
-        } else if (factionFilter == "T'au Empire" && faction.id != "tau-1") {
-          continue;
-        } else if (factionFilter == "Aeldari" && faction.id != "ael-1") {
-          continue;
-        } else if (!faction.name
-            .toLowerCase()
-            .contains(factionFilter.toLowerCase())) {
+            faction.id == "cust-1") {
+          // matched fallback
+        } else if (factionFilter == "T'au Empire" && faction.id == "tau-1") {
+          // matched fallback
+        } else if (factionFilter == "Aeldari" && faction.id == "ael-1") {
+          // matched fallback
+        } else if (faction.id.toLowerCase() == factionFilter.toLowerCase() ||
+            faction.name.toLowerCase() == factionFilter.toLowerCase()) {
+          // exact match
+        } else if (faction.name
+                .toLowerCase()
+                .contains(factionFilter.toLowerCase()) &&
+            !(factionFilter.toLowerCase() == "space marines" &&
+                faction.name.toLowerCase().contains("chaos"))) {
+          // matched
+        } else {
           continue;
         }
       }
 
       for (final unit in faction.units) {
+        if (!includeLegends && unit.isLegends) {
+          continue;
+        }
         if (categoryFilter == "Infantry" && !unit.isInfantry) {
           continue;
         }
@@ -65,6 +143,9 @@ class BsDataService {
           continue;
         }
         if (categoryFilter == "Character" && !unit.isCharacter) {
+          continue;
+        }
+        if (categoryFilter == "Battleline" && !unit.isBattleline) {
           continue;
         }
 
@@ -421,7 +502,116 @@ class BsDataService {
       BsDataFaction(
         id: "sm-1",
         name: "Imperium - Space Marines",
+        armyRules: [
+          RuleEntryUi(
+            id: "oath_of_moment",
+            name: "Oath of Moment",
+            description:
+                "At the start of your Command phase, select one enemy unit for Oath of Moment.",
+          ),
+        ],
+        detachments: [
+          DetachmentDataUi(
+            id: "gladius_task_force",
+            name: "Gladius Task Force",
+            dpCost: 2,
+            forceDispositions: ["Flexible Assault", "Tactical Reserve"],
+            rules: [
+              RuleEntryUi(
+                id: "combat_doctrines",
+                name: "Combat Doctrines",
+                description:
+                    "Select Devastator, Tactical, or Assault Doctrine in your Command phase.",
+              ),
+            ],
+            enhancements: [
+              EnhancementDataUi(
+                id: "fire_discipline",
+                name: "Fire Discipline",
+                points: 25,
+                description:
+                    "ADEPTUS ASTARTES model only. Grants Sustained Hits 1.",
+              ),
+              EnhancementDataUi(
+                id: "chapter_master_upgrade",
+                name: "Chapter Master (Upgrade)",
+                points: 40,
+                isUpgrade: true,
+                description:
+                    "CAPTAIN model only. Upgrades bearer to Chapter Master.",
+              ),
+            ],
+          ),
+          DetachmentDataUi(
+            id: "first_company_spearhead",
+            name: "1st Company Auxiliary",
+            dpCost: 1,
+            forceDispositions: ["Elite Vanguard"],
+            rules: [
+              RuleEntryUi(
+                id: "extremis_threat",
+                name: "Extremis-level Threat",
+                description:
+                    "Once per battle, re-roll Wound rolls against your Oath of Moment target.",
+              ),
+            ],
+            enhancements: [
+              EnhancementDataUi(
+                id: "the_imperiums_sword",
+                name: "The Imperium's Sword",
+                points: 20,
+                description: "Add 1 to the Attacks characteristic of melee weapons.",
+              ),
+            ],
+          ),
+        ],
         units: [
+          BsDataUnit(
+            id: "sm_captain_terminator",
+            name: "Captain in Terminator Armour",
+            faction: "Space Marines",
+            factionId: "sm-1",
+            pointsCost: 95,
+            unitProfile: UnitUiProfile(
+              name: "Captain in Terminator Armour",
+              toughness: 5,
+              save: 2,
+              invuln: 4,
+              woundsPerModel: 6,
+              modelCount: 1,
+              keywords: ["INFANTRY", "CHARACTER", "IMPERIUM", "TERMINATOR"],
+            ),
+            movement: '5"',
+            leadership: '6+',
+            objectiveControl: 1,
+            abilities: [
+              "Rites of Battle: Reduce CP cost of a Stratagem targeting this unit by 1CP.",
+              "Unstoppable Valour: Re-roll Charge rolls made for this unit."
+            ],
+            categories: ["Infantry", "Character", "Terminator", "Imperium"],
+            leaderTo: ["Terminator Squad"],
+            weapons: [
+              WeaponUiProfile(
+                  name: "Storm Bolter",
+                  profileName: "Standard",
+                  range: 24,
+                  attacks: "2",
+                  skill: 2,
+                  strength: 4,
+                  ap: 0,
+                  damage: "1",
+                  abilities: ["Rapid Fire 2"]),
+              WeaponUiProfile(
+                  name: "Relic Weapon",
+                  profileName: "Melee",
+                  range: 0,
+                  attacks: "6",
+                  skill: 2,
+                  strength: 5,
+                  ap: 2,
+                  damage: "2"),
+            ],
+          ),
           BsDataUnit(
             id: "sm_terminators",
             name: "Terminator Squad",

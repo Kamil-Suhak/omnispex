@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'army_list_builder_screen.dart';
 import '../models/simulation_models.dart';
 import '../services/simulation_service.dart';
 import '../theme/omnispex_colors.dart';
@@ -8,6 +9,11 @@ import '../widgets/scannable_metric_card.dart';
 import '../widgets/stat_badge.dart';
 import '../widgets/tactical_card.dart';
 import '../widgets/tactical_verdict_badge.dart';
+
+enum ListBuildSubMode { rosterBuilder, archetypeBenchmark }
+
+final listBuildSubModeProvider =
+    StateProvider<ListBuildSubMode>((ref) => ListBuildSubMode.rosterBuilder);
 
 final benchWeaponIndexAProvider = StateProvider<int>((ref) => 0);
 final benchWeaponCountAProvider = StateProvider<int>((ref) => 1);
@@ -27,6 +33,7 @@ class ListBuildingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final subMode = ref.watch(listBuildSubModeProvider);
     final weaponIdxA = ref.watch(benchWeaponIndexAProvider);
     final countA = ref.watch(benchWeaponCountAProvider);
     final pointsA = ref.watch(benchPointsAProvider);
@@ -62,45 +69,80 @@ class ListBuildingScreen extends ConsumerWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 900;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("LIST-BUILDING BENCHMARK",
-                          style: OmnispexTypography.h2),
-                      Text("Cross-Archetype Efficiency & Weapon Optimization",
-                          style: OmnispexTypography.bodyMuted),
-                    ],
-                  ),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.refresh, size: 14),
-                    label: Text("RESET DEFAULTS",
-                        style: OmnispexTypography.monoStatBadge
-                            .copyWith(fontSize: 11)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: OmnispexColors.textSecondary,
-                      side: const BorderSide(color: OmnispexColors.border),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                    ),
-                    onPressed: () => _resetDefaults(ref),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: const BoxDecoration(
+            color: OmnispexColors.surface,
+            border: Border(bottom: BorderSide(color: OmnispexColors.border)),
+          ),
+          child: Center(
+            child: SegmentedButton<ListBuildSubMode>(
+              segments: const [
+                ButtonSegment(
+                  value: ListBuildSubMode.rosterBuilder,
+                  label: Text('11e Army List Builder'),
+                  icon: Icon(Icons.list_alt, size: 15),
+                ),
+                ButtonSegment(
+                  value: ListBuildSubMode.archetypeBenchmark,
+                  label: Text('Archetype Efficiency Matrix'),
+                  icon: Icon(Icons.grid_view, size: 15),
+                ),
+              ],
+              selected: {subMode},
+              onSelectionChanged: (set) {
+                ref.read(listBuildSubModeProvider.notifier).state = set.first;
+              },
+            ),
+          ),
+        ),
+        Expanded(
+          child: subMode == ListBuildSubMode.rosterBuilder
+              ? const ArmyListBuilderScreen()
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1100),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("LIST-BUILDING BENCHMARK",
+                                      style: OmnispexTypography.h2),
+                                  Text(
+                                      "Cross-Archetype Efficiency & Weapon Optimization",
+                                      style: OmnispexTypography.bodyMuted),
+                                ],
+                              ),
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.refresh, size: 14),
+                                label: Text("RESET DEFAULTS",
+                                    style: OmnispexTypography.monoStatBadge
+                                        .copyWith(fontSize: 11)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: OmnispexColors.textSecondary,
+                                  side: const BorderSide(
+                                      color: OmnispexColors.border),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
+                                ),
+                                onPressed: () => _resetDefaults(ref),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
 
               // Configuration Card
               TacticalCard(
@@ -275,10 +317,13 @@ class ListBuildingScreen extends ConsumerWidget {
                 return _buildArchetypeCard(
                     context, eval, activeWeaponA, activeWeaponB, isDualCompare);
               }),
-            ],
-          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
         ),
-      ),
+      ],
     );
   }
 

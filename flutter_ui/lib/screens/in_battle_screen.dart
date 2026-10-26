@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/omnispex_models.dart';
 import '../models/simulation_models.dart';
 import '../providers/app_state_provider.dart';
 import '../services/simulation_service.dart';
@@ -226,21 +227,105 @@ class InBattleScreen extends ConsumerWidget {
                 runSpacing: 8,
                 children: [
                   Text("IN-BATTLE RESOLUTION", style: OmnispexTypography.h2),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.refresh, size: 14),
-                    label: Text("RESET DEFAULTS",
-                        style: OmnispexTypography.monoStatBadge
-                            .copyWith(fontSize: 11)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: OmnispexColors.textSecondary,
-                      side: const BorderSide(color: OmnispexColors.border),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                    ),
-                    onPressed: () => _resetAll(ref),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.bookmark_add_outlined, size: 14),
+                        label: Text("SAVE CALCULATION",
+                            style: OmnispexTypography.monoStatBadge
+                                .copyWith(fontSize: 11)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: OmnispexColors.cyan,
+                          side: const BorderSide(color: OmnispexColors.cyan),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                        ),
+                        onPressed: () {
+                          final now = DateTime.now().toIso8601String();
+                          final cfg = SavedCalculationConfigUi(
+                            id: 'calc-${DateTime.now().microsecondsSinceEpoch}',
+                            name:
+                                '${activeWeapon.name} vs ${activeTarget.name}',
+                            attackerUnitName: loadedAttackerName ?? '',
+                            weapon: activeWeapon,
+                            target: activeTarget,
+                            createdAt: now,
+                          );
+                          ref
+                              .read(personalStoreProvider.notifier)
+                              .saveCalculationConfig(cfg);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Saved '${cfg.name}'"),
+                              backgroundColor: OmnispexColors.surfaceElevated,
+                            ),
+                          );
+                        },
+                      ),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.refresh, size: 14),
+                        label: Text("RESET DEFAULTS",
+                            style: OmnispexTypography.monoStatBadge
+                                .copyWith(fontSize: 11)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: OmnispexColors.textSecondary,
+                          side: const BorderSide(color: OmnispexColors.border),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                        ),
+                        onPressed: () => _resetAll(ref),
+                      ),
+                    ],
                   ),
                 ],
               ),
+              if (ref.watch(personalStoreProvider).savedCalculations.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      Text('SAVED CONFIGS: ',
+                          style: OmnispexTypography.label.copyWith(fontSize: 10)),
+                      const SizedBox(width: 6),
+                      ...ref
+                          .watch(personalStoreProvider)
+                          .savedCalculations
+                          .map((cfg) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: InputChip(
+                            label: Text(cfg.name,
+                                style: OmnispexTypography.monoStatBadge
+                                    .copyWith(fontSize: 10)),
+                            backgroundColor: OmnispexColors.surfaceElevated,
+                            side: const BorderSide(color: OmnispexColors.border),
+                            onPressed: () {
+                              ref.read(customWeaponProfileProvider.notifier).state =
+                                  cfg.weapon;
+                              ref.read(isCustomWeaponModeProvider.notifier).state =
+                                  true;
+                              ref.read(customTargetProfileProvider.notifier).state =
+                                  cfg.target;
+                              ref.read(isCustomTargetModeProvider.notifier).state =
+                                  true;
+                              ref.read(loadedDefenderNameProvider.notifier).state =
+                                  cfg.target.name;
+                            },
+                            onDeleted: () {
+                              ref
+                                  .read(personalStoreProvider.notifier)
+                                  .deleteCalculationConfig(cfg.id);
+                            },
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               if (isDesktop)
                 Row(
@@ -844,6 +929,7 @@ class InBattleScreen extends ConsumerWidget {
                   Expanded(
                     child: DropdownButtonFormField<ReRollOption>(
                       value: hitReroll,
+                      isExpanded: true,
                       decoration:
                           const InputDecoration(labelText: "HIT RE-ROLLS"),
                       dropdownColor: OmnispexColors.surfaceCard,
@@ -867,6 +953,7 @@ class InBattleScreen extends ConsumerWidget {
                   Expanded(
                     child: DropdownButtonFormField<ReRollOption>(
                       value: woundReroll,
+                      isExpanded: true,
                       decoration:
                           const InputDecoration(labelText: "WOUND RE-ROLLS"),
                       dropdownColor: OmnispexColors.surfaceCard,
@@ -1281,6 +1368,76 @@ class InBattleScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 12),
+        ],
+        if (report.stageProbabilities.expectedAttacks > 0) ...[
+          TacticalCard(
+            title: "EXACT ANALYTICAL STAGE PROBABILITIES (RUST CORE)",
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    StatBadge(
+                      label: "E[ATTACKS]",
+                      value: report.stageProbabilities.expectedAttacks
+                          .toStringAsFixed(2),
+                    ),
+                    StatBadge(
+                      label: "HIT %",
+                      value:
+                          "${(report.stageProbabilities.hitProbability * 100).toStringAsFixed(1)}%",
+                      accentColor: OmnispexColors.cyan,
+                    ),
+                    StatBadge(
+                      label: "WOUND %",
+                      value:
+                          "${(report.stageProbabilities.woundProbability * 100).toStringAsFixed(1)}%",
+                      accentColor: OmnispexColors.amber,
+                    ),
+                    StatBadge(
+                      label: "UNSAVED %",
+                      value:
+                          "${(report.stageProbabilities.unsavedProbabilityGivenNormalWound * 100).toStringAsFixed(1)}%",
+                      accentColor: OmnispexColors.purple,
+                    ),
+                    StatBadge(
+                      label: "E[UNCLIPPED DMG]",
+                      value: report
+                          .stageProbabilities.expectedTotalUnclippedDamage
+                          .toStringAsFixed(2),
+                      accentColor: OmnispexColors.greenKill,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Method: ${report.calculationMethod}",
+                  style: OmnispexTypography.bodyMuted.copyWith(fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (report.unsupportedNotices.isNotEmpty) ...[
+          TacticalCard(
+            title: "INFORMATIONAL / NON-NUMERICAL WEAPON RULES",
+            borderColor: OmnispexColors.amber,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: report.unsupportedNotices.map((n) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    "ℹ $n",
+                    style: OmnispexTypography.bodyMuted
+                        .copyWith(fontSize: 11, color: OmnispexColors.amber),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
         ],
         if (isDeepAnalytics) ...[
           TacticalCard(

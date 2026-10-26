@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../bridge/omnispex_rust_bridge.dart';
 import '../models/simulation_models.dart';
 
 class SquadPreset {
@@ -399,6 +400,32 @@ class SimulationService {
     int iterations = 10000,
     int seed = 42,
   }) {
+    if (OmnispexRustBridge.isReady) {
+      final ctxJson = OmnispexRustBridge.buildCombatContextJson(
+        isStationary: isStationary,
+        hasCharged: hasCharged,
+        targetInCover: targetInCover,
+        distance: distance,
+        extraAbilities: extraAbilities,
+        hitReroll: hitReroll,
+        woundReroll: woundReroll,
+        bonusStrength: bonusStrength,
+        bonusAp: bonusAp,
+        defensiveArmorOfContempt: defensiveArmorOfContempt,
+        defensiveMinusWound: defensiveMinusWound,
+        defensiveGrantInvuln4: defensiveGrantInvuln4,
+        defensiveGrantFnp5: defensiveGrantFnp5,
+        defensiveGrantHalfDamage: defensiveGrantHalfDamage,
+        defensiveGrantMinusDamage1: defensiveGrantMinusDamage1,
+      );
+      return OmnispexRustBridge.simulateSquadMatchup(
+        loadout: loadout,
+        target: target,
+        contextJson: ctxJson,
+        iterations: iterations,
+      );
+    }
+
     final rng = Random(seed);
     int totalKills = 0;
     int totalDamage = 0;

@@ -1,46 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Omnispex — Tactical Warhammer 40,000 & Kill Team Companion">
 
-  <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="flutter_ui">
+  <meta name="apple-mobile-web-app-title" content="Omnispex">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>flutter_ui</title>
+  <title>OMNISPEX // Tactical Cogitator</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    (function() {
+      let wasmExports = null;
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder('utf-8');
+
+      async function loadOmnispexWasm() {
+        try {
+          const response = await fetch('omnispex_flutter.wasm');
+          const bytes = await response.arrayBuffer();
+          const result = await WebAssembly.instantiate(bytes, {});
+          wasmExports = result.instance.exports;
+          window.omnispexWasmReady = true;
+          return true;
+        } catch (err) {
+          console.error('Failed to initialize omnispex_flutter.wasm:', err);
+          window.omnispexWasmReady = false;
+          return false;
+        }
+      }
+
+      window.omnispexWasmReadyPromise = loadOmnispexWasm();
+
+      window.omnispexRustCall = function(op, payload) {
+        if (!wasmExports) {
+          return JSON.stringify({ ok: false, error: 'Rust WASM engine not yet initialized' });
+        }
+        const opBytes = encoder.encode(op || '');
+        const payloadBytes = encoder.encode(payload || '');
+
+        const opPtr = opBytes.length > 0 ? wasmExports.omnispex_alloc(opBytes.length) : 0;
+        const payloadPtr = payloadBytes.length > 0 ? wasmExports.omnispex_alloc(payloadBytes.length) : 0;
+
+        try {
+          if (opBytes.length > 0) {
+            new Uint8Array(wasmExports.memory.buffer, opPtr, opBytes.length).set(opBytes);
+          }
+          if (payloadBytes.length > 0) {
+            new Uint8Array(wasmExports.memory.buffer, payloadPtr, payloadBytes.length).set(payloadBytes);
+          }
+
+          const resPtr = wasmExports.omnispex_invoke(
+            opPtr,
+            opBytes.length,
+            payloadPtr,
+            payloadBytes.length
+          );
+          const resLen = wasmExports.omnispex_last_result_len();
+          const resView = new Uint8Array(wasmExports.memory.buffer, resPtr, resLen);
+          return decoder.decode(resView);
+        } finally {
+          if (opBytes.length > 0 && opPtr !== 0) {
+            wasmExports.omnispex_dealloc(opPtr, opBytes.length);
+          }
+          if (payloadBytes.length > 0 && payloadPtr !== 0) {
+            wasmExports.omnispex_dealloc(payloadPtr, payloadBytes.length);
+          }
+        }
+      };
+    })();
+  </script>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
-
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

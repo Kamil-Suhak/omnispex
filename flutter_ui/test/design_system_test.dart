@@ -85,8 +85,12 @@ void main() {
 
   testWidgets('ListBuildingScreen renders 5 archetypes and points efficiency', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        overrides: [
+          listBuildSubModeProvider
+              .overrideWith((ref) => ListBuildSubMode.archetypeBenchmark),
+        ],
+        child: const MaterialApp(
           home: Scaffold(body: ListBuildingScreen()),
         ),
       ),

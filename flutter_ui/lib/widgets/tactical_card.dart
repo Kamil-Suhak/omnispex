@@ -44,9 +44,12 @@ class TacticalCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     if (title != null)
-                      Text(
-                        title!.toUpperCase(),
-                        style: OmnispexTypography.label,
+                      Expanded(
+                        child: Text(
+                          title!.toUpperCase(),
+                          style: OmnispexTypography.label,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     if (trailing != null) trailing!,
                   ],

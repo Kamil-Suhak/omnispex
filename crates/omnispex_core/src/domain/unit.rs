@@ -6,11 +6,16 @@ use serde::{Deserialize, Serialize};
 pub enum DefensiveAbility {
     MinusHit(u32),
     MinusWound(u32),
+    MinusOneToWound,
+    MinusOneAp,
     ReduceDamage(u32),
+    DamageReduction(u32),
     HalfDamage,
     Stealth,
     NoWoundReRolls,
     NoHitReRolls,
+    FeelNoPain(u32),
+    InvulnerableSave(u32),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -59,7 +64,9 @@ impl ModelProfile {
         self.defensive_abilities
             .iter()
             .filter_map(|a| match a {
-                DefensiveAbility::ReduceDamage(x) => Some(*x),
+                DefensiveAbility::ReduceDamage(x) | DefensiveAbility::DamageReduction(x) => {
+                    Some(*x)
+                }
                 _ => None,
             })
             .max()
@@ -70,6 +77,12 @@ impl ModelProfile {
         self.defensive_abilities
             .iter()
             .any(|a| matches!(a, DefensiveAbility::HalfDamage))
+    }
+
+    pub fn has_minus_one_ap(&self) -> bool {
+        self.defensive_abilities
+            .iter()
+            .any(|a| matches!(a, DefensiveAbility::MinusOneAp))
     }
 }
 
@@ -85,16 +98,46 @@ impl ModelGroup {
     }
 }
 
+fn default_movement() -> String {
+    "6\"".to_string()
+}
+
+fn default_leadership() -> String {
+    "6+".to_string()
+}
+
+fn default_oc() -> u32 {
+    1
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UnitProfile {
     pub name: String,
     pub toughness: u32,
+    #[serde(default = "default_movement")]
+    pub movement: String,
+    #[serde(default = "default_leadership")]
+    pub leadership: String,
+    #[serde(default = "default_oc")]
+    pub objective_control: u32,
     #[serde(default)]
     pub model_groups: Vec<ModelGroup>,
     #[serde(default)]
     pub defensive_abilities: Vec<DefensiveAbility>,
     #[serde(default)]
     pub keywords: Vec<Keyword>,
+}
+
+impl Default for UnitProfile {
+    fn default() -> Self {
+        Self::uniform(
+            "Target Unit",
+            4,
+            ModelProfile::new("Model", 2, 3, None, None),
+            5,
+            vec![Keyword::Infantry],
+        )
+    }
 }
 
 impl UnitProfile {
@@ -107,6 +150,9 @@ impl UnitProfile {
         Self {
             name: name.into(),
             toughness,
+            movement: default_movement(),
+            leadership: default_leadership(),
+            objective_control: default_oc(),
             model_groups,
             defensive_abilities: Vec::new(),
             keywords,
@@ -123,10 +169,25 @@ impl UnitProfile {
         Self {
             name: name.into(),
             toughness,
+            movement: default_movement(),
+            leadership: default_leadership(),
+            objective_control: default_oc(),
             model_groups: vec![ModelGroup::new(count, model)],
             defensive_abilities: Vec::new(),
             keywords,
         }
+    }
+
+    pub fn with_datasheet_stats(
+        mut self,
+        movement: impl Into<String>,
+        leadership: impl Into<String>,
+        objective_control: u32,
+    ) -> Self {
+        self.movement = movement.into();
+        self.leadership = leadership.into();
+        self.objective_control = objective_control;
+        self
     }
 
     pub fn with_defensive_abilities(mut self, abilities: Vec<DefensiveAbility>) -> Self {
@@ -188,6 +249,12 @@ impl UnitProfile {
             .any(|a| matches!(a, DefensiveAbility::Stealth))
     }
 
+    pub fn has_minus_one_ap(&self) -> bool {
+        self.defensive_abilities
+            .iter()
+            .any(|a| matches!(a, DefensiveAbility::MinusOneAp))
+    }
+
     pub fn minus_hit_value(&self) -> u32 {
         self.defensive_abilities
             .iter()
@@ -204,6 +271,7 @@ impl UnitProfile {
             .iter()
             .filter_map(|a| match a {
                 DefensiveAbility::MinusWound(x) => Some(*x),
+                DefensiveAbility::MinusOneToWound => Some(1),
                 _ => None,
             })
             .max()
@@ -214,7 +282,9 @@ impl UnitProfile {
         self.defensive_abilities
             .iter()
             .filter_map(|a| match a {
-                DefensiveAbility::ReduceDamage(x) => Some(*x),
+                DefensiveAbility::ReduceDamage(x) | DefensiveAbility::DamageReduction(x) => {
+                    Some(*x)
+                }
                 _ => None,
             })
             .max()

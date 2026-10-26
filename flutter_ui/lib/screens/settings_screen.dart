@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/simulation_models.dart';
 import '../providers/app_state_provider.dart';
+import '../services/bsdata_service.dart';
+import '../services/personal_data_service.dart';
 import '../services/simulation_service.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
+import '../widgets/stat_badge.dart';
 import '../widgets/tactical_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -109,9 +113,284 @@ class SettingsScreen extends ConsumerWidget {
                 final entry = archetypes[idx];
                 return _buildArchetypeEditorCard(context, ref, idx, entry);
               }),
+              const SizedBox(height: 16),
+
+              // 3. Game Data Provenance & Catalogue Management
+              TacticalCard(
+                title: "3. WARHAMMER 11E GAME DATA & PROVENANCE",
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        StatBadge(
+                          label: "EDITION",
+                          value: BsDataService.provenance.edition,
+                          accentColor: OmnispexColors.cyan,
+                        ),
+                        StatBadge(
+                          label: "BSDATA REV",
+                          value: BsDataService.provenance.bsdataRevision.length > 8
+                              ? BsDataService.provenance.bsdataRevision.substring(0, 8)
+                              : BsDataService.provenance.bsdataRevision,
+                          accentColor: OmnispexColors.amber,
+                        ),
+                        StatBadge(
+                          label: "MFM VERSION",
+                          value: "v${BsDataService.provenance.mfmVersion} (${BsDataService.provenance.mfmLastUpdated})",
+                          accentColor: OmnispexColors.purple,
+                        ),
+                        StatBadge(
+                          label: "FACTIONS",
+                          value: "${BsDataService.bundledFactions.length}",
+                          accentColor: OmnispexColors.greenKill,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      BsDataService.provenance.attributionNotice,
+                      style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.upload_file, size: 14),
+                          label: Text(
+                            "IMPORT CUSTOM BSDATA JSON",
+                            style: OmnispexTypography.monoStatBadge.copyWith(
+                              fontSize: 10,
+                              color: OmnispexColors.background,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: OmnispexColors.cyan,
+                          ),
+                          onPressed: () => _showImportCatalogueDialog(context, ref),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // 4. Local-First Personal Data Backup & Restore
+              TacticalCard(
+                title: "4. PERSONAL DATA BACKUP & RESTORE (ISOLATED FROM GAME DATA)",
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Your Army Lists, Wishlists, Match History, and Saved Calculations are stored locally and isolated from game catalogue updates.",
+                      style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.download, size: 14),
+                          label: Text(
+                            "EXPORT PERSONAL BACKUP JSON",
+                            style: OmnispexTypography.monoStatBadge.copyWith(
+                              fontSize: 10,
+                              color: OmnispexColors.background,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: OmnispexColors.greenKill,
+                          ),
+                          onPressed: () {
+                            final store = ref.read(personalStoreProvider);
+                            final jsonStr = PersonalDataService.exportBackupJson(store);
+                            _showBackupExportDialog(context, jsonStr);
+                          },
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.restore_page, size: 14),
+                          label: Text(
+                            "RESTORE FROM BACKUP JSON",
+                            style: OmnispexTypography.monoStatBadge.copyWith(
+                              fontSize: 10,
+                              color: OmnispexColors.amber,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: OmnispexColors.amber,
+                            side: const BorderSide(color: OmnispexColors.amber),
+                          ),
+                          onPressed: () => _showBackupRestoreDialog(context, ref),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showImportCatalogueDialog(BuildContext context, WidgetRef ref) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: OmnispexColors.surfaceCard,
+        title: Text("IMPORT BSDATA CATALOGUE JSON", style: OmnispexTypography.h3),
+        content: SizedBox(
+          width: 520,
+          child: TextField(
+            controller: ctrl,
+            maxLines: 8,
+            style: OmnispexTypography.monoData.copyWith(fontSize: 11),
+            decoration: const InputDecoration(
+              hintText: 'Paste BSData 11e .json catalogue content...',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("CANCEL"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: OmnispexColors.cyan,
+              foregroundColor: OmnispexColors.background,
+            ),
+            onPressed: () {
+              try {
+                final parsed = BsDataService.importCatalogueJson(ctrl.text);
+                ref.read(catalogueRevisionEpochProvider.notifier).state++;
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        "Imported '${parsed.name}' (${parsed.units.length} units) without modifying personal data!"),
+                    backgroundColor: OmnispexColors.surfaceElevated,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Catalogue parse error: $e"),
+                    backgroundColor: OmnispexColors.redIneffective,
+                  ),
+                );
+              }
+            },
+            child: const Text("IMPORT"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBackupExportDialog(BuildContext context, String jsonStr) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: OmnispexColors.surfaceCard,
+        title: Text("PERSONAL DATA BACKUP JSON", style: OmnispexTypography.h3),
+        content: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              jsonStr,
+              style: OmnispexTypography.monoData.copyWith(fontSize: 11),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("CLOSE"),
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.copy, size: 14),
+            label: const Text("COPY TO CLIPBOARD"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: OmnispexColors.cyan,
+              foregroundColor: OmnispexColors.background,
+            ),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: jsonStr));
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Personal backup JSON copied to clipboard!"),
+                  backgroundColor: OmnispexColors.surfaceElevated,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBackupRestoreDialog(BuildContext context, WidgetRef ref) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: OmnispexColors.surfaceCard,
+        title: Text("RESTORE PERSONAL BACKUP JSON", style: OmnispexTypography.h3),
+        content: SizedBox(
+          width: 520,
+          child: TextField(
+            controller: ctrl,
+            maxLines: 8,
+            style: OmnispexTypography.monoData.copyWith(fontSize: 11),
+            decoration: const InputDecoration(
+              hintText: 'Paste exported Omnispex Personal Data Backup JSON...',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("CANCEL"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: OmnispexColors.amber,
+              foregroundColor: OmnispexColors.background,
+            ),
+            onPressed: () {
+              try {
+                final restored =
+                    PersonalDataService.restoreFromBackupJson(ctrl.text);
+                ref.read(personalStoreProvider.notifier).restoreBackup(restored);
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                        "Personal data restored and migrated via Rust schema engine!"),
+                    backgroundColor: OmnispexColors.surfaceElevated,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Invalid backup JSON: $e"),
+                    backgroundColor: OmnispexColors.redIneffective,
+                  ),
+                );
+              }
+            },
+            child: const Text("RESTORE"),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/bsdata_models.dart';
+import '../models/omnispex_models.dart';
 import '../models/simulation_models.dart';
 import '../providers/app_state_provider.dart';
 import '../screens/in_battle_screen.dart';
@@ -39,6 +40,7 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(catalogueRevisionEpochProvider);
     final query = ref.watch(unitSearchQueryProvider);
     final factionFilter = ref.watch(unitFactionFilterProvider);
     final categoryFilter = ref.watch(unitCategoryFilterProvider);
@@ -48,6 +50,10 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
       factionFilter: factionFilter,
       categoryFilter: categoryFilter,
     );
+    final selectedFactionObj = factionFilter != "All Factions"
+        ? BsDataService.findFaction(factionFilter)
+        : null;
+    final displayedUnits = units.take(100).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -168,6 +174,77 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
               ),
               const SizedBox(height: 16),
 
+              // Faction Army Rules & Detachments Inspector (when a faction is selected)
+              if (selectedFactionObj != null &&
+                  (selectedFactionObj.armyRules.isNotEmpty ||
+                      selectedFactionObj.detachments.isNotEmpty)) ...[
+                TacticalCard(
+                  title:
+                      "FACTION DETACHMENTS & ARMY RULES — ${selectedFactionObj.name.toUpperCase()}",
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (selectedFactionObj.armyRules.isNotEmpty) ...[
+                        Text("ARMY RULES:",
+                            style: OmnispexTypography.label
+                                .copyWith(fontSize: 10, color: OmnispexColors.cyan)),
+                        const SizedBox(height: 4),
+                        ...selectedFactionObj.armyRules.take(4).map((r) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                "• ${r.name}: ${r.description}",
+                                style: OmnispexTypography.bodyMuted
+                                    .copyWith(fontSize: 11),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )),
+                        const SizedBox(height: 8),
+                      ],
+                      if (selectedFactionObj.detachments.isNotEmpty) ...[
+                        Text(
+                            "DETACHMENTS (${selectedFactionObj.detachments.length}):",
+                            style: OmnispexTypography.label.copyWith(
+                                fontSize: 10, color: OmnispexColors.amber)),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: selectedFactionObj.detachments.take(12).map((det) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: OmnispexColors.surfaceElevated,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: OmnispexColors.border),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    "${det.name} (${det.dpCost} DP)",
+                                    style: OmnispexTypography.monoData
+                                        .copyWith(fontSize: 11, color: OmnispexColors.cyan),
+                                  ),
+                                  if (det.enhancements.isNotEmpty)
+                                    Text(
+                                      "${det.enhancements.length} Enhancements",
+                                      style: OmnispexTypography.bodyMuted
+                                          .copyWith(fontSize: 10),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+
               // Unit Datasheets Feed
               if (units.isEmpty)
                 Container(
@@ -184,7 +261,7 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                   ),
                 )
               else
-                ...units.map((u) => _buildUnitCard(context, ref, u)),
+                ...displayedUnits.map((u) => _buildUnitCard(context, ref, u)),
             ],
           ),
         ),
@@ -386,6 +463,66 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text("Sent '${unit.name}' (${unit.pointsCost ?? 100} pts) to List-Building Benchmark!"),
+                      backgroundColor: OmnispexColors.surfaceElevated,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.playlist_add, size: 13),
+                label: Text("ADD TO ARMY LIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.greenKill)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: OmnispexColors.greenKill,
+                  side: const BorderSide(color: OmnispexColors.greenKill),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () {
+                  final list = ref
+                      .read(personalStoreProvider.notifier)
+                      .addUnitToArmyList(unit: unit);
+                  ref.read(activeArmyListIdProvider.notifier).state = list.id;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Added '${unit.name}' to Army List '${list.name}'!"),
+                      backgroundColor: OmnispexColors.surfaceElevated,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.bookmark_add_outlined, size: 13),
+                label: Text("ADD TO WISHLIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.purple)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: OmnispexColors.purple,
+                  side: const BorderSide(color: OmnispexColors.purple),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () {
+                  final now = DateTime.now().toIso8601String();
+                  ref.read(personalStoreProvider.notifier).upsertWishlistItem(
+                        WishlistItemUi(
+                          id: 'wl-${unit.id}',
+                          factionId: unit.factionId.isNotEmpty
+                              ? unit.factionId
+                              : unit.faction,
+                          factionName: unit.faction,
+                          unitId: unit.id,
+                          unitName: unit.name,
+                          quantityDesired: 1,
+                          quantityOwned: 0,
+                          pointsPerUnit: unit.pointsCost ?? 100,
+                          priority: WishlistPriorityUi.medium,
+                          state: AcquisitionStateUi.wishlist,
+                          updatedAtIso: now,
+                        ),
+                      );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Added '${unit.name}' to ${unit.faction} Wishlist!"),
                       backgroundColor: OmnispexColors.surfaceElevated,
                       duration: const Duration(seconds: 2),
                     ),
