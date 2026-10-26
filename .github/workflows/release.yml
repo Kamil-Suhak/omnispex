@@ -118,17 +118,15 @@ jobs:
       - name: Package CLI Archive (Linux / macOS)
         if: runner.os != 'Windows'
         run: |
-          mkdir -p package/data
+          mkdir -p package
           cp target/${{ matrix.target }}/release/${{ matrix.bin_name }} package/
-          cp flutter_ui/assets/data/wh40k_11e_bundle.json package/data/
           tar -czvf ${{ matrix.archive_name }} -C package .
 
       - name: Package CLI Archive (Windows)
         if: runner.os == 'Windows'
         run: |
-          New-Item -ItemType Directory -Path package\data -Force
+          New-Item -ItemType Directory -Path package -Force
           Copy-Item target\${{ matrix.target }}\release\${{ matrix.bin_name }} package\
-          Copy-Item flutter_ui\assets\data\wh40k_11e_bundle.json package\data\
           Compress-Archive -Path package\* -DestinationPath ${{ matrix.archive_name }}
 
       - uses: actions/upload-artifact@v4
@@ -204,10 +202,6 @@ jobs:
           name: omnispex-cli-macos-x86_64.tar.gz
           path: release-assets/
 
-      - name: Copy Bundle Reference Data
-        run: |
-          cp flutter_ui/assets/data/wh40k_11e_bundle.json release-assets/
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -225,7 +219,7 @@ jobs:
             - 📱 **Android Universal APK**: Download `omnispex-android-universal.apk` for multi-architecture devices.
             - 🌐 **Web Live App**: Hosted on Cloudflare Edge: [https://omnispex-cloud.kamilsuhak.workers.dev](https://omnispex-cloud.kamilsuhak.workers.dev)
             - 💻 **CLI Binaries**: Standalone release archives attached below for Windows (`.zip`), Linux (`.tar.gz`), and macOS (`.tar.gz`).
-            - 📦 **11th Edition Catalogue Bundle**: `wh40k_11e_bundle.json` (35 factions, 690 detachments, 1,531 datasheets).
+            - 🌐 **Lazy BSData Ingestion**: Clients download MFM points upfront and lazily stream individual factions on demand directly from the BSData repository.
 
             ### Highlights
             - **Mathematical Certainty**: Exact analytical probabilities ($P(\text{Hit})$, $P(\text{Wound})$, $P(\text{Unsaved})$) combined with Monte Carlo discrete wound allocation.
