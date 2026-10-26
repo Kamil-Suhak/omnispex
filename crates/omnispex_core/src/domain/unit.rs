@@ -123,6 +123,8 @@ pub struct UnitProfile {
     #[serde(default)]
     pub model_groups: Vec<ModelGroup>,
     #[serde(default)]
+    pub models: Option<Vec<ModelProfile>>,
+    #[serde(default)]
     pub defensive_abilities: Vec<DefensiveAbility>,
     #[serde(default)]
     pub keywords: Vec<Keyword>,
@@ -154,6 +156,7 @@ impl UnitProfile {
             leadership: default_leadership(),
             objective_control: default_oc(),
             model_groups,
+            models: None,
             defensive_abilities: Vec::new(),
             keywords,
         }
@@ -173,6 +176,7 @@ impl UnitProfile {
             leadership: default_leadership(),
             objective_control: default_oc(),
             model_groups: vec![ModelGroup::new(count, model)],
+            models: None,
             defensive_abilities: Vec::new(),
             keywords,
         }
@@ -196,27 +200,45 @@ impl UnitProfile {
     }
 
     pub fn expanded_models(&self) -> Vec<ModelProfile> {
-        let mut models = Vec::with_capacity(self.total_models());
-        for group in &self.model_groups {
-            for _ in 0..group.count {
-                models.push(group.model.clone());
+        if !self.model_groups.is_empty() {
+            let mut models = Vec::with_capacity(self.total_models());
+            for group in &self.model_groups {
+                for _ in 0..group.count {
+                    models.push(group.model.clone());
+                }
             }
+            models
+        } else if let Some(ref legacy) = self.models {
+            legacy.clone()
+        } else {
+            Vec::new()
         }
-        models
     }
 
     pub fn initial_wounds(&self) -> Vec<u32> {
-        let mut wounds = Vec::with_capacity(self.total_models());
-        for group in &self.model_groups {
-            for _ in 0..group.count {
-                wounds.push(group.model.wounds);
+        if !self.model_groups.is_empty() {
+            let mut wounds = Vec::with_capacity(self.total_models());
+            for group in &self.model_groups {
+                for _ in 0..group.count {
+                    wounds.push(group.model.wounds);
+                }
             }
+            wounds
+        } else if let Some(ref legacy) = self.models {
+            legacy.iter().map(|m| m.wounds).collect()
+        } else {
+            Vec::new()
         }
-        wounds
     }
 
     pub fn total_models(&self) -> usize {
-        self.model_groups.iter().map(|g| g.count).sum()
+        let count: usize = self.model_groups.iter().map(|g| g.count).sum();
+        if count == 0 {
+            if let Some(ref legacy) = self.models {
+                return legacy.len();
+            }
+        }
+        count
     }
 
     pub fn living_models_count(wounds: &[u32]) -> usize {

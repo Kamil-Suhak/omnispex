@@ -186,6 +186,10 @@ pub struct ValidateListArgs {
     /// Print formatted plain-text army roster export
     #[arg(long = "export-text")]
     pub export_text: bool,
+
+    /// Fail with non-zero exit code if confirmed rule violations exist
+    #[arg(long = "strict")]
+    pub strict: bool,
 }
 
 #[derive(Args, Debug)]

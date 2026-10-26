@@ -322,6 +322,14 @@ fn handle_validate_list(args: ValidateListArgs) -> Result<(), Box<dyn std::error
         println!("{}", export_army_list_text(&list, Some(&report)));
     }
 
+    if args.strict && !report.is_valid {
+        return Err(format!(
+            "List validation failed with {} confirmed rule violation(s).",
+            report.violations.len()
+        )
+        .into());
+    }
+
     Ok(())
 }
 
@@ -375,19 +383,32 @@ fn print_report(
         weapon.name, weapon.attacks, weapon.skill, weapon.strength, weapon.ap, weapon.damage
     );
     if !weapon.abilities.is_empty() {
-        println!("Abilities: {:?}", weapon.abilities);
+        let ab_labels: Vec<String> = weapon.abilities.iter().map(|a| a.display_label()).collect();
+        println!("Abilities: {}", ab_labels.join(", "));
     }
     let expanded = target.expanded_models();
     let first_save = expanded.first().map_or(3, |m| m.save);
     let first_wounds = expanded.first().map_or(1, |m| m.wounds);
-    println!(
-        "Defender: {} ({} models, T: {}, SV: {}+, W: {})",
+    let first_invuln = expanded.first().and_then(|m| m.invulnerable_save);
+    let first_fnp = expanded.first().and_then(|m| m.feel_no_pain);
+
+    let mut def_desc = format!(
+        "Defender: {} ({} models, T: {}, SV: {}+, W: {}",
         target.name,
         target.total_models(),
         target.toughness,
         first_save,
         first_wounds
     );
+    if let Some(inv) = first_invuln {
+        def_desc.push_str(&format!(", Inv: {}+", inv));
+    }
+    if let Some(fnp) = first_fnp {
+        def_desc.push_str(&format!(", FNP: {}+", fnp));
+    }
+    def_desc.push(')');
+    println!("{}", def_desc);
+
     if !target.defensive_abilities.is_empty() {
         println!("Defensive Abilities: {:?}", target.defensive_abilities);
     }
