@@ -35,9 +35,6 @@ void main() {
     test('BsDataService lazy faction download, disk caching, and cache deletion', () async {
       final orkMeta = FactionRegistry.find('orks')!;
 
-      // Initially cached check
-      final isInitiallyCached = BsDataService.isFactionCached(orkMeta.slug);
-
       // Download and cache Orks
       final downloaded = await BsDataService.downloadAndCacheFaction(orkMeta.slug);
       expect(downloaded, isNotNull);

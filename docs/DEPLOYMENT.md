@@ -21,21 +21,26 @@ This document details the complete build, cross-compilation, packaging, and depl
 
 ---
 
-## 2. Shared Data Asset Pipeline
+## 2. Game Data & Client Ingestion Architecture
 
-Before packaging any Flutter platform artifact, the normalized 11th Edition game catalogue must be generated.
+Omnispex adopts a decentralized, lazy-loading data architecture rather than packaging a multi-megabyte monolithic JSON file inside client binaries:
 
-### Building the Production Catalogue Bundle
+- **Munitorum Field Manual (MFM v1.6)**: Points costs and provenance revisions are initialized upfront on client startup and stored in isolated client storage (`StorageAdapter`).
+- **Lazy Faction Streaming**: Each client lazily streams individual faction catalogues (out of 35 supported factions) directly from the upstream [BSData/wh40k-11e](https://github.com/BSData/wh40k-11e) repository on demand when opening a faction or building a roster.
+- **Client Cache Isolation**: Downloaded factions are cached locally per-device (via `SharedPreferences` on Android/Desktop or `localStorage` on Web) and never shared across clients.
+- **In-Memory RAM Scoping**: Memory usage is strictly constrained (1 faction active in browser and list builder, at most 2 factions during battle simulation).
+- **Optional CLI Bundle Builder**: The CLI utility `omnispex_cli -- build-catalogue-bundle` remains available for offline development and headless testing, but client releases do not bundle or require monolithic bundles.
+
+### Optional CLI Reference Bundle Generation (For Local Offline Testing)
 ```bash
-# Ingest BSData catalogue definitions and MFM points into the production asset bundle
+# Ingest BSData catalogue definitions and MFM points into a local reference bundle for CLI tests
 cargo run --release -p omnispex_cli -- build-catalogue-bundle \
   --bsdata-dir ./wh40k-11e \
   --mfm-dir ./wh40k-11e-mfm/data \
   --output ./flutter_ui/assets/data/wh40k_11e_bundle.json
 ```
 
-**Verification Checklist**:
-- Verify file existence: `flutter_ui/assets/data/wh40k_11e_bundle.json`.
+**Verification Checklist (CLI Local Evaluation)**:
 - Verify dataset contents via CLI:
   ```bash
   cargo run -p omnispex_cli -- search-units -b flutter_ui/assets/data/wh40k_11e_bundle.json -q "Ghazghkull"
@@ -79,12 +84,10 @@ lipo -create -output target/release/omnispex_cli \
 ```
 
 ### 3.3 Packaging Standalone Releases
-Package the binary together with the reference bundle for out-of-the-box offline evaluation:
+Package the binary as a lightweight standalone tool:
 ```
-dist/omnispex-cli-v0.1.0-<platform>/
+dist/omnispex-cli-v1.1.0-<platform>/
 ├── omnispex_cli (or omnispex_cli.exe)
-├── data/
-│   └── wh40k_11e_bundle.json
 └── README.txt
 ```
 
@@ -421,7 +424,7 @@ jobs:
 Prior to distributing any release:
 - [ ] Run `cargo test --workspace` (All 41 integration tests passing).
 - [ ] Run `cd flutter_ui && flutter analyze` (0 errors).
-- [ ] Check catalogue data provenance: Verify edition header and commit hash in `wh40k_11e_bundle.json`.
+- [ ] Check catalogue data provenance: Verify MFM v1.6 points and upstream BSData revision compatibility.
 - [ ] Validate user data isolation: Verify that installing a new version of the app retains existing user lists and match histories (`PersonalDataStore`).
 - [ ] Test offline behavior: Verify unit browsing and combat simulations with network connectivity disabled.
 

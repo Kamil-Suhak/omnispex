@@ -20,14 +20,16 @@ All business logic is owned by the shared Rust core:
 
 ## CLI Usage
 
+The standalone CLI (`crates/omnispex_cli`) provides command-line combat simulations, list validation, and optional catalogue utilities:
+
 ```bash
 # 1. Ad-hoc attack/defense probability simulation (Exact Stage Math + Monte Carlo)
 cargo run -p omnispex_cli -- simulate --attacks 20 --bs 3 --str 4 --ap 0 --dmg 1 --target-t 4 --target-sv 3 --target-w 2 --target-count 5
 
-# 2. Build normalized 11th Edition BSData + MFM v1.6 catalogue bundle
+# 2. (Optional Developer Tool) Build local normalized catalogue bundle for CLI testing
 cargo run --release -p omnispex_cli -- build-catalogue-bundle --bsdata-dir ./wh40k-11e --mfm-dir ./wh40k-11e-mfm/data --output ./flutter_ui/assets/data/wh40k_11e_bundle.json
 
-# 3. Search units across the normalized 11e bundle
+# 3. Search units across a local bundle via CLI
 cargo run -p omnispex_cli -- search-units --bundle ./flutter_ui/assets/data/wh40k_11e_bundle.json --query "Terminator" --faction "Space Marines"
 
 # 4. Validate an 11th Edition Army List JSON file and print formatted roster
