@@ -37,6 +37,13 @@ cargo run -p omnispex_cli -- validate-list --list ./my_list.json --bundle ./flut
 cargo run -p omnispex_cli -- match-stats --file ./personal_backup.json
 ```
 
+## Platform Deployment Pipelines
+
+Omnispex supports automated release packaging for **Rust CLI**, **Flutter Android** (APK and Google Play `.aab`), **Flutter Web** (WebAssembly SPA), and **Desktop** (Windows, Linux, macOS).
+
+Complete build, cross-compilation, Keystore signing, NGINX hosting, and CI/CD instructions are documented in:
+👉 [**docs/DEPLOYMENT.md**](docs/DEPLOYMENT.md)
+
 ## Attribution & Data Provenance
 
 Game data is sourced from the community-maintained [BSData/wh40k-11e](https://github.com/BSData/wh40k-11e) repository (`b4dc3f40ca39ae551e480228186e769344a36194`) and Munitorum Field Manual v1.6 points from [BSData/wh40k-11e-mfm](https://github.com/BSData/wh40k-11e-mfm) (`11c45c5f062d26d6468b8b2156c7a8e258013ef5`). Omnispex is an unofficial companion application and is not affiliated with or endorsed by Games Workshop.
