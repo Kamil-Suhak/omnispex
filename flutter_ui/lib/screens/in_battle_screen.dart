@@ -5,6 +5,7 @@ import '../models/simulation_models.dart';
 import '../providers/app_state_provider.dart';
 import '../services/simulation_service.dart';
 import '../theme/omnispex_colors.dart';
+import '../theme/omnispex_theme.dart';
 import '../theme/omnispex_typography.dart';
 import '../widgets/kill_histogram_chart.dart';
 import '../widgets/profile_duel_bar.dart';
@@ -216,7 +217,7 @@ class InBattleScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
+          constraints: const BoxConstraints(maxWidth: OmnispexLayout.contentMaxWidth),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -237,8 +238,8 @@ class InBattleScreen extends ConsumerWidget {
                             style: OmnispexTypography.monoStatBadge
                                 .copyWith(fontSize: 11)),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: OmnispexColors.cyan,
-                          side: const BorderSide(color: OmnispexColors.cyan),
+                          foregroundColor: OmnispexColors.accent,
+                          side: const BorderSide(color: OmnispexColors.accent),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 6),
                         ),
@@ -545,11 +546,11 @@ class InBattleScreen extends ConsumerWidget {
                       'DETAILS',
                       style: OmnispexTypography.monoStatBadge.copyWith(
                         fontSize: 10,
-                        color: OmnispexColors.cyan,
+                        color: OmnispexColors.accent,
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: OmnispexColors.cyan,
+                      foregroundColor: OmnispexColors.accent,
                       side: const BorderSide(color: OmnispexColors.border),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       visualDensity: VisualDensity.compact,
@@ -626,16 +627,16 @@ class InBattleScreen extends ConsumerWidget {
                           style: OmnispexTypography.monoStatBadge.copyWith(
                             color: isSel
                                 ? OmnispexColors.background
-                                : OmnispexColors.cyan,
+                                : OmnispexColors.accent,
                             fontSize: 11,
                           ),
                         ),
                         selected: isSel,
-                        selectedColor: OmnispexColors.cyan,
+                        selectedColor: OmnispexColors.accent,
                         backgroundColor: OmnispexColors.surfaceElevated,
                         side: BorderSide(
                           color: isSel
-                              ? OmnispexColors.cyan
+                              ? OmnispexColors.accent
                               : OmnispexColors.border,
                         ),
                         onSelected: (selected) {
@@ -666,7 +667,7 @@ class InBattleScreen extends ConsumerWidget {
                         StatBadge(
                           label: "RANGED",
                           value: '${activeWeapon.range}"',
-                          accentColor: OmnispexColors.cyan,
+                          accentColor: OmnispexColors.accent,
                         ),
                       StatBadge(label: "A", value: activeWeapon.attacks),
                       StatBadge(
@@ -779,11 +780,11 @@ class InBattleScreen extends ConsumerWidget {
                     'DETAILS',
                     style: OmnispexTypography.monoStatBadge.copyWith(
                       fontSize: 10,
-                      color: OmnispexColors.cyan,
+                      color: OmnispexColors.accent,
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: OmnispexColors.cyan,
+                    foregroundColor: OmnispexColors.accent,
                     side: const BorderSide(color: OmnispexColors.border),
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     visualDensity: VisualDensity.compact,
@@ -872,7 +873,7 @@ class InBattleScreen extends ConsumerWidget {
                   title: Text("Attacker Made Charge Move (Lance +1)",
                       style: OmnispexTypography.body),
                   value: hasCharged,
-                  activeColor: OmnispexColors.cyan,
+                  activeColor: OmnispexColors.accent,
                   onChanged: (val) =>
                       ref.read(hasChargedProvider.notifier).state = val,
                 ),
@@ -885,7 +886,7 @@ class InBattleScreen extends ConsumerWidget {
                   title: Text("Target Has Benefit of Cover (+1 Sv)",
                       style: OmnispexTypography.body),
                   value: targetInCover,
-                  activeColor: OmnispexColors.cyan,
+                  activeColor: OmnispexColors.accent,
                   onChanged: (val) =>
                       ref.read(targetInCoverProvider.notifier).state = val,
                 ),
@@ -896,7 +897,7 @@ class InBattleScreen extends ConsumerWidget {
                   title: Text("Attacker Stationary (Heavy +1)",
                       style: OmnispexTypography.body),
                   value: isStationary,
-                  activeColor: OmnispexColors.cyan,
+                  activeColor: OmnispexColors.accent,
                   onChanged: (val) =>
                       ref.read(isStationaryProvider.notifier).state = val,
                 ),
@@ -1037,7 +1038,7 @@ class InBattleScreen extends ConsumerWidget {
                         style: OmnispexTypography.monoStatBadge
                             .copyWith(fontSize: 10)),
                     selected: defArmorOfContempt,
-                    selectedColor: OmnispexColors.purple.withOpacity(0.25),
+                    selectedColor: OmnispexColors.purple.withValues(alpha: 0.25),
                     backgroundColor: OmnispexColors.surfaceElevated,
                     side: BorderSide(
                         color: defArmorOfContempt
@@ -1106,9 +1107,9 @@ class InBattleScreen extends ConsumerWidget {
       return Chip(
         label: Text("$label (Inherent)",
             style: OmnispexTypography.monoStatBadge
-                .copyWith(fontSize: 10, color: OmnispexColors.cyan)),
-        backgroundColor: OmnispexColors.cyan.withOpacity(0.15),
-        side: const BorderSide(color: OmnispexColors.cyan),
+                .copyWith(fontSize: 10, color: OmnispexColors.accent)),
+        backgroundColor: OmnispexColors.accent.withValues(alpha: 0.15),
+        side: const BorderSide(color: OmnispexColors.accent),
         padding: EdgeInsets.zero,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       );
@@ -1119,7 +1120,7 @@ class InBattleScreen extends ConsumerWidget {
       label: Text(label,
           style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
       selected: active,
-      selectedColor: OmnispexColors.amber.withOpacity(0.25),
+      selectedColor: OmnispexColors.amber.withValues(alpha: 0.25),
       backgroundColor: OmnispexColors.surfaceElevated,
       side: BorderSide(
           color: active ? OmnispexColors.amber : OmnispexColors.border),
@@ -1146,7 +1147,7 @@ class InBattleScreen extends ConsumerWidget {
         label: Text("$label (Inherent)",
             style: OmnispexTypography.monoStatBadge
                 .copyWith(fontSize: 10, color: OmnispexColors.purple)),
-        backgroundColor: OmnispexColors.purple.withOpacity(0.15),
+        backgroundColor: OmnispexColors.purple.withValues(alpha: 0.15),
         side: const BorderSide(color: OmnispexColors.purple),
         padding: EdgeInsets.zero,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1157,7 +1158,7 @@ class InBattleScreen extends ConsumerWidget {
       label: Text(label,
           style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10)),
       selected: isSelected,
-      selectedColor: OmnispexColors.purple.withOpacity(0.25),
+      selectedColor: OmnispexColors.purple.withValues(alpha: 0.25),
       backgroundColor: OmnispexColors.surfaceElevated,
       side: BorderSide(
           color: isSelected ? OmnispexColors.purple : OmnispexColors.border),
@@ -1175,7 +1176,7 @@ class InBattleScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: OmnispexColors.surfaceElevated,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: OmnispexColors.amber.withOpacity(0.5)),
+        border: Border.all(color: OmnispexColors.amber.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1298,7 +1299,7 @@ class InBattleScreen extends ConsumerWidget {
                     style: OmnispexTypography.monoStatBadge
                         .copyWith(fontSize: 10)),
                 selected: active,
-                selectedColor: OmnispexColors.cyan.withOpacity(0.25),
+                selectedColor: OmnispexColors.accent.withValues(alpha: 0.25),
                 backgroundColor: OmnispexColors.surfaceCard,
                 onSelected: (selected) {
                   final list = List<String>.from(custom.abilities);
@@ -1352,7 +1353,7 @@ class InBattleScreen extends ConsumerWidget {
                 subtitle: isSingleModel
                     ? "± ${report.stdDevDamage.toStringAsFixed(1)} HP StdDev"
                     : "± ${report.stdDevKills.toStringAsFixed(1)} Models StdDev",
-                accentColor: OmnispexColors.cyan,
+                accentColor: OmnispexColors.accent,
                 icon: Icons.track_changes,
               ),
             ),
@@ -1425,7 +1426,7 @@ class InBattleScreen extends ConsumerWidget {
                       label: "HIT %",
                       value:
                           "${(report.stageProbabilities.hitProbability * 100).toStringAsFixed(1)}%",
-                      accentColor: OmnispexColors.cyan,
+                      accentColor: OmnispexColors.accent,
                     ),
                     StatBadge(
                       label: "WOUND %",
@@ -1622,7 +1623,7 @@ class InBattleScreen extends ConsumerWidget {
           label,
           style: OmnispexTypography.label.copyWith(
             fontSize: 10,
-            color: isMedian ? OmnispexColors.cyan : OmnispexColors.textMuted,
+            color: isMedian ? OmnispexColors.accent : OmnispexColors.textMuted,
           ),
         ),
         const SizedBox(height: 4),
@@ -1630,11 +1631,11 @@ class InBattleScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: isMedian
-                ? OmnispexColors.cyan.withOpacity(0.15)
+                ? OmnispexColors.accent.withValues(alpha: 0.15)
                 : OmnispexColors.surfaceElevated,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
-              color: isMedian ? OmnispexColors.cyan : OmnispexColors.border,
+              color: isMedian ? OmnispexColors.accent : OmnispexColors.border,
             ),
           ),
           child: Text(
@@ -1642,7 +1643,7 @@ class InBattleScreen extends ConsumerWidget {
             style: OmnispexTypography.monoData.copyWith(
               fontSize: 12,
               color:
-                  isMedian ? OmnispexColors.cyan : OmnispexColors.textPrimary,
+                  isMedian ? OmnispexColors.accent : OmnispexColors.textPrimary,
               fontWeight: isMedian ? FontWeight.w700 : FontWeight.w500,
             ),
           ),

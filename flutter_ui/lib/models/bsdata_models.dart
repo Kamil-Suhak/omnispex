@@ -153,6 +153,13 @@ class DetachmentDataUi {
     this.enhancements = const [],
   });
 
+  bool get isBoardingAction {
+    if (name.toLowerCase().contains('boarding')) return true;
+    return rules.any((r) =>
+        r.name.toLowerCase().contains('boarding') ||
+        r.description.toLowerCase().contains('boarding'));
+  }
+
   factory DetachmentDataUi.fromRustJson(Map<String, dynamic> json) {
     return DetachmentDataUi(
       id: json['id']?.toString() ?? '',
@@ -437,6 +444,9 @@ class BsDataFaction {
   final List<RuleEntryUi> armyRules;
   final List<DetachmentDataUi> detachments;
   final List<BsDataUnit> units;
+
+  List<DetachmentDataUi> get matchedPlayDetachments =>
+      detachments.where((d) => !d.isBoardingAction).toList();
 
   const BsDataFaction({
     required this.id,

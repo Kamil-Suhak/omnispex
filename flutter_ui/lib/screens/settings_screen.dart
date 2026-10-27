@@ -9,6 +9,7 @@ import '../services/faction_registry.dart';
 import '../services/personal_data_service.dart';
 import '../services/simulation_service.dart';
 import '../theme/omnispex_colors.dart';
+import '../theme/omnispex_theme.dart';
 import '../theme/omnispex_typography.dart';
 import '../widgets/stat_badge.dart';
 import '../widgets/tactical_card.dart';
@@ -62,7 +63,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       padding: const EdgeInsets.all(16),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
+          constraints: const BoxConstraints(maxWidth: OmnispexLayout.contentMaxWidth),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -179,7 +180,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         StatBadge(
                           label: "EDITION",
                           value: BsDataService.provenance.edition,
-                          accentColor: OmnispexColors.cyan,
+                          accentColor: OmnispexColors.accent,
                         ),
                         StatBadge(
                           label: "BSDATA REV",
@@ -201,7 +202,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         StatBadge(
                           label: "ACTIVE IN RAM",
                           value: "${BsDataService.loadedFactionsMap.length} Faction(s)",
-                          accentColor: OmnispexColors.cyan,
+                          accentColor: OmnispexColors.accent,
                         ),
                       ],
                     ),
@@ -210,18 +211,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: OmnispexColors.cyan.withOpacity(0.12),
+                          color: OmnispexColors.accent.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: OmnispexColors.cyan.withOpacity(0.3)),
+                          border: Border.all(color: OmnispexColors.accent.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.info_outline, size: 16, color: OmnispexColors.cyan),
+                            const Icon(Icons.info_outline, size: 16, color: OmnispexColors.accent),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 BsDataService.updateStatusMessage!,
-                                style: OmnispexTypography.monoData.copyWith(fontSize: 11, color: OmnispexColors.cyan),
+                                style: OmnispexTypography.monoData.copyWith(fontSize: 11, color: OmnispexColors.accent),
                               ),
                             ),
                           ],
@@ -245,7 +246,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             "CHECK 11E CATALOG UPDATES",
                             style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.background),
                           ),
-                          style: ElevatedButton.styleFrom(backgroundColor: OmnispexColors.cyan),
+                          style: ElevatedButton.styleFrom(backgroundColor: OmnispexColors.accent),
                           onPressed: _isCheckingCatalog
                               ? null
                               : () async {
@@ -310,7 +311,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       decoration: InputDecoration(
                         hintText: "Filter factions (e.g. 'Orks', 'Space Marines', 'Tyranids')...",
                         hintStyle: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
-                        prefixIcon: const Icon(Icons.search, size: 16, color: OmnispexColors.cyan),
+                        prefixIcon: const Icon(Icons.search, size: 16, color: OmnispexColors.accent),
                         fillColor: OmnispexColors.surfaceElevated,
                         filled: true,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -346,13 +347,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             title: Text(f.name, style: OmnispexTypography.monoData.copyWith(fontSize: 12, fontWeight: FontWeight.w700)),
                             subtitle: Text("~${f.expectedUnits} datasheets • ${f.remoteFile}", style: OmnispexTypography.bodyMuted.copyWith(fontSize: 10)),
                             trailing: isDownloading
-                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: OmnispexColors.cyan))
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: OmnispexColors.accent))
                                 : Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       if (isCached) ...[
                                         TextButton(
-                                          child: Text("RE-FETCH", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.cyan)),
+                                          child: Text("RE-FETCH", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.accent)),
                                           onPressed: () async {
                                             setState(() => _downloadingSlugs.add(f.slug));
                                             await BsDataService.downloadAndCacheFaction(f.slug, force: true);
@@ -374,7 +375,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                           icon: const Icon(Icons.download, size: 12),
                                           label: Text("DOWNLOAD", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.background)),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: OmnispexColors.cyan,
+                                            backgroundColor: OmnispexColors.accent,
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           ),
                                           onPressed: () async {
@@ -413,7 +414,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         decoration: BoxDecoration(
                           color: OmnispexColors.surfaceElevated,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: OmnispexColors.cyan.withOpacity(0.3)),
+                          border: Border.all(color: OmnispexColors.accent.withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,11 +422,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text("DEVICE ACCOUNT PAIRING KEY:", style: OmnispexTypography.label.copyWith(fontSize: 11, color: OmnispexColors.cyan)),
+                                Text("DEVICE ACCOUNT PAIRING KEY:", style: OmnispexTypography.label.copyWith(fontSize: 11, color: OmnispexColors.accent)),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: OmnispexColors.greenKill.withOpacity(0.15),
+                                    color: OmnispexColors.greenKill.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text("AUTHENTICATED", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.greenKill)),
@@ -457,7 +458,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             "COPY ACCOUNT PAIRING KEY",
                             style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.background),
                           ),
-                          style: ElevatedButton.styleFrom(backgroundColor: OmnispexColors.cyan),
+                          style: ElevatedButton.styleFrom(backgroundColor: OmnispexColors.accent),
                           onPressed: _credentials == null
                               ? null
                               : () {
@@ -474,9 +475,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           icon: const Icon(Icons.devices, size: 14),
                           label: Text(
                             "PAIR ANOTHER DEVICE / IMPORT KEY",
-                            style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.cyan),
+                            style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.accent),
                           ),
-                          style: OutlinedButton.styleFrom(side: const BorderSide(color: OmnispexColors.cyan)),
+                          style: OutlinedButton.styleFrom(side: const BorderSide(color: OmnispexColors.accent)),
                           onPressed: () => _showPairDeviceDialog(context, ref),
                         ),
                         ElevatedButton.icon(
@@ -583,7 +584,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: OmnispexColors.cyan,
+              backgroundColor: OmnispexColors.accent,
               foregroundColor: OmnispexColors.background,
             ),
             onPressed: () async {
@@ -644,7 +645,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: OmnispexColors.cyan,
+              backgroundColor: OmnispexColors.accent,
               foregroundColor: OmnispexColors.background,
             ),
             onPressed: () {
@@ -699,7 +700,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: const Icon(Icons.copy, size: 14),
             label: const Text("COPY TO CLIPBOARD"),
             style: ElevatedButton.styleFrom(
-              backgroundColor: OmnispexColors.cyan,
+              backgroundColor: OmnispexColors.accent,
               foregroundColor: OmnispexColors.background,
             ),
             onPressed: () {
@@ -778,11 +779,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildIterationChip(WidgetRef ref, int val, String label, int current) {
     final isSel = val == current;
     return ChoiceChip(
-      label: Text(label, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11, color: isSel ? OmnispexColors.background : OmnispexColors.cyan)),
+      label: Text(label, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11, color: isSel ? OmnispexColors.background : OmnispexColors.accent)),
       selected: isSel,
-      selectedColor: OmnispexColors.cyan,
+      selectedColor: OmnispexColors.accent,
       backgroundColor: OmnispexColors.surfaceElevated,
-      side: BorderSide(color: isSel ? OmnispexColors.cyan : OmnispexColors.border),
+      side: BorderSide(color: isSel ? OmnispexColors.accent : OmnispexColors.border),
       onSelected: (sel) {
         if (sel) ref.read(simulationIterationsProvider.notifier).state = val;
       },
@@ -829,10 +830,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: OmnispexColors.cyan.withOpacity(0.15),
+                  color: OmnispexColors.accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(entry.id.toUpperCase(), style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.cyan)),
+                child: Text(entry.id.toUpperCase(), style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.accent)),
               ),
             ],
           ),

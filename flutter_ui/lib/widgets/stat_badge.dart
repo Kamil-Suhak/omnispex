@@ -16,32 +16,30 @@ class StatBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accentColor ?? OmnispexColors.cyan;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    final color = accentColor ?? OmnispexColors.accent;
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.4), width: 1),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            "$label ",
-            style: OmnispexTypography.monoStatBadge.copyWith(
-              color: OmnispexColors.textSecondary,
-              fontSize: 11,
-            ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: "$label ",
+                style: OmnispexTypography.label.copyWith(fontSize: 11),
+              ),
+              TextSpan(
+                text: value,
+                style: OmnispexTypography.monoStatBadge.copyWith(color: color),
+              ),
+            ],
           ),
-          Text(
-            value,
-            style: OmnispexTypography.monoStatBadge.copyWith(
-              color: color,
-              fontSize: 12,
-            ),
-          ),
-        ],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }

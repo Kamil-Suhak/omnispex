@@ -20,7 +20,7 @@ class ScannableMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accentColor ?? OmnispexColors.cyan;
+    final color = accentColor ?? OmnispexColors.accent;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

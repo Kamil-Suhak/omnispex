@@ -285,12 +285,11 @@ class BsDataService {
 
     for (final faction in bundledFactions) {
       if (factionFilter != "All Factions") {
-        final matches = faction.id.toLowerCase() == factionFilter.toLowerCase() ||
-            faction.name.toLowerCase() == factionFilter.toLowerCase() ||
-            (faction.name.toLowerCase().contains(factionFilter.toLowerCase()) &&
-                !(factionFilter.toLowerCase() == "space marines" &&
-                    faction.name.toLowerCase().contains("chaos")));
-        if (!matches) continue;
+        final wanted = factionFilter.toLowerCase();
+        if (faction.id.toLowerCase() != wanted &&
+            faction.name.toLowerCase() != wanted) {
+          continue;
+        }
       }
 
       for (final unit in faction.units) {

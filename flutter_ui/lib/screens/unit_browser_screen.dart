@@ -7,6 +7,7 @@ import '../screens/in_battle_screen.dart';
 import '../services/bsdata_service.dart';
 import '../services/faction_registry.dart';
 import '../theme/omnispex_colors.dart';
+import '../theme/omnispex_theme.dart';
 import '../theme/omnispex_typography.dart';
 import '../widgets/compact_unit_tile.dart';
 import '../widgets/tactical_card.dart';
@@ -14,6 +15,8 @@ import '../widgets/tactical_card.dart';
 final unitSearchQueryProvider = StateProvider<String>((ref) => "");
 final unitFactionFilterProvider = StateProvider<String>((ref) => "All Factions");
 final unitCategoryFilterProvider = StateProvider<String>((ref) => "All Types");
+
+enum _BrowserTab { datasheets, armyRules, detachments }
 
 class UnitBrowserScreen extends ConsumerStatefulWidget {
   const UnitBrowserScreen({super.key});
@@ -23,10 +26,11 @@ class UnitBrowserScreen extends ConsumerStatefulWidget {
 }
 
 class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
-  late TextEditingController _searchController;
+  static const _typeFilters = ["All Types", "Infantry", "Vehicle / Monster", "Character"];
+
+  late final TextEditingController _searchController;
   bool _isDownloading = false;
-  String _downloadingFactionName = '';
-  int _selectedTab = 0; // 0: Datasheets, 1: Army Rules, 2: Detachments
+  _BrowserTab _tab = _BrowserTab.datasheets;
 
   @override
   void initState() {
@@ -41,78 +45,43 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
   }
 
   Future<void> _handleFactionSelect(String factionName) async {
-    if (factionName == "All Factions") {
-      ref.read(unitFactionFilterProvider.notifier).state = "All Factions";
-      return;
-    }
-
-    final meta = FactionRegistry.find(factionName);
+    final filter = ref.read(unitFactionFilterProvider.notifier);
+    final meta = factionName == "All Factions" ? null : FactionRegistry.find(factionName);
     if (meta == null) {
-      ref.read(unitFactionFilterProvider.notifier).state = factionName;
+      filter.state = factionName;
       return;
     }
 
-    if (BsDataService.isFactionCached(meta.slug)) {
-      await BsDataService.scopeMemoryToBrowser(meta.name);
-      ref.read(unitFactionFilterProvider.notifier).state = meta.name;
-      if (mounted) setState(() {});
-      return;
-    }
-
-    // Prompt user to download with clean copy
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: OmnispexColors.surfaceElevated,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: const BorderSide(color: OmnispexColors.border),
-        ),
-        title: Row(
-          children: [
-            const Icon(Icons.cloud_download, color: OmnispexColors.cyan, size: 20),
-            const SizedBox(width: 8),
-            Text("DOWNLOAD FACTION DATA", style: OmnispexTypography.h3),
+    if (!BsDataService.isFactionCached(meta.slug)) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text("Download ${meta.name}?", style: OmnispexTypography.h3),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: OmnispexColors.textSecondary),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Cancel"),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Download"),
+            ),
           ],
         ),
-        content: Text(
-          "Datasheet catalogue for ${meta.name} is not cached on this device. Would you like to download it now?",
-          style: OmnispexTypography.body,
-        ),
-        actions: [
-          TextButton(
-            child: Text("CANCEL", style: OmnispexTypography.monoData.copyWith(color: OmnispexColors.textMuted)),
-            onPressed: () => Navigator.pop(ctx, false),
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.download, size: 16),
-            label: Text("DOWNLOAD & LOAD", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 11, color: OmnispexColors.background)),
-            style: ElevatedButton.styleFrom(backgroundColor: OmnispexColors.cyan),
-            onPressed: () => Navigator.pop(ctx, true),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      setState(() {
-        _isDownloading = true;
-        _downloadingFactionName = meta.name;
-      });
+      );
+      if (confirm != true) return;
+      setState(() => _isDownloading = true);
       try {
         await BsDataService.downloadAndCacheFaction(meta.slug);
-        await BsDataService.scopeMemoryToBrowser(meta.name);
-        ref.read(unitFactionFilterProvider.notifier).state = meta.name;
-        ref.read(catalogueRevisionEpochProvider.notifier).state++;
       } finally {
-        if (mounted) {
-          setState(() {
-            _isDownloading = false;
-            _downloadingFactionName = '';
-          });
-        }
+        if (mounted) setState(() => _isDownloading = false);
       }
     }
+
+    await BsDataService.scopeMemoryToBrowser(meta.name);
+    filter.state = meta.name;
+    ref.read(catalogueRevisionEpochProvider.notifier).state++;
   }
 
   @override
@@ -127,701 +96,324 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
       factionFilter: factionFilter,
       categoryFilter: categoryFilter,
     );
-    final selectedFactionObj = factionFilter != "All Factions"
-        ? BsDataService.findFaction(factionFilter)
-        : null;
-    final displayedUnits = units.take(100).toList();
+    final faction = factionFilter == "All Factions"
+        ? null
+        : BsDataService.findFaction(factionFilter);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("BSDATA UNIT & WEAPON BROWSER", style: OmnispexTypography.h2),
-                      Text("Datasheets, Detachments & Army Rules", style: OmnispexTypography.bodyMuted),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: OmnispexColors.cyan.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: OmnispexColors.cyan.withOpacity(0.4)),
-                    ),
-                    child: Text(
-                      "${units.length} UNITS FOUND",
-                      style: OmnispexTypography.monoData.copyWith(fontSize: 11, color: OmnispexColors.cyan, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: OmnispexLayout.contentMaxWidth),
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                OmnispexLayout.pagePadding,
+                OmnispexLayout.pagePadding,
+                OmnispexLayout.pagePadding,
+                OmnispexLayout.gap,
               ),
-              const SizedBox(height: 16),
-
-              // Search & Filter Card
-              TacticalCard(
-                title: "SEARCH & ROSTER FILTERS",
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: _searchController,
-                      style: OmnispexTypography.monoData.copyWith(fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: factionFilter != "All Factions"
-                            ? "Search $factionFilter units, weapons, or abilities..."
-                            : "Search units, weapons, or abilities (e.g. 'Terminators', 'Leman Russ', 'Melta')...",
-                        hintStyle: OmnispexTypography.bodyMuted.copyWith(fontSize: 12),
-                        prefixIcon: const Icon(Icons.search, size: 18, color: OmnispexColors.cyan),
-                        suffixIcon: query.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 16, color: OmnispexColors.textMuted),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  ref.read(unitSearchQueryProvider.notifier).state = "";
-                                },
-                              )
-                            : null,
-                        fillColor: OmnispexColors.surfaceElevated,
-                        filled: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: OmnispexColors.border)),
-                      ),
-                      onChanged: (val) => ref.read(unitSearchQueryProvider.notifier).state = val,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Faction Selector Dropdown
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: BsDataService.availableFactions.contains(factionFilter)
-                                ? factionFilter
-                                : "All Factions",
-                            isExpanded: true,
-                            dropdownColor: OmnispexColors.surfaceElevated,
-                            decoration: InputDecoration(
-                              labelText: "FACTION SELECTION",
-                              labelStyle: OmnispexTypography.monoData.copyWith(
-                                color: OmnispexColors.cyan,
-                                fontSize: 11,
-                              ),
-                              prefixIcon: const Icon(Icons.shield_outlined,
-                                  size: 18, color: OmnispexColors.cyan),
-                              fillColor: OmnispexColors.surfaceElevated,
-                              filled: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: OmnispexColors.border),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: OmnispexColors.border),
-                              ),
-                            ),
-                            items: BsDataService.availableFactions.map((f) {
-                              final isCached = f == "All Factions" ||
-                                  BsDataService.isFactionCached(
-                                      FactionRegistry.find(f)?.slug ?? "");
-                              return DropdownMenuItem<String>(
-                                value: f,
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        f,
-                                        style: OmnispexTypography.monoData.copyWith(
-                                          fontSize: 12,
-                                          color: f == factionFilter
-                                              ? OmnispexColors.cyan
-                                              : OmnispexColors.textPrimary,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    if (f != "All Factions")
-                                      Container(
-                                        margin: const EdgeInsets.only(left: 6),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 5, vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: isCached
-                                              ? OmnispexColors.greenKill.withOpacity(0.15)
-                                              : OmnispexColors.surfaceCard,
-                                          borderRadius: BorderRadius.circular(3),
-                                        ),
-                                        child: Text(
-                                          isCached ? "CACHED" : "DOWNLOAD",
-                                          style: OmnispexTypography.monoStatBadge.copyWith(
-                                            fontSize: 8,
-                                            color: isCached
-                                                ? OmnispexColors.greenKill
-                                                : OmnispexColors.textMuted,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) _handleFactionSelect(val);
-                            },
-                          ),
-                        ),
-                        if (factionFilter != "All Factions") ...[
-                          const SizedBox(width: 8),
-                          IconButton(
-                            tooltip: "Clear Faction Filter",
-                            icon: const Icon(Icons.clear, color: OmnispexColors.textMuted),
-                            onPressed: () => _handleFactionSelect("All Factions"),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Role Filters
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: ["All Types", "Infantry", "Vehicle / Monster", "Character"].map((cat) {
-                        final isSel = categoryFilter == cat;
-                        return ChoiceChip(
-                          label: Text(cat, style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: isSel ? OmnispexColors.background : OmnispexColors.amber)),
-                          selected: isSel,
-                          selectedColor: OmnispexColors.amber,
-                          backgroundColor: OmnispexColors.surfaceElevated,
-                          side: BorderSide(color: isSel ? OmnispexColors.amber : OmnispexColors.border),
-                          padding: EdgeInsets.zero,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          onSelected: (sel) {
-                            if (sel) ref.read(unitCategoryFilterProvider.notifier).state = cat;
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              if (_isDownloading) ...[
-                TacticalCard(
-                  title: "DOWNLOADING FACTION FROM BSDATA...",
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          const CircularProgressIndicator(color: OmnispexColors.cyan),
-                          const SizedBox(height: 16),
-                          Text("Ingesting $_downloadingFactionName from repository...", style: OmnispexTypography.monoData),
-                          const SizedBox(height: 4),
-                          Text("Downloading and caching catalogue...", style: OmnispexTypography.bodyMuted),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ] else if (factionFilter != "All Factions") ...[
-                // Active Faction Header & Switcher
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: OmnispexColors.cyan.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: OmnispexColors.cyan.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.shield_outlined, color: OmnispexColors.cyan, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "ACTIVE FACTION: $factionFilter",
-                              style: OmnispexTypography.h3.copyWith(fontSize: 14, color: OmnispexColors.cyan),
-                            ),
-                            Text(
-                              "${units.length} DATASHEETS LOADED",
-                              style: OmnispexTypography.monoData.copyWith(fontSize: 10, color: OmnispexColors.greenKill),
-                            ),
-                          ],
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.sync_alt, size: 14),
-                        label: Text(
-                          "SWITCH FACTION",
-                          style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 10, color: OmnispexColors.cyan),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: OmnispexColors.cyan),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        ),
-                        onPressed: () => _handleFactionSelect("All Factions"),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Sub-navigation Tabs (Datasheets, Army Rules, Detachments)
-              Row(
-                children: [
-                  _buildTabButton(0, "DATASHEETS (${units.length})", Icons.list_alt),
-                  const SizedBox(width: 8),
-                  _buildTabButton(1, "ARMY RULES (${selectedFactionObj?.armyRules.length ?? 0})", Icons.menu_book),
-                  const SizedBox(width: 8),
-                  _buildTabButton(2, "DETACHMENTS (${selectedFactionObj?.detachments.length ?? 0})", Icons.shield),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Sub-navigation Content
-              if (_selectedTab == 0) ...[
-                // Unit Datasheets Feed
-                if (units.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(40),
-                    alignment: Alignment.center,
-                    child: Column(
-                      children: [
-                        const Icon(Icons.search_off, size: 48, color: OmnispexColors.textMuted),
-                        const SizedBox(height: 12),
-                        Text("No matching units found", style: OmnispexTypography.h2),
-                        const SizedBox(height: 4),
-                        Text("Try clearing search filters or changing the faction selection.", style: OmnispexTypography.bodyMuted),
-                      ],
-                    ),
-                  )
-                else
-                  ...displayedUnits.map((u) => _buildCompactUnitTile(context, ref, u)),
-              ] else if (_selectedTab == 1) ...[
-                _buildArmyRulesTab(selectedFactionObj),
-              ] else ...[
-                _buildDetachmentsTab(selectedFactionObj),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabButton(int index, String title, IconData icon) {
-    final isSelected = _selectedTab == index;
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => _selectedTab = index),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? OmnispexColors.cyan.withOpacity(0.15)
-                : OmnispexColors.surfaceCard,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? OmnispexColors.cyan : OmnispexColors.border,
-              width: isSelected ? 1.5 : 1,
+              sliver: SliverToBoxAdapter(child: _buildHeader(units.length, factionFilter, categoryFilter)),
             ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 15,
-                color: isSelected ? OmnispexColors.cyan : OmnispexColors.textMuted,
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  title,
-                  style: OmnispexTypography.monoData.copyWith(
-                    fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? OmnispexColors.cyan : OmnispexColors.textSecondary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+            if (_isDownloading)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(48),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              )
+            else if (_tab == _BrowserTab.datasheets)
+              _buildUnitGrid(units)
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: OmnispexLayout.pagePadding),
+                sliver: SliverToBoxAdapter(
+                  child: _tab == _BrowserTab.armyRules
+                      ? _buildArmyRules(faction)
+                      : _buildDetachments(faction),
                 ),
               ),
-            ],
-          ),
+            const SliverToBoxAdapter(child: SizedBox(height: OmnispexLayout.pagePadding)),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildCompactUnitTile(BuildContext context, WidgetRef ref, BsDataUnit unit) {
-    return CompactUnitTile(
-      unit: unit,
-      actionButtons: [
-        ElevatedButton.icon(
-          icon: const Icon(Icons.flash_on, size: 12),
-          label: Text("ATTACKER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.background)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: OmnispexColors.cyan,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          onPressed: () {
-            ref.read(loadedAttackerNameProvider.notifier).state = unit.name;
-            if (unit.weapons.isNotEmpty) {
-              ref.read(customWeaponProfileProvider.notifier).state = unit.weapons.first;
-              ref.read(isCustomWeaponModeProvider.notifier).state = true;
-            }
-            ref.read(currentNavIndexProvider.notifier).state = 0;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Loaded '${unit.name}' as Attacker into In-Battle Simulator!"),
-                backgroundColor: OmnispexColors.surfaceElevated,
-                duration: const Duration(seconds: 2),
+  Widget _buildHeader(int unitCount, String factionFilter, String categoryFilter) {
+    final factions = BsDataService.availableFactions;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("BSDATA UNIT & WEAPON BROWSER", style: OmnispexTypography.h2),
+        const SizedBox(height: OmnispexLayout.gap),
+        Wrap(
+          spacing: OmnispexLayout.gap,
+          runSpacing: OmnispexLayout.gap,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              width: 360,
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: "Search units, weapons, abilities",
+                  prefixIcon: const Icon(Icons.search, size: 18),
+                  isDense: true,
+                  suffixIcon: _searchController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: "Clear",
+                          icon: const Icon(Icons.clear, size: 16),
+                          onPressed: () {
+                            _searchController.clear();
+                            ref.read(unitSearchQueryProvider.notifier).state = "";
+                          },
+                        ),
+                ),
+                onChanged: (val) => ref.read(unitSearchQueryProvider.notifier).state = val,
               ),
-            );
-          },
-        ),
-        ElevatedButton.icon(
-          icon: const Icon(Icons.shield_outlined, size: 12),
-          label: Text("DEFENDER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.background)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: OmnispexColors.amber,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          onPressed: () {
-            ref.read(loadedDefenderNameProvider.notifier).state = unit.name;
-            ref.read(customTargetProfileProvider.notifier).state = unit.unitProfile;
-            ref.read(isCustomTargetModeProvider.notifier).state = true;
-            ref.read(currentNavIndexProvider.notifier).state = 0;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Loaded '${unit.name}' as Defender into In-Battle Simulator!"),
-                backgroundColor: OmnispexColors.surfaceElevated,
-                duration: const Duration(seconds: 2),
+            ),
+            SizedBox(
+              width: 300,
+              child: DropdownButtonFormField<String>(
+                initialValue: factions.contains(factionFilter) ? factionFilter : "All Factions",
+                isExpanded: true,
+                decoration: const InputDecoration(isDense: true),
+                items: [
+                  for (final f in factions)
+                    DropdownMenuItem(value: f, child: Text(f, overflow: TextOverflow.ellipsis)),
+                ],
+                onChanged: (val) {
+                  if (val != null) _handleFactionSelect(val);
+                },
               ),
-            );
-          },
-        ),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.playlist_add, size: 12),
-          label: Text("ADD TO LIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.greenKill)),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: OmnispexColors.greenKill,
-            side: const BorderSide(color: OmnispexColors.greenKill),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          onPressed: () {
-            final list = ref
-                .read(personalStoreProvider.notifier)
-                .addUnitToArmyList(unit: unit);
-            ref.read(activeArmyListIdProvider.notifier).state = list.id;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Added '${unit.name}' to Army List '${list.name}'!"),
-                backgroundColor: OmnispexColors.surfaceElevated,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          },
-        ),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.bookmark_add_outlined, size: 12),
-          label: Text("WISHLIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.purple)),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: OmnispexColors.purple,
-            side: const BorderSide(color: OmnispexColors.purple),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          onPressed: () {
-            final now = DateTime.now().toIso8601String();
-            ref.read(personalStoreProvider.notifier).upsertWishlistItem(
-                  WishlistItemUi(
-                    id: 'wl-${unit.id}',
-                    factionId: unit.factionId.isNotEmpty
-                        ? unit.factionId
-                        : unit.faction,
-                    factionName: unit.faction,
-                    unitId: unit.id,
-                    unitName: unit.name,
-                    quantityDesired: 1,
-                    quantityOwned: 0,
-                    pointsPerUnit: unit.pointsCost ?? 100,
-                    priority: WishlistPriorityUi.medium,
-                    state: AcquisitionStateUi.wishlist,
-                    updatedAtIso: now,
+            ),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final t in _typeFilters)
+                  ChoiceChip(
+                    label: Text(
+                      t,
+                      style: OmnispexTypography.monoStatBadge.copyWith(
+                        fontSize: 11,
+                        color: categoryFilter == t
+                            ? OmnispexColors.background
+                            : OmnispexColors.accent,
+                      ),
+                    ),
+                    selected: categoryFilter == t,
+                    selectedColor: OmnispexColors.accent,
+                    backgroundColor: OmnispexColors.surfaceElevated,
+                    onSelected: (_) =>
+                        ref.read(unitCategoryFilterProvider.notifier).state = t,
                   ),
-                );
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Added '${unit.name}' to ${unit.faction} Wishlist!"),
-                backgroundColor: OmnispexColors.surfaceElevated,
-                duration: const Duration(seconds: 2),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: OmnispexLayout.gap),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SegmentedButton<_BrowserTab>(
+            showSelectedIcon: false,
+            style: const ButtonStyle(visualDensity: VisualDensity.compact),
+            segments: const [
+              ButtonSegment(
+                value: _BrowserTab.datasheets,
+                label: Text("Datasheets", maxLines: 1),
               ),
-            );
-          },
+              ButtonSegment(
+                value: _BrowserTab.armyRules,
+                label: Text("Army Rules", maxLines: 1),
+              ),
+              ButtonSegment(
+                value: _BrowserTab.detachments,
+                label: Text("Detachments", maxLines: 1),
+              ),
+            ],
+            selected: {_tab},
+            onSelectionChanged: (s) => setState(() => _tab = s.first),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildArmyRulesTab(BsDataFaction? faction) {
-    if (faction == null) {
-      return TacticalCard(
-        title: "ARMY RULES",
+  Widget _buildUnitGrid(List<BsDataUnit> units) {
+    if (units.isEmpty) {
+      return SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Center(
-            child: Column(
-              children: [
-                const Icon(Icons.shield_outlined, size: 36, color: OmnispexColors.textMuted),
-                const SizedBox(height: 8),
-                Text("Select a specific faction to view its Army Rules.", style: OmnispexTypography.bodyMuted),
-              ],
-            ),
-          ),
+          padding: const EdgeInsets.all(48),
+          child: Center(child: Text("No matching units", style: OmnispexTypography.bodyMuted)),
         ),
       );
     }
-
-    if (faction.armyRules.isEmpty) {
-      return TacticalCard(
-        title: "ARMY RULES — ${faction.name.toUpperCase()}",
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Center(
-            child: Text("No army rules recorded for ${faction.name}.", style: OmnispexTypography.bodyMuted),
-          ),
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: OmnispexLayout.pagePadding),
+      sliver: SliverGrid.builder(
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 420,
+          mainAxisExtent: 52,
+          crossAxisSpacing: OmnispexLayout.gap,
+          mainAxisSpacing: 8,
         ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: faction.armyRules.map((rule) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: OmnispexColors.surfaceCard,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: OmnispexColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.menu_book, size: 16, color: OmnispexColors.cyan),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      rule.name.toUpperCase(),
-                      style: OmnispexTypography.h3.copyWith(color: OmnispexColors.cyan, fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(rule.description, style: OmnispexTypography.body),
-            ],
-          ),
-        );
-      }).toList(),
+        itemCount: units.length,
+        itemBuilder: (context, i) {
+          final unit = units[i];
+          return CompactUnitTile(
+            key: ValueKey(unit.id),
+            unit: unit,
+            trailing: _UnitActionsMenu(unit: unit),
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildDetachmentsTab(BsDataFaction? faction) {
-    if (faction == null) {
-      return TacticalCard(
-        title: "DETACHMENTS",
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Center(
+  Widget _buildArmyRules(BsDataFaction? faction) {
+    if (faction == null || faction.armyRules.isEmpty) {
+      return _emptyNote(faction == null
+          ? "Select a faction to view its army rules."
+          : "No army rules recorded for ${faction.name}.");
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final rule in faction.armyRules)
+          TacticalCard(
+            title: rule.name,
+            child: Text(rule.description, style: OmnispexTypography.bodyMuted),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDetachments(BsDataFaction? faction) {
+    final detachments = faction?.matchedPlayDetachments ?? const [];
+    if (faction == null || detachments.isEmpty) {
+      return _emptyNote(faction == null
+          ? "Select a faction to view its detachments."
+          : "No detachments recorded for ${faction.name}.");
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final det in detachments)
+          TacticalCard(
+            title: "${det.name} · ${det.dpCost} DP",
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.military_tech_outlined, size: 36, color: OmnispexColors.textMuted),
-                const SizedBox(height: 8),
-                Text("Select a specific faction to view its Detachments.", style: OmnispexTypography.bodyMuted),
+                for (final r in det.rules)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text(
+                      r.description.isNotEmpty ? "${r.name}: ${r.description}" : r.name,
+                      style: OmnispexTypography.bodyMuted,
+                    ),
+                  ),
+                if (det.enhancements.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text("ENHANCEMENTS", style: OmnispexTypography.label),
+                  const SizedBox(height: 6),
+                  for (final enh in det.enhancements)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text.rich(TextSpan(children: [
+                        TextSpan(
+                          text: "${enh.name} · ${enh.points} pts",
+                          style: OmnispexTypography.body.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        if (enh.description.isNotEmpty)
+                          TextSpan(text: "\n${enh.description}", style: OmnispexTypography.bodyMuted),
+                      ])),
+                    ),
+                ],
               ],
             ),
           ),
-        ),
-      );
-    }
-
-    if (faction.detachments.isEmpty) {
-      return TacticalCard(
-        title: "DETACHMENTS — ${faction.name.toUpperCase()}",
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Center(
-            child: Text("No detachments recorded for ${faction.name}.", style: OmnispexTypography.bodyMuted),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: faction.detachments.map((det) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 14),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: OmnispexColors.surfaceCard,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: OmnispexColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Detachment Header & DP Badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(Icons.shield, size: 16, color: OmnispexColors.amber),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            det.name.toUpperCase(),
-                            style: OmnispexTypography.h3.copyWith(fontSize: 14, color: OmnispexColors.amber),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: OmnispexColors.amber.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: OmnispexColors.amber.withOpacity(0.4)),
-                    ),
-                    child: Text(
-                      "${det.dpCost} DP",
-                      style: OmnispexTypography.monoStatBadge.copyWith(
-                        fontSize: 11,
-                        color: OmnispexColors.amber,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (det.rules.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                ...det.rules.map((r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        r.description.isNotEmpty ? "${r.name}: ${r.description}" : r.name,
-                        style: OmnispexTypography.body,
-                      ),
-                    )),
-              ],
-              const SizedBox(height: 12),
-
-              // Enhancements List
-              if (det.enhancements.isNotEmpty) ...[
-                Text(
-                  "ENHANCEMENTS (${det.enhancements.length}):",
-                  style: OmnispexTypography.monoData.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: OmnispexColors.cyan,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                ...det.enhancements.map((enh) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: OmnispexColors.surfaceElevated,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: OmnispexColors.border.withOpacity(0.5)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                enh.name,
-                                style: OmnispexTypography.monoData.copyWith(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: OmnispexColors.cyan,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: OmnispexColors.purple.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                              child: Text(
-                                "+${enh.points} PTS",
-                                style: OmnispexTypography.monoStatBadge.copyWith(
-                                  fontSize: 9,
-                                  color: OmnispexColors.purple,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (enh.description.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            enh.description,
-                            style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                }),
-              ] else ...[
-                Text(
-                  "No enhancements available for this detachment.",
-                  style: OmnispexTypography.bodyMuted.copyWith(fontSize: 11),
-                ),
-              ],
-            ],
-          ),
-        );
-      }).toList(),
+      ],
     );
+  }
+
+  Widget _emptyNote(String text) => Padding(
+        padding: const EdgeInsets.all(32),
+        child: Center(child: Text(text, style: OmnispexTypography.bodyMuted)),
+      );
+}
+
+enum _UnitAction { attacker, defender, addToList, wishlist }
+
+class _UnitActionsMenu extends ConsumerWidget {
+  final BsDataUnit unit;
+
+  const _UnitActionsMenu({required this.unit});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<_UnitAction>(
+      tooltip: "Actions",
+      icon: const Icon(Icons.more_vert, size: 20),
+      color: OmnispexColors.surfaceElevated,
+      onSelected: (action) => _run(context, ref, action),
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: _UnitAction.attacker, child: Text("Load as attacker")),
+        PopupMenuItem(value: _UnitAction.defender, child: Text("Load as defender")),
+        PopupMenuItem(value: _UnitAction.addToList, child: Text("Add to army list")),
+        PopupMenuItem(value: _UnitAction.wishlist, child: Text("Add to wishlist")),
+      ],
+    );
+  }
+
+  void _run(BuildContext context, WidgetRef ref, _UnitAction action) {
+    String message = "";
+    switch (action) {
+      case _UnitAction.attacker:
+        ref.read(loadedAttackerNameProvider.notifier).state = unit.name;
+        if (unit.weapons.isNotEmpty) {
+          ref.read(customWeaponProfileProvider.notifier).state = unit.weapons.first;
+          ref.read(isCustomWeaponModeProvider.notifier).state = true;
+        }
+        ref.read(currentNavIndexProvider.notifier).state = 0;
+        message = "Loaded '${unit.name}' as attacker";
+        break;
+      case _UnitAction.defender:
+        ref.read(loadedDefenderNameProvider.notifier).state = unit.name;
+        ref.read(customTargetProfileProvider.notifier).state = unit.unitProfile;
+        ref.read(isCustomTargetModeProvider.notifier).state = true;
+        ref.read(currentNavIndexProvider.notifier).state = 0;
+        message = "Loaded '${unit.name}' as defender";
+        break;
+      case _UnitAction.addToList:
+        final list = ref.read(personalStoreProvider.notifier).addUnitToArmyList(unit: unit);
+        ref.read(activeArmyListIdProvider.notifier).state = list.id;
+        message = "Added '${unit.name}' to '${list.name}'";
+        break;
+      case _UnitAction.wishlist:
+        ref.read(personalStoreProvider.notifier).upsertWishlistItem(
+              WishlistItemUi(
+                id: 'wl-${unit.id}',
+                factionId: unit.factionId.isNotEmpty ? unit.factionId : unit.faction,
+                factionName: unit.faction,
+                unitId: unit.id,
+                unitName: unit.name,
+                quantityDesired: 1,
+                quantityOwned: 0,
+                pointsPerUnit: unit.pointsCost ?? 100,
+                priority: WishlistPriorityUi.medium,
+                state: AcquisitionStateUi.wishlist,
+                updatedAtIso: DateTime.now().toIso8601String(),
+              ),
+            );
+        message = "Added '${unit.name}' to wishlist";
+        break;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 2)));
   }
 }
+

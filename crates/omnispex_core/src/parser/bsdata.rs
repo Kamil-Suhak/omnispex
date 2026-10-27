@@ -455,6 +455,27 @@ impl BsDataParser {
                                 }
                             }
 
+                            // Filter out Boarding Actions detachments and rules
+                            let comment = det_entry
+                                .get("comment")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+                            let is_boarding = comment.to_lowercase().contains("boarding")
+                                || dname.to_lowercase().contains("boarding")
+                                || det_rules.iter().any(|r| {
+                                    let rn = r.name.to_lowercase();
+                                    let rd = r.description.to_lowercase();
+                                    rn.contains("boarding patrol")
+                                        || rn.contains("boarding squad")
+                                        || rn.contains("boarding action")
+                                        || rd.contains("boarding patrol")
+                                        || rd.contains("boarding squad")
+                                        || rd.contains("boarding action")
+                                });
+                            if is_boarding {
+                                continue;
+                            }
+
                             if let Some(existing) = detachments
                                 .iter_mut()
                                 .find(|d| d.name.eq_ignore_ascii_case(&dname))
@@ -493,11 +514,20 @@ impl BsDataParser {
                         grp.get("selectionEntryGroups").and_then(|v| v.as_array())
                     {
                         for sub in subgroups {
+                            let sub_comment = sub
+                                .get("comment")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
                             let sub_name = sub
                                 .get("name")
                                 .and_then(|v| v.as_str())
                                 .unwrap_or("")
                                 .trim();
+                            if sub_comment.to_lowercase().contains("boarding")
+                                || sub_name.to_lowercase().contains("boarding")
+                            {
+                                continue;
+                            }
                             let target_det_name = sub_name
                                 .replace("Enhancements", "")
                                 .replace("Enhancement", "")

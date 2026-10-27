@@ -32,8 +32,7 @@ void main() {
     );
 
     expect(find.text("TEST CARD"), findsOneWidget);
-    expect(find.text("BS "), findsOneWidget);
-    expect(find.text("3+"), findsOneWidget);
+    expect(find.text("BS 3+"), findsOneWidget);
   });
 
   testWidgets('TacticalVerdictBadge renders Traffic Light states', (WidgetTester tester) async {
@@ -134,14 +133,14 @@ void main() {
     );
 
     expect(find.text("BSDATA UNIT & WEAPON BROWSER"), findsOneWidget);
-    expect(find.text("SEARCH & ROSTER FILTERS"), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
     expect(find.text("Battlewagon"), findsOneWidget);
     expect(find.text("Terminator Squad"), findsOneWidget);
     expect(find.text("Leman Russ Battle Tank"), findsOneWidget);
   });
 
   test('BsDataService accurately isolates Space Marines from Chaos Space Marines', () {
-    final smUnits = BsDataService.searchUnits(factionFilter: "Adeptus Astartes");
+    final smUnits = BsDataService.searchUnits(factionFilter: "Adeptus Astartes - Compliant Chapters");
     final csmUnits = BsDataService.searchUnits(factionFilter: "Chaos Space Marines");
 
     expect(smUnits.any((u) => u.name == "Terminator Squad"), isTrue);

@@ -7,6 +7,7 @@ import '../providers/app_state_provider.dart';
 import '../services/bsdata_service.dart';
 import '../services/personal_data_service.dart';
 import '../theme/omnispex_colors.dart';
+import '../theme/omnispex_theme.dart';
 import '../theme/omnispex_typography.dart';
 import '../widgets/scannable_metric_card.dart';
 import '../widgets/stat_badge.dart';
@@ -57,7 +58,7 @@ class WishlistScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
+          constraints: const BoxConstraints(maxWidth: OmnispexLayout.contentMaxWidth),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -89,7 +90,7 @@ class WishlistScreen extends ConsumerWidget {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: OmnispexColors.cyan,
+                      backgroundColor: OmnispexColors.accent,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
                     ),
@@ -109,7 +110,7 @@ class WishlistScreen extends ConsumerWidget {
                           '${summary.totalBoxesOwned} / ${summary.totalBoxesDesired}',
                       subtitle:
                           '${summary.totalBoxesRemaining} remaining to acquire',
-                      accentColor: OmnispexColors.cyan,
+                      accentColor: OmnispexColors.accent,
                       icon: Icons.inventory_2_outlined,
                     ),
                   ),
@@ -155,7 +156,7 @@ class WishlistScreen extends ConsumerWidget {
                             decoration: const InputDecoration(
                               hintText: 'Search wishlist units or notes...',
                               prefixIcon: Icon(Icons.search,
-                                  size: 16, color: OmnispexColors.cyan),
+                                  size: 16, color: OmnispexColors.accent),
                               isDense: true,
                             ),
                             onChanged: (val) => ref
@@ -212,11 +213,11 @@ class WishlistScreen extends ConsumerWidget {
                                   fontSize: 10,
                                   color: sel
                                       ? OmnispexColors.background
-                                      : OmnispexColors.cyan,
+                                      : OmnispexColors.accent,
                                 ),
                               ),
                               selected: sel,
-                              selectedColor: OmnispexColors.cyan,
+                              selectedColor: OmnispexColors.accent,
                               backgroundColor: OmnispexColors.surfaceElevated,
                               onSelected: (_) => ref
                                   .read(wishlistFactionFilterProvider.notifier)
@@ -239,7 +240,7 @@ class WishlistScreen extends ConsumerWidget {
                           ),
                           selected: priorityFilter == null,
                           selectedColor:
-                              OmnispexColors.amber.withOpacity(0.25),
+                              OmnispexColors.amber.withValues(alpha: 0.25),
                           backgroundColor: OmnispexColors.surfaceElevated,
                           onSelected: (_) => ref
                               .read(wishlistPriorityFilterProvider.notifier)
@@ -255,7 +256,7 @@ class WishlistScreen extends ConsumerWidget {
                             ),
                             selected: sel,
                             selectedColor:
-                                OmnispexColors.amber.withOpacity(0.25),
+                                OmnispexColors.amber.withValues(alpha: 0.25),
                             backgroundColor: OmnispexColors.surfaceElevated,
                             onSelected: (_) => ref
                                 .read(wishlistPriorityFilterProvider.notifier)
@@ -301,7 +302,7 @@ class WishlistScreen extends ConsumerWidget {
     final priorityColor = switch (item.priority) {
       WishlistPriorityUi.critical => OmnispexColors.redIneffective,
       WishlistPriorityUi.high => OmnispexColors.amber,
-      WishlistPriorityUi.medium => OmnispexColors.cyan,
+      WishlistPriorityUi.medium => OmnispexColors.accent,
       WishlistPriorityUi.low => OmnispexColors.textSecondary,
     };
 
@@ -342,7 +343,7 @@ class WishlistScreen extends ConsumerWidget {
                   StatBadge(
                     label: 'ARMY',
                     value: item.factionName,
-                    accentColor: OmnispexColors.cyan,
+                    accentColor: OmnispexColors.accent,
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
@@ -351,11 +352,11 @@ class WishlistScreen extends ConsumerWidget {
                       'DETAILS',
                       style: OmnispexTypography.monoStatBadge.copyWith(
                         fontSize: 10,
-                        color: OmnispexColors.cyan,
+                        color: OmnispexColors.accent,
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: OmnispexColors.cyan,
+                      foregroundColor: OmnispexColors.accent,
                       side: const BorderSide(color: OmnispexColors.border),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       visualDensity: VisualDensity.compact,
@@ -411,7 +412,7 @@ class WishlistScreen extends ConsumerWidget {
               _buildStepperPill(
                 label: 'DESIRED',
                 value: item.quantityDesired,
-                color: OmnispexColors.cyan,
+                color: OmnispexColors.accent,
                 onChanged: (next) {
                   ref.read(personalStoreProvider.notifier).upsertWishlistItem(
                         item.copyWith(
@@ -518,7 +519,7 @@ class WishlistScreen extends ConsumerWidget {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: OmnispexColors.cyan,
+                  backgroundColor: OmnispexColors.accent,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -597,7 +598,7 @@ class WishlistScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: OmnispexColors.surfaceElevated,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -828,7 +829,7 @@ class WishlistScreen extends ConsumerWidget {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: OmnispexColors.cyan,
+                    backgroundColor: OmnispexColors.accent,
                     foregroundColor: OmnispexColors.background,
                   ),
                   onPressed: () {

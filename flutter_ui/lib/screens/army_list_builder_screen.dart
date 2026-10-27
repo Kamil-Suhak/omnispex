@@ -8,6 +8,7 @@ import '../services/bsdata_service.dart';
 import '../services/faction_registry.dart';
 import '../services/personal_data_service.dart';
 import '../theme/omnispex_colors.dart';
+import '../theme/omnispex_theme.dart';
 import '../theme/omnispex_typography.dart';
 import '../widgets/compact_unit_tile.dart';
 import '../widgets/scannable_metric_card.dart';
@@ -17,6 +18,8 @@ import '../widgets/unit_details_modal.dart';
 
 final _unitAdderSearchProvider = StateProvider<String>((ref) => '');
 final _unitAdderCategoryProvider = StateProvider<String>((ref) => 'All Types');
+final _builderSubTabProvider = StateProvider<int>((ref) => 0);
+final _builderMobileTabProvider = StateProvider<int>((ref) => 0);
 
 class ArmyListBuilderScreen extends ConsumerWidget {
   const ArmyListBuilderScreen({super.key});
@@ -61,13 +64,14 @@ class ArmyListBuilderScreen extends ConsumerWidget {
     final evaluatedList = evaluation?.list ?? activeList;
     final validation = evaluation?.validation;
     final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 960;
+    final isWidescreen = screenWidth >= 1200;
+    final isMedium = screenWidth >= 768 && screenWidth < 1200;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1180),
+          constraints: const BoxConstraints(maxWidth: OmnispexLayout.contentMaxWidth),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -81,13 +85,13 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                 if (validation != null)
                   _buildValidationBanner(context, validation),
                 const SizedBox(height: 14),
-                if (isDesktop)
+                if (isWidescreen)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        flex: 5,
-                        child: _buildLeftColumn(
+                      SizedBox(
+                        width: 320,
+                        child: _buildRosterConfigAndDetachments(
                           context,
                           ref,
                           evaluatedList,
@@ -95,9 +99,18 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                           factions,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 14),
+                      SizedBox(
+                        width: 360,
+                        child: _buildUnitAdder(
+                          context,
+                          ref,
+                          evaluatedList,
+                          activeFaction,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
                       Expanded(
-                        flex: 7,
                         child: _buildRosterUnitsColumn(
                           context,
                           ref,
@@ -108,23 +121,123 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                       ),
                     ],
                   )
-                else ...[
-                  _buildLeftColumn(
-                    context,
-                    ref,
-                    evaluatedList,
-                    activeFaction,
-                    factions,
+                else if (isMedium)
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final subTab = ref.watch(_builderSubTabProvider);
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SegmentedButton<int>(
+                                  showSelectedIcon: false,
+                                  segments: const [
+                                    ButtonSegment(
+                                      value: 0,
+                                      label: Text('Add Units', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    ),
+                                    ButtonSegment(
+                                      value: 1,
+                                      label: Text('Detachments', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    ),
+                                  ],
+                                  selected: {subTab},
+                                  onSelectionChanged: (set) =>
+                                      ref.read(_builderSubTabProvider.notifier).state = set.first,
+                                ),
+                                const SizedBox(height: 12),
+                                if (subTab == 0)
+                                  _buildUnitAdder(
+                                    context,
+                                    ref,
+                                    evaluatedList,
+                                    activeFaction,
+                                  )
+                                else
+                                  _buildRosterConfigAndDetachments(
+                                    context,
+                                    ref,
+                                    evaluatedList,
+                                    activeFaction,
+                                    factions,
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 7,
+                            child: _buildRosterUnitsColumn(
+                              context,
+                              ref,
+                              evaluatedList,
+                              activeFaction,
+                              validation,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  )
+                else
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final mobileTab = ref.watch(_builderMobileTabProvider);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SegmentedButton<int>(
+                            showSelectedIcon: false,
+                            segments: const [
+                              ButtonSegment(
+                                value: 0,
+                                label: Text('Roster', maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ),
+                              ButtonSegment(
+                                value: 1,
+                                label: Text('Add Units', maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ),
+                              ButtonSegment(
+                                value: 2,
+                                label: Text('Setup', maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ),
+                            ],
+                            selected: {mobileTab},
+                            onSelectionChanged: (set) =>
+                                ref.read(_builderMobileTabProvider.notifier).state = set.first,
+                          ),
+                          const SizedBox(height: 12),
+                          if (mobileTab == 0)
+                            _buildRosterUnitsColumn(
+                              context,
+                              ref,
+                              evaluatedList,
+                              activeFaction,
+                              validation,
+                            )
+                          else if (mobileTab == 1)
+                            _buildUnitAdder(
+                              context,
+                              ref,
+                              evaluatedList,
+                              activeFaction,
+                            )
+                          else
+                            _buildRosterConfigAndDetachments(
+                              context,
+                              ref,
+                              evaluatedList,
+                              activeFaction,
+                              factions,
+                            ),
+                        ],
+                      );
+                    },
                   ),
-                  const SizedBox(height: 16),
-                  _buildRosterUnitsColumn(
-                    context,
-                    ref,
-                    evaluatedList,
-                    activeFaction,
-                    validation,
-                  ),
-                ],
               ],
             ],
           ),
@@ -200,7 +313,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                     .copyWith(fontSize: 11, color: OmnispexColors.background),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: OmnispexColors.cyan,
+                backgroundColor: OmnispexColors.accent,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
@@ -215,8 +328,8 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                       OmnispexTypography.monoStatBadge.copyWith(fontSize: 11),
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: OmnispexColors.cyan,
-                  side: const BorderSide(color: OmnispexColors.cyan),
+                  foregroundColor: OmnispexColors.accent,
+                  side: const BorderSide(color: OmnispexColors.accent),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 ),
@@ -282,7 +395,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
           child: Column(
             children: [
               const Icon(Icons.shield_outlined,
-                  size: 48, color: OmnispexColors.cyanMuted),
+                  size: 48, color: OmnispexColors.accentMuted),
               const SizedBox(height: 12),
               Text('Create your first 11th Edition Roster',
                   style: OmnispexTypography.h3),
@@ -296,7 +409,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                 icon: const Icon(Icons.add),
                 label: const Text('CREATE NEW ARMY LIST'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: OmnispexColors.cyan,
+                  backgroundColor: OmnispexColors.accent,
                   foregroundColor: OmnispexColors.background,
                 ),
                 onPressed: () => _showCreateListDialog(context, ref, factions),
@@ -332,7 +445,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                 : '${ptsLimit - pts} pts remaining',
             accentColor: pts > ptsLimit
                 ? OmnispexColors.redIneffective
-                : OmnispexColors.cyan,
+                : OmnispexColors.accent,
             icon: Icons.military_tech,
           ),
         ),
@@ -377,9 +490,9 @@ class ArmyListBuilderScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: borderColor.withOpacity(0.1),
+        color: borderColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor.withOpacity(0.5)),
+        border: Border.all(color: borderColor.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,7 +549,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
             Text(
               'UNVERIFIED PROSE RULES (INFORMATIONAL ONLY):',
               style: OmnispexTypography.label
-                  .copyWith(fontSize: 10, color: OmnispexColors.cyan),
+                  .copyWith(fontSize: 10, color: OmnispexColors.accent),
             ),
             const SizedBox(height: 2),
             ...validation.unverifiedRules.map((u) => Padding(
@@ -452,34 +565,20 @@ class ArmyListBuilderScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLeftColumn(
+  Widget _buildRosterConfigAndDetachments(
     BuildContext context,
     WidgetRef ref,
     ArmyListUi list,
     BsDataFaction? activeFaction,
     List<BsDataFaction> factions,
   ) {
-    final unitQuery = ref.watch(_unitAdderSearchProvider);
-    final unitCat = ref.watch(_unitAdderCategoryProvider);
-    final factionUnits = (activeFaction?.units ?? []).where((u) {
-      if (u.isLegends) return false;
-      if (unitCat == 'Character' && !u.isCharacter) return false;
-      if (unitCat == 'Battleline' && !u.isBattleline) return false;
-      if (unitCat == 'Infantry' && !u.isInfantry) return false;
-      if (unitCat == 'Vehicle / Monster' && !u.isVehicleOrMonster) return false;
-      if (unitQuery.trim().isNotEmpty &&
-          !u.name.toLowerCase().contains(unitQuery.trim().toLowerCase())) {
-        return false;
-      }
-      return true;
-    }).toList();
+    final detachments = activeFaction?.matchedPlayDetachments ?? const [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. Roster Configuration & Battle Size
         TacticalCard(
-          title: '1. ROSTER CONFIGURATION & BATTLE SIZE',
+          title: 'ROSTER SETUP',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -504,7 +603,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                value: () {
+                initialValue: () {
                   final m = FactionRegistry.find(list.factionId) ??
                       FactionRegistry.find(list.factionName);
                   if (m != null && FactionRegistry.allFactions.any((f) => f.id == m.id)) {
@@ -532,13 +631,13 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                   if (metaId != null) {
                     final meta = FactionRegistry.allFactions.firstWhere((el) => el.id == metaId);
                     final f = await BsDataService.scopeMemoryToListBuilder(meta.slug);
-                    final defaultDet = (f != null && f.detachments.isNotEmpty)
+                    final defaultDet = (f != null && f.matchedPlayDetachments.isNotEmpty)
                         ? [
                             SelectedDetachmentUi(
-                              id: f.detachments.first.id,
-                              name: f.detachments.first.name,
-                              dpCost: f.detachments.first.dpCost,
-                              uniqueTag: f.detachments.first.uniqueTag,
+                              id: f.matchedPlayDetachments.first.id,
+                              name: f.matchedPlayDetachments.first.name,
+                              dpCost: f.matchedPlayDetachments.first.dpCost,
+                              uniqueTag: f.matchedPlayDetachments.first.uniqueTag,
                             )
                           ]
                         : <SelectedDetachmentUi>[];
@@ -556,18 +655,18 @@ class ArmyListBuilderScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<BattleSizeUi>(
-                value: list.battleSize,
+                initialValue: list.battleSize,
                 isExpanded: true,
                 dropdownColor: OmnispexColors.surfaceCard,
                 decoration: const InputDecoration(
-                  labelText: '11E BATTLE SIZE & DP BUDGET',
+                  labelText: 'BATTLE SIZE',
                   isDense: true,
                 ),
                 items: BattleSizeUi.values.map((bs) {
                   return DropdownMenuItem(
                     value: bs,
                     child: Text(
-                      '${bs.label} — ${bs.dpLimit} DP / ${bs.enhancementLimit} Enh',
+                      bs.label,
                       style: OmnispexTypography.monoData.copyWith(fontSize: 12),
                     ),
                   );
@@ -587,41 +686,37 @@ class ArmyListBuilderScreen extends ConsumerWidget {
             ],
           ),
         ),
-
-        // 2. Detachment Selection (DP Budget)
+        const SizedBox(height: 12),
         TacticalCard(
-          title:
-              '2. DETACHMENTS (${list.totalDp} / ${list.battleSize.dpLimit} DP)',
+          title: 'DETACHMENTS (${list.totalDp} / ${list.battleSize.dpLimit} DP)',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (activeFaction == null || activeFaction.detachments.isEmpty)
+              if (detachments.isEmpty)
                 Text(
-                  'No detachments listed for this catalogue.',
+                  'No matched play detachments listed for this catalogue.',
                   style: OmnispexTypography.bodyMuted,
                 )
               else
-                ...activeFaction.detachments.map((det) {
-                  final isSelected =
-                      list.detachments.any((d) => d.id == det.id);
+                ...detachments.map((det) {
+                  final isSelected = list.detachments.any((d) => d.id == det.id);
                   return Container(
                     margin: const EdgeInsets.only(bottom: 6),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? OmnispexColors.cyan.withOpacity(0.12)
+                          ? OmnispexColors.accent.withValues(alpha: 0.12)
                           : OmnispexColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
                         color: isSelected
-                            ? OmnispexColors.cyan
+                            ? OmnispexColors.accent
                             : OmnispexColors.border,
                       ),
                     ),
                     child: InkWell(
                       onTap: () {
-                        final updated =
-                            List<SelectedDetachmentUi>.from(list.detachments);
+                        final updated = List<SelectedDetachmentUi>.from(list.detachments);
                         if (isSelected) {
                           updated.removeWhere((d) => d.id == det.id);
                         } else {
@@ -647,7 +742,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                                 : Icons.check_box_outline_blank,
                             size: 18,
                             color: isSelected
-                                ? OmnispexColors.cyan
+                                ? OmnispexColors.accent
                                 : OmnispexColors.textMuted,
                           ),
                           const SizedBox(width: 8),
@@ -682,98 +777,117 @@ class ArmyListBuilderScreen extends ConsumerWidget {
             ],
           ),
         ),
-
-        // 3. Unit Adder from Faction Catalogue
-        TacticalCard(
-          title: '3. ADD DATASHEET TO ROSTER (${factionUnits.length})',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                style: OmnispexTypography.monoData.copyWith(fontSize: 12),
-                decoration: const InputDecoration(
-                  hintText: 'Filter faction units...',
-                  prefixIcon:
-                      Icon(Icons.search, size: 16, color: OmnispexColors.cyan),
-                  isDense: true,
-                ),
-                onChanged: (val) =>
-                    ref.read(_unitAdderSearchProvider.notifier).state = val,
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  'All Types',
-                  'Character',
-                  'Battleline',
-                  'Infantry',
-                  'Vehicle / Monster'
-                ].map((cat) {
-                  final sel = unitCat == cat;
-                  return ChoiceChip(
-                    label: Text(
-                      cat,
-                      style: OmnispexTypography.monoStatBadge.copyWith(
-                        fontSize: 10,
-                        color: sel
-                            ? OmnispexColors.background
-                            : OmnispexColors.cyan,
-                      ),
-                    ),
-                    selected: sel,
-                    selectedColor: OmnispexColors.cyan,
-                    backgroundColor: OmnispexColors.surfaceElevated,
-                    onSelected: (_) =>
-                        ref.read(_unitAdderCategoryProvider.notifier).state =
-                            cat,
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 10),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 360),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: factionUnits.length,
-                  itemBuilder: (context, idx) {
-                    final u = factionUnits[idx];
-                    return CompactUnitTile(
-                      unit: u,
-                      trailing: ElevatedButton.icon(
-                        icon: const Icon(Icons.add, size: 13),
-                        label: Text(
-                          'ADD',
-                          style: OmnispexTypography.monoStatBadge.copyWith(
-                            fontSize: 10,
-                            color: OmnispexColors.background,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: OmnispexColors.cyan,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          visualDensity: VisualDensity.compact,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        onPressed: () {
-                          ref
-                              .read(personalStoreProvider.notifier)
-                              .addUnitToArmyList(
-                                unit: u,
-                                targetListId: list.id,
-                              );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
+    );
+  }
+
+  Widget _buildUnitAdder(
+    BuildContext context,
+    WidgetRef ref,
+    ArmyListUi list,
+    BsDataFaction? activeFaction,
+  ) {
+    final unitQuery = ref.watch(_unitAdderSearchProvider);
+    final unitCat = ref.watch(_unitAdderCategoryProvider);
+    final factionUnits = (activeFaction?.units ?? []).where((u) {
+      if (u.isLegends) return false;
+      if (unitCat == 'Character' && !u.isCharacter) return false;
+      if (unitCat == 'Battleline' && !u.isBattleline) return false;
+      if (unitCat == 'Infantry' && !u.isInfantry) return false;
+      if (unitCat == 'Vehicle / Monster' && !u.isVehicleOrMonster) return false;
+      if (unitQuery.trim().isNotEmpty &&
+          !u.name.toLowerCase().contains(unitQuery.trim().toLowerCase())) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    return TacticalCard(
+      title: 'ADD DATASHEET (${factionUnits.length})',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            style: OmnispexTypography.monoData.copyWith(fontSize: 12),
+            decoration: const InputDecoration(
+              hintText: 'Filter faction units...',
+              prefixIcon:
+                  Icon(Icons.search, size: 16, color: OmnispexColors.accent),
+              isDense: true,
+            ),
+            onChanged: (val) =>
+                ref.read(_unitAdderSearchProvider.notifier).state = val,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              'All Types',
+              'Character',
+              'Battleline',
+              'Infantry',
+              'Vehicle / Monster'
+            ].map((cat) {
+              final sel = unitCat == cat;
+              return ChoiceChip(
+                label: Text(
+                  cat,
+                  style: OmnispexTypography.monoStatBadge.copyWith(
+                    fontSize: 10,
+                    color: sel
+                        ? OmnispexColors.background
+                        : OmnispexColors.accent,
+                  ),
+                ),
+                selected: sel,
+                selectedColor: OmnispexColors.accent,
+                backgroundColor: OmnispexColors.surfaceElevated,
+                onSelected: (_) =>
+                    ref.read(_unitAdderCategoryProvider.notifier).state =
+                        cat,
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 10),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 560),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: factionUnits.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 4),
+              itemBuilder: (context, idx) {
+                final u = factionUnits[idx];
+                return CompactUnitTile(
+                  unit: u,
+                  trailing: IconButton(
+                    icon: const Icon(Icons.add, size: 18),
+                    tooltip: 'Add ${u.name} to roster',
+                    color: OmnispexColors.accent,
+                    style: IconButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        side: const BorderSide(color: OmnispexColors.border),
+                      ),
+                      backgroundColor: OmnispexColors.surfaceElevated,
+                    ),
+                    onPressed: () {
+                      ref
+                          .read(personalStoreProvider.notifier)
+                          .addUnitToArmyList(
+                            unit: u,
+                            targetListId: list.id,
+                          );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -878,11 +992,11 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                                 'DETAILS',
                                 style: OmnispexTypography.monoStatBadge.copyWith(
                                   fontSize: 10,
-                                  color: OmnispexColors.cyan,
+                                  color: OmnispexColors.accent,
                                 ),
                               ),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: OmnispexColors.cyan,
+                                foregroundColor: OmnispexColors.accent,
                                 side: const BorderSide(color: OmnispexColors.border),
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 visualDensity: VisualDensity.compact,
@@ -895,7 +1009,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                           StatBadge(
                             label: 'TOTAL',
                             value: '${entry.totalPoints} PTS',
-                            accentColor: OmnispexColors.cyan,
+                            accentColor: OmnispexColors.accent,
                           ),
                           const SizedBox(width: 4),
                           IconButton(
@@ -937,11 +1051,11 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                                     fontSize: 10,
                                     color: isSel
                                         ? OmnispexColors.background
-                                        : OmnispexColors.cyan,
+                                        : OmnispexColors.accent,
                                   ),
                                 ),
                                 selected: isSel,
-                                selectedColor: OmnispexColors.cyan,
+                                selectedColor: OmnispexColors.accent,
                                 backgroundColor: OmnispexColors.surfaceCard,
                                 onSelected: (sel) {
                                   if (sel) {
@@ -973,7 +1087,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                               ),
                               selected: entry.isWarlord,
                               selectedColor:
-                                  OmnispexColors.amber.withOpacity(0.25),
+                                  OmnispexColors.amber.withValues(alpha: 0.25),
                               backgroundColor: OmnispexColors.surfaceCard,
                               onSelected: (val) {
                                 final updatedUnits = list.units.map((u) {
@@ -1205,7 +1319,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: OmnispexColors.cyan,
+                    backgroundColor: OmnispexColors.accent,
                     foregroundColor: OmnispexColors.background,
                   ),
                   onPressed: () {
@@ -1213,14 +1327,14 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                     final factionData = BsDataService.findFaction(meta.id) ??
                         BsDataService.findFaction(meta.name);
                     final now = DateTime.now().toIso8601String();
-                    final defaultDet = (factionData != null && factionData.detachments.isNotEmpty)
+                    final defaultDet = (factionData != null && factionData.matchedPlayDetachments.isNotEmpty)
                         ? [
                             SelectedDetachmentUi(
-                              id: factionData.detachments.first.id,
-                              name: factionData.detachments.first.name,
-                              dpCost: factionData.detachments.first.dpCost,
+                              id: factionData.matchedPlayDetachments.first.id,
+                              name: factionData.matchedPlayDetachments.first.name,
+                              dpCost: factionData.matchedPlayDetachments.first.dpCost,
                               uniqueTag:
-                                  factionData.detachments.first.uniqueTag,
+                                  factionData.matchedPlayDetachments.first.uniqueTag,
                             )
                           ]
                         : <SelectedDetachmentUi>[];
@@ -1279,7 +1393,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
               icon: const Icon(Icons.copy, size: 14),
               label: const Text('COPY TO CLIPBOARD'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: OmnispexColors.cyan,
+                backgroundColor: OmnispexColors.accent,
                 foregroundColor: OmnispexColors.background,
               ),
               onPressed: () {

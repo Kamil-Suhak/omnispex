@@ -2,65 +2,65 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'omnispex_colors.dart';
 
+/// Text styles are built once; GoogleFonts lookups are expensive and these
+/// are referenced from every build method in the app.
 class OmnispexTypography {
-  // Headings
-  static TextStyle get h1 => GoogleFonts.rajdhani(
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        color: OmnispexColors.textPrimary,
-        letterSpacing: 1.2,
-      );
+  static final TextStyle h1 = GoogleFonts.rajdhani(
+    fontSize: 28,
+    fontWeight: FontWeight.w700,
+    color: OmnispexColors.textPrimary,
+    letterSpacing: 0.6,
+  );
 
-  static TextStyle get h2 => GoogleFonts.rajdhani(
-        fontSize: 22,
-        fontWeight: FontWeight.w700,
-        color: OmnispexColors.textPrimary,
-        letterSpacing: 1.0,
-      );
+  static final TextStyle h2 = GoogleFonts.rajdhani(
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: OmnispexColors.textPrimary,
+    letterSpacing: 0.5,
+  );
 
-  static TextStyle get h3 => GoogleFonts.rajdhani(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: OmnispexColors.textPrimary,
-        letterSpacing: 0.8,
-      );
+  static final TextStyle h3 = GoogleFonts.rajdhani(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: OmnispexColors.textPrimary,
+    letterSpacing: 0.3,
+  );
 
-  // Body & Labels
-  static TextStyle get body => GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: OmnispexColors.textPrimary,
-      );
+  static final TextStyle body = GoogleFonts.inter(
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    color: OmnispexColors.textPrimary,
+  );
 
-  static TextStyle get bodyMuted => GoogleFonts.inter(
-        fontSize: 13,
-        fontWeight: FontWeight.w400,
-        color: OmnispexColors.textSecondary,
-      );
+  static final TextStyle bodyMuted = GoogleFonts.inter(
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    color: OmnispexColors.textSecondary,
+  );
 
-  static TextStyle get label => GoogleFonts.rajdhani(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: OmnispexColors.textSecondary,
-        letterSpacing: 1.5,
-      );
+  static final TextStyle label = GoogleFonts.inter(
+    fontSize: 11,
+    fontWeight: FontWeight.w600,
+    color: OmnispexColors.textSecondary,
+    letterSpacing: 0.8,
+  );
 
-  // Tactical Monospace Data Readouts
-  static TextStyle get monoData => GoogleFonts.jetBrainsMono(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: OmnispexColors.textPrimary,
-      );
+  /// Numeric readouts (stat lines, points).
+  static final TextStyle monoData = GoogleFonts.jetBrainsMono(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: OmnispexColors.textPrimary,
+  );
 
-  static TextStyle get monoDataLarge => GoogleFonts.jetBrainsMono(
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        color: OmnispexColors.textPrimary,
-      );
+  static final TextStyle monoDataLarge = GoogleFonts.jetBrainsMono(
+    fontSize: 26,
+    fontWeight: FontWeight.w600,
+    color: OmnispexColors.textPrimary,
+  );
 
-  static TextStyle get monoStatBadge => GoogleFonts.jetBrainsMono(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: OmnispexColors.cyan,
-      );
+  static final TextStyle monoStatBadge = GoogleFonts.inter(
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    color: OmnispexColors.accent,
+  );
 }

@@ -17,6 +17,7 @@ class OmnispexApp extends StatelessWidget {
       title: 'Omnispex Engine',
       debugShowCheckedModeBanner: false,
       theme: OmnispexTheme.darkTheme,
+      scrollBehavior: const OmnispexScrollBehavior(),
       home: const MainShell(),
     );
   }

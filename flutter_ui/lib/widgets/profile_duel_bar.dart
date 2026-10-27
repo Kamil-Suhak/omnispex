@@ -79,9 +79,9 @@ class ProfileDuelBar extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: OmnispexColors.greenKill.withOpacity(0.15),
+                    color: OmnispexColors.greenKill.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: OmnispexColors.greenKill.withOpacity(0.4)),
+                    border: Border.all(color: OmnispexColors.greenKill.withValues(alpha: 0.4)),
                   ),
                   child: Text(
                     "★ RECOMMEND: ${winningProfile.profileName.toUpperCase()} (+${deltaPercent.toStringAsFixed(0)}% OUTPUT)",
@@ -157,13 +157,13 @@ class ProfileDuelBar extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: isSelected
-              ? OmnispexColors.cyan.withOpacity(0.14)
+              ? OmnispexColors.accent.withValues(alpha: 0.14)
               : OmnispexColors.surfaceCard,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: isSelected
-                ? OmnispexColors.cyan
-                : (isWinner ? OmnispexColors.greenKill.withOpacity(0.6) : OmnispexColors.border),
+                ? OmnispexColors.accent
+                : (isWinner ? OmnispexColors.greenKill.withValues(alpha: 0.6) : OmnispexColors.border),
             width: isSelected ? 1.8 : 1.0,
           ),
         ),
@@ -178,7 +178,7 @@ class ProfileDuelBar extends StatelessWidget {
                     profile.profileName,
                     style: OmnispexTypography.h3.copyWith(
                       fontSize: 13,
-                      color: isSelected ? OmnispexColors.cyan : OmnispexColors.textPrimary,
+                      color: isSelected ? OmnispexColors.accent : OmnispexColors.textPrimary,
                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -189,7 +189,7 @@ class ProfileDuelBar extends StatelessWidget {
                     margin: const EdgeInsets.only(left: 4),
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
-                      color: OmnispexColors.cyan,
+                      color: OmnispexColors.accent,
                       borderRadius: BorderRadius.circular(3),
                     ),
                     child: Text(
@@ -236,7 +236,7 @@ class ProfileDuelBar extends StatelessWidget {
                   "Kills: ${report.expectedModelsKilled.toStringAsFixed(1)}",
                   style: OmnispexTypography.monoData.copyWith(
                     fontSize: 11,
-                    color: isSelected ? OmnispexColors.cyan : OmnispexColors.textPrimary,
+                    color: isSelected ? OmnispexColors.accent : OmnispexColors.textPrimary,
                   ),
                 ),
                 Text(

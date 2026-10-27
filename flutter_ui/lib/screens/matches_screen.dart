@@ -4,6 +4,7 @@ import '../models/omnispex_models.dart';
 import '../providers/app_state_provider.dart';
 import '../services/personal_data_service.dart';
 import '../theme/omnispex_colors.dart';
+import '../theme/omnispex_theme.dart';
 import '../theme/omnispex_typography.dart';
 import '../widgets/scannable_metric_card.dart';
 import '../widgets/stat_badge.dart';
@@ -38,7 +39,7 @@ class MatchesScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1120),
+          constraints: const BoxConstraints(maxWidth: OmnispexLayout.contentMaxWidth),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -73,7 +74,7 @@ class MatchesScreen extends ConsumerWidget {
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: OmnispexColors.cyan,
+                          backgroundColor: OmnispexColors.accent,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 8),
                         ),
@@ -134,7 +135,7 @@ class MatchesScreen extends ConsumerWidget {
                           '${stats.averagePlayerScore.toStringAsFixed(1)} vs ${stats.averageOpponentScore.toStringAsFixed(1)}',
                       subtitle:
                           'Avg Diff: ${stats.averageDifferential >= 0 ? "+" : ""}${stats.averageDifferential.toStringAsFixed(1)} VP',
-                      accentColor: OmnispexColors.cyan,
+                      accentColor: OmnispexColors.accent,
                       icon: Icons.analytics_outlined,
                     ),
                   ),
@@ -186,7 +187,7 @@ class MatchesScreen extends ConsumerWidget {
                                 'PLAYED: ${fp.faction.toUpperCase()}',
                                 style: OmnispexTypography.label.copyWith(
                                   fontSize: 10,
-                                  color: OmnispexColors.cyan,
+                                  color: OmnispexColors.accent,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -244,7 +245,7 @@ class MatchesScreen extends ConsumerWidget {
                         hintText:
                             'Search by faction, opponent name, mission, detachment, or notes...',
                         prefixIcon: Icon(Icons.search,
-                            size: 16, color: OmnispexColors.cyan),
+                            size: 16, color: OmnispexColors.accent),
                         isDense: true,
                       ),
                       onChanged: (val) => ref
@@ -263,7 +264,7 @@ class MatchesScreen extends ConsumerWidget {
                                 .copyWith(fontSize: 10),
                           ),
                           selected: systemFilter == null,
-                          selectedColor: OmnispexColors.cyan.withOpacity(0.25),
+                          selectedColor: OmnispexColors.accent.withValues(alpha: 0.25),
                           backgroundColor: OmnispexColors.surfaceElevated,
                           onSelected: (_) => ref
                               .read(matchGameSystemFilterProvider.notifier)
@@ -279,7 +280,7 @@ class MatchesScreen extends ConsumerWidget {
                             ),
                             selected: sel,
                             selectedColor:
-                                OmnispexColors.cyan.withOpacity(0.25),
+                                OmnispexColors.accent.withValues(alpha: 0.25),
                             backgroundColor: OmnispexColors.surfaceElevated,
                             onSelected: (_) => ref
                                 .read(matchGameSystemFilterProvider.notifier)
@@ -297,7 +298,7 @@ class MatchesScreen extends ConsumerWidget {
                             ),
                             selected: sel,
                             selectedColor:
-                                OmnispexColors.amber.withOpacity(0.25),
+                                OmnispexColors.amber.withValues(alpha: 0.25),
                             backgroundColor: OmnispexColors.surfaceElevated,
                             onSelected: (_) => ref
                                 .read(matchResultFilterProvider.notifier)
@@ -345,7 +346,7 @@ class MatchesScreen extends ConsumerWidget {
       MatchResultUi.win => OmnispexColors.greenKill,
       MatchResultUi.loss => OmnispexColors.redIneffective,
       MatchResultUi.draw => OmnispexColors.amber,
-      MatchResultUi.inProgress => OmnispexColors.cyan,
+      MatchResultUi.inProgress => OmnispexColors.accent,
     };
 
     return Container(
@@ -372,7 +373,7 @@ class MatchesScreen extends ConsumerWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: resultColor.withOpacity(0.18),
+                      color: resultColor.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(color: resultColor),
                     ),
@@ -389,7 +390,7 @@ class MatchesScreen extends ConsumerWidget {
                     label: 'SYSTEM',
                     value: match.gameSystem.label.toUpperCase(),
                     accentColor: match.gameSystem == GameSystemUi.warhammer40k
-                        ? OmnispexColors.cyan
+                        ? OmnispexColors.accent
                         : OmnispexColors.amber,
                   ),
                   const SizedBox(width: 8),
@@ -613,7 +614,7 @@ class MatchesScreen extends ConsumerWidget {
                           style: OmnispexTypography.body,
                         ),
                         value: isDetailed,
-                        activeColor: OmnispexColors.cyan,
+                        activeColor: OmnispexColors.accent,
                         onChanged: (val) => setState(() => isDetailed = val),
                       ),
                       Row(
@@ -849,7 +850,7 @@ class MatchesScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: OmnispexColors.surfaceElevated,
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: OmnispexColors.cyan),
+                          border: Border.all(color: OmnispexColors.accent),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -859,7 +860,7 @@ class MatchesScreen extends ConsumerWidget {
                             Text(
                               '$calcPlayer VP vs $calcOpp VP',
                               style: OmnispexTypography.monoData
-                                  .copyWith(color: OmnispexColors.cyan),
+                                  .copyWith(color: OmnispexColors.accent),
                             ),
                           ],
                         ),
@@ -881,7 +882,7 @@ class MatchesScreen extends ConsumerWidget {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: OmnispexColors.cyan,
+                    backgroundColor: OmnispexColors.accent,
                     foregroundColor: OmnispexColors.background,
                   ),
                   onPressed: () {

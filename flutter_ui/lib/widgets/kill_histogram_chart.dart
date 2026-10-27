@@ -41,7 +41,7 @@ class KillHistogramChart extends StatelessWidget {
               runSpacing: 4,
               children: [
                 _buildLegendPill("Safe Bet (≥80%)", OmnispexColors.greenKill),
-                _buildLegendPill("Distribution", OmnispexColors.cyan),
+                _buildLegendPill("Distribution", OmnispexColors.accent),
                 if (targetMaxHp != null)
                   _buildLegendPill("Kill Zone (≥$targetMaxHp HP)", OmnispexColors.purple),
               ],
@@ -58,7 +58,7 @@ class KillHistogramChart extends StatelessWidget {
               barTouchData: BarTouchData(
                 touchTooltipData: BarTouchTooltipData(
                   getTooltipColor: (group) => OmnispexColors.surfaceElevated,
-                  tooltipBorder: const BorderSide(color: OmnispexColors.cyan, width: 1),
+                  tooltipBorder: const BorderSide(color: OmnispexColors.accent, width: 1),
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final xVal = group.x;
                     final prob = (rod.toY * 100).toStringAsFixed(1);
@@ -123,7 +123,7 @@ class KillHistogramChart extends StatelessWidget {
                 drawVerticalLine: false,
                 horizontalInterval: 0.1,
                 getDrawingHorizontalLine: (value) => FlLine(
-                  color: OmnispexColors.border.withOpacity(0.5),
+                  color: OmnispexColors.border.withValues(alpha: 0.5),
                   strokeWidth: 1,
                   dashArray: [4, 4],
                 ),
@@ -135,7 +135,7 @@ class KillHistogramChart extends StatelessWidget {
 
                 final barColor = isKill
                     ? OmnispexColors.purple
-                    : (isSafeBet ? OmnispexColors.greenKill : OmnispexColors.cyan);
+                    : (isSafeBet ? OmnispexColors.greenKill : OmnispexColors.accent);
 
                 return BarChartGroupData(
                   x: entry.key,
@@ -148,7 +148,7 @@ class KillHistogramChart extends StatelessWidget {
                       backDrawRodData: BackgroundBarChartRodData(
                         show: true,
                         toY: maxY,
-                        color: OmnispexColors.surfaceElevated.withOpacity(0.3),
+                        color: OmnispexColors.surfaceElevated.withValues(alpha: 0.3),
                       ),
                     ),
                   ],

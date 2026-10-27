@@ -40,37 +40,37 @@ class _MainShellState extends ConsumerState<MainShell> {
   Widget build(BuildContext context) {
     final navIndex = ref.watch(currentNavIndexProvider);
     final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 820;
+    final isDesktop = screenWidth >= 768;
 
     const destinations = [
       NavigationDestination(
         icon: Icon(Icons.flash_on_outlined),
-        selectedIcon: Icon(Icons.flash_on, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.flash_on),
         label: 'In-Battle',
       ),
       NavigationDestination(
         icon: Icon(Icons.list_alt_outlined),
-        selectedIcon: Icon(Icons.list_alt, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.list_alt),
         label: 'List-Build',
       ),
       NavigationDestination(
         icon: Icon(Icons.library_books_outlined),
-        selectedIcon: Icon(Icons.library_books, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.library_books),
         label: 'Datasheets',
       ),
       NavigationDestination(
         icon: Icon(Icons.bookmark_border),
-        selectedIcon: Icon(Icons.bookmark, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.bookmark),
         label: 'Wishlist',
       ),
       NavigationDestination(
         icon: Icon(Icons.emoji_events_outlined),
-        selectedIcon: Icon(Icons.emoji_events, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.emoji_events),
         label: 'Matches',
       ),
       NavigationDestination(
         icon: Icon(Icons.settings_outlined),
-        selectedIcon: Icon(Icons.settings, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.settings),
         label: 'Settings',
       ),
     ];
@@ -78,32 +78,32 @@ class _MainShellState extends ConsumerState<MainShell> {
     const railDestinations = [
       NavigationRailDestination(
         icon: Icon(Icons.flash_on_outlined),
-        selectedIcon: Icon(Icons.flash_on, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.flash_on),
         label: Text('In-Battle'),
       ),
       NavigationRailDestination(
         icon: Icon(Icons.list_alt_outlined),
-        selectedIcon: Icon(Icons.list_alt, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.list_alt),
         label: Text('List-Build'),
       ),
       NavigationRailDestination(
         icon: Icon(Icons.library_books_outlined),
-        selectedIcon: Icon(Icons.library_books, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.library_books),
         label: Text('Datasheets'),
       ),
       NavigationRailDestination(
         icon: Icon(Icons.bookmark_border),
-        selectedIcon: Icon(Icons.bookmark, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.bookmark),
         label: Text('Wishlist'),
       ),
       NavigationRailDestination(
         icon: Icon(Icons.emoji_events_outlined),
-        selectedIcon: Icon(Icons.emoji_events, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.emoji_events),
         label: Text('Matches'),
       ),
       NavigationRailDestination(
         icon: Icon(Icons.settings_outlined),
-        selectedIcon: Icon(Icons.settings, color: OmnispexColors.cyan),
+        selectedIcon: Icon(Icons.settings),
         label: Text('Settings'),
       ),
     ];
@@ -125,27 +125,15 @@ class _MainShellState extends ConsumerState<MainShell> {
         elevation: 0,
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: OmnispexColors.cyan.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: OmnispexColors.cyan.withOpacity(0.4)),
-              ),
-              child: Text(
-                "OMNISPEX",
-                style: OmnispexTypography.monoData.copyWith(
-                  color: OmnispexColors.cyan,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                ),
-              ),
+            Text(
+              "OMNISPEX",
+              style: OmnispexTypography.h3.copyWith(letterSpacing: 2),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Flexible(
               child: Text(
                 "PROBABILITY ENGINE",
-                style: OmnispexTypography.label.copyWith(fontSize: 11),
+                style: OmnispexTypography.label,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -166,9 +154,9 @@ class _MainShellState extends ConsumerState<MainShell> {
             const VerticalDivider(width: 1, color: OmnispexColors.border),
           ],
           Expanded(
-            child: IndexedStack(
-              index: safeIndex,
-              children: pages,
+            child: KeyedSubtree(
+              key: ValueKey(safeIndex),
+              child: pages[safeIndex],
             ),
           ),
         ],

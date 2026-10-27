@@ -4,6 +4,7 @@ import 'army_list_builder_screen.dart';
 import '../models/simulation_models.dart';
 import '../services/simulation_service.dart';
 import '../theme/omnispex_colors.dart';
+import '../theme/omnispex_theme.dart';
 import '../theme/omnispex_typography.dart';
 import '../widgets/scannable_metric_card.dart';
 import '../widgets/stat_badge.dart';
@@ -106,7 +107,7 @@ class ListBuildingScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1100),
+                      constraints: const BoxConstraints(maxWidth: OmnispexLayout.contentMaxWidth),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -159,7 +160,7 @@ class ListBuildingScreen extends ConsumerWidget {
                               context,
                               ref,
                               title: "PROFILE A (BASELINE)",
-                              color: OmnispexColors.cyan,
+                              color: OmnispexColors.accent,
                               weapons: weapons,
                               weaponIdx: weaponIdxA,
                               count: countA,
@@ -208,7 +209,7 @@ class ListBuildingScreen extends ConsumerWidget {
                         context,
                         ref,
                         title: "PROFILE A (BASELINE)",
-                        color: OmnispexColors.cyan,
+                        color: OmnispexColors.accent,
                         weapons: weapons,
                         weaponIdx: weaponIdxA,
                         count: countA,
@@ -261,11 +262,11 @@ class ListBuildingScreen extends ConsumerWidget {
                               style: OmnispexTypography.monoStatBadge
                                   .copyWith(fontSize: 11)),
                           selected: isStationary,
-                          selectedColor: OmnispexColors.cyan.withOpacity(0.25),
+                          selectedColor: OmnispexColors.accent.withValues(alpha: 0.25),
                           backgroundColor: OmnispexColors.surfaceElevated,
                           side: BorderSide(
                               color: isStationary
-                                  ? OmnispexColors.cyan
+                                  ? OmnispexColors.accent
                                   : OmnispexColors.border),
                           onSelected: (val) => ref
                               .read(benchIsStationaryProvider.notifier)
@@ -276,7 +277,7 @@ class ListBuildingScreen extends ConsumerWidget {
                               style: OmnispexTypography.monoStatBadge
                                   .copyWith(fontSize: 11)),
                           selected: hasCharged,
-                          selectedColor: OmnispexColors.amber.withOpacity(0.25),
+                          selectedColor: OmnispexColors.amber.withValues(alpha: 0.25),
                           backgroundColor: OmnispexColors.surfaceElevated,
                           side: BorderSide(
                               color: hasCharged
@@ -292,7 +293,7 @@ class ListBuildingScreen extends ConsumerWidget {
                                   .copyWith(fontSize: 11)),
                           selected: targetInCover,
                           selectedColor:
-                              OmnispexColors.purple.withOpacity(0.25),
+                              OmnispexColors.purple.withValues(alpha: 0.25),
                           backgroundColor: OmnispexColors.surfaceElevated,
                           side: BorderSide(
                               color: targetInCover
@@ -360,7 +361,7 @@ class ListBuildingScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: OmnispexColors.surfaceElevated,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,7 +480,7 @@ class ListBuildingScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
         decoration: BoxDecoration(
-          color: OmnispexColors.surfaceElevated.withOpacity(0.5),
+          color: OmnispexColors.surfaceElevated.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: OmnispexColors.border, style: BorderStyle.solid),
@@ -544,7 +545,7 @@ class ListBuildingScreen extends ConsumerWidget {
                     width: 4,
                     height: 18,
                     decoration: BoxDecoration(
-                        color: OmnispexColors.cyan,
+                        color: OmnispexColors.accent,
                         borderRadius: BorderRadius.circular(2)),
                   ),
                   const SizedBox(width: 8),
@@ -585,7 +586,7 @@ class ListBuildingScreen extends ConsumerWidget {
                         : "${eval.reportA.expectedModelsKilled.toStringAsFixed(1)} / ${target.modelCount}",
                     subtitle:
                         "± ${(isSingleModel ? eval.reportA.stdDevDamage : eval.reportA.stdDevKills).toStringAsFixed(1)} StdDev",
-                    accentColor: OmnispexColors.cyan,
+                    accentColor: OmnispexColors.accent,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -623,14 +624,14 @@ class ListBuildingScreen extends ConsumerWidget {
                       color: OmnispexColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: OmnispexColors.cyan.withOpacity(0.3)),
+                          color: OmnispexColors.accent.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text("PROFILE A",
                             style: OmnispexTypography.label.copyWith(
-                                color: OmnispexColors.cyan, fontSize: 10)),
+                                color: OmnispexColors.accent, fontSize: 10)),
                         const SizedBox(height: 4),
                         Text(
                           isSingleModel
@@ -647,7 +648,7 @@ class ListBuildingScreen extends ConsumerWidget {
                         Text(
                             "${eval.ptsEfficiencyA.toStringAsFixed(1)} dmg / 100pts",
                             style: OmnispexTypography.monoStatBadge.copyWith(
-                                fontSize: 11, color: OmnispexColors.cyan)),
+                                fontSize: 11, color: OmnispexColors.accent)),
                       ],
                     ),
                   ),
@@ -660,7 +661,7 @@ class ListBuildingScreen extends ConsumerWidget {
                       color: OmnispexColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: OmnispexColors.amber.withOpacity(0.3)),
+                          color: OmnispexColors.amber.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -703,7 +704,7 @@ class ListBuildingScreen extends ConsumerWidget {
 
   Widget _buildAdvantageBanner(ArchetypeEvaluationUi eval) {
     final winnerColor = eval.winner == DuelWinner.profileA
-        ? OmnispexColors.cyan
+        ? OmnispexColors.accent
         : (eval.winner == DuelWinner.profileB
             ? OmnispexColors.amber
             : OmnispexColors.textSecondary);
@@ -743,7 +744,7 @@ class ListBuildingScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   flex: (ratioA * 100).round(),
-                  child: Container(color: OmnispexColors.cyan),
+                  child: Container(color: OmnispexColors.accent),
                 ),
                 Expanded(
                   flex: ((1 - ratioA) * 100).round(),
