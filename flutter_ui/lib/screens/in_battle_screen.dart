@@ -12,6 +12,7 @@ import '../widgets/scannable_metric_card.dart';
 import '../widgets/stat_badge.dart';
 import '../widgets/tactical_card.dart';
 import '../widgets/tactical_verdict_badge.dart';
+import '../widgets/unit_details_modal.dart';
 
 enum AttackMode { singleWeapon, squadBundle }
 
@@ -74,7 +75,6 @@ class InBattleScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDeepAnalytics = ref.watch(isDeepAnalyticsModeProvider);
     final attackMode = ref.watch(attackModeProvider);
     final weaponIdx = ref.watch(selectedWeaponIndexProvider);
     final profileIdx = ref.watch(selectedProfileIndexProvider);
@@ -380,7 +380,6 @@ class InBattleScreen extends ConsumerWidget {
                         currentProfiles,
                         currentProfileReports,
                         profileIdx,
-                        isDeepAnalytics,
                         attackMode,
                         ref,
                       ),
@@ -432,7 +431,6 @@ class InBattleScreen extends ConsumerWidget {
                   currentProfiles,
                   currentProfileReports,
                   profileIdx,
-                  isDeepAnalytics,
                   attackMode,
                   ref,
                 ),
@@ -540,6 +538,26 @@ class InBattleScreen extends ConsumerWidget {
             title: loadedAttackerName != null
                 ? "1. ATTACKER: ${loadedAttackerName.toUpperCase()}"
                 : "1. ATTACKER WEAPON LOADOUT",
+            trailing: loadedAttackerName != null
+                ? OutlinedButton.icon(
+                    icon: const Icon(Icons.info_outline, size: 12),
+                    label: Text(
+                      'DETAILS',
+                      style: OmnispexTypography.monoStatBadge.copyWith(
+                        fontSize: 10,
+                        color: OmnispexColors.cyan,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: OmnispexColors.cyan,
+                      side: const BorderSide(color: OmnispexColors.border),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: () => showUnitDetailsByNameModal(context, loadedAttackerName),
+                  )
+                : null,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -754,6 +772,26 @@ class InBattleScreen extends ConsumerWidget {
           title: loadedDefenderName != null
               ? "2. DEFENDER: ${loadedDefenderName.toUpperCase()}"
               : "2. DEFENDER TARGET DATASHEET",
+          trailing: loadedDefenderName != null
+              ? OutlinedButton.icon(
+                  icon: const Icon(Icons.info_outline, size: 12),
+                  label: Text(
+                    'DETAILS',
+                    style: OmnispexTypography.monoStatBadge.copyWith(
+                      fontSize: 10,
+                      color: OmnispexColors.cyan,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: OmnispexColors.cyan,
+                    side: const BorderSide(color: OmnispexColors.border),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => showUnitDetailsByNameModal(context, loadedDefenderName),
+                )
+              : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1287,7 +1325,6 @@ class InBattleScreen extends ConsumerWidget {
     List<WeaponUiProfile> currentProfiles,
     List<SimulationUiReport> currentProfileReports,
     int profileIdx,
-    bool isDeepAnalytics,
     AttackMode attackMode,
     WidgetRef ref,
   ) {
@@ -1439,11 +1476,10 @@ class InBattleScreen extends ConsumerWidget {
             ),
           ),
         ],
-        if (isDeepAnalytics) ...[
-          TacticalCard(
-            title: isSingleModel
-                ? "DEEP ANALYTICS: DAMAGE HISTOGRAM"
-                : "DEEP ANALYTICS: CASUALTY HISTOGRAM",
+        TacticalCard(
+          title: isSingleModel
+              ? "DAMAGE PROBABILITY HISTOGRAM"
+              : "CASUALTY PROBABILITY HISTOGRAM",
             child: KillHistogramChart(
               distribution: isSingleModel
                   ? report.damageDistribution
@@ -1574,7 +1610,6 @@ class InBattleScreen extends ConsumerWidget {
                 ],
               ),
             ),
-        ],
       ],
     );
   }

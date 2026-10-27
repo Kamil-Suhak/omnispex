@@ -11,6 +11,7 @@ import '../theme/omnispex_typography.dart';
 import '../widgets/scannable_metric_card.dart';
 import '../widgets/stat_badge.dart';
 import '../widgets/tactical_card.dart';
+import '../widgets/unit_details_modal.dart';
 
 final wishlistFactionFilterProvider =
     StateProvider<String>((ref) => 'All Factions');
@@ -342,6 +343,25 @@ class WishlistScreen extends ConsumerWidget {
                     label: 'ARMY',
                     value: item.factionName,
                     accentColor: OmnispexColors.cyan,
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.info_outline, size: 12),
+                    label: Text(
+                      'DETAILS',
+                      style: OmnispexTypography.monoStatBadge.copyWith(
+                        fontSize: 10,
+                        color: OmnispexColors.cyan,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: OmnispexColors.cyan,
+                      side: const BorderSide(color: OmnispexColors.border),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: () => showUnitDetailsByNameModal(context, item.unitName),
                   ),
                 ],
               ),

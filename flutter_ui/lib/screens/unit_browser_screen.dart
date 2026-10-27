@@ -8,8 +8,8 @@ import '../services/bsdata_service.dart';
 import '../services/faction_registry.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
+import '../widgets/compact_unit_tile.dart';
 import '../widgets/tactical_card.dart';
-import '../widgets/unit_details_modal.dart';
 
 final unitSearchQueryProvider = StateProvider<String>((ref) => "");
 final unitFactionFilterProvider = StateProvider<String>((ref) => "All Factions");
@@ -473,246 +473,120 @@ class _UnitBrowserScreenState extends ConsumerState<UnitBrowserScreen> {
   }
 
   Widget _buildCompactUnitTile(BuildContext context, WidgetRef ref, BsDataUnit unit) {
-    final p = unit.unitProfile;
-    final pts = unit.pointsCost ??
-        (unit.legalSizeOptions.isNotEmpty
-            ? unit.legalSizeOptions.first.points
-            : null);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: OmnispexColors.surfaceCard,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: OmnispexColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row 1: Indicator, Unit Name, Points Badge, Details Button
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 3,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: OmnispexColors.cyan,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  unit.name,
-                  style: OmnispexTypography.h3.copyWith(fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (pts != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: OmnispexColors.purple.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: OmnispexColors.purple.withOpacity(0.4)),
-                  ),
-                  child: Text(
-                    "$pts PTS",
-                    style: OmnispexTypography.monoStatBadge.copyWith(
-                      fontSize: 11,
-                      color: OmnispexColors.purple,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-              OutlinedButton.icon(
-                icon: const Icon(Icons.info_outline, size: 13),
-                label: const Text("DETAILS", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: OmnispexColors.cyan,
-                  side: const BorderSide(color: OmnispexColors.cyan),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () => showUnitDetailsModal(context, unit),
-              ),
-            ],
+    return CompactUnitTile(
+      unit: unit,
+      actionButtons: [
+        ElevatedButton.icon(
+          icon: const Icon(Icons.flash_on, size: 12),
+          label: Text("ATTACKER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.background)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: OmnispexColors.cyan,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          const SizedBox(height: 6),
-
-          // Row 2: Categories & Core Identifiers Summary
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: OmnispexColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(3),
-                  border: Border.all(color: OmnispexColors.border),
-                ),
-                child: Text(
-                  unit.faction.toUpperCase(),
-                  style: OmnispexTypography.monoStatBadge.copyWith(
-                    fontSize: 9,
-                    color: OmnispexColors.textMuted,
-                  ),
-                ),
+          onPressed: () {
+            ref.read(loadedAttackerNameProvider.notifier).state = unit.name;
+            if (unit.weapons.isNotEmpty) {
+              ref.read(customWeaponProfileProvider.notifier).state = unit.weapons.first;
+              ref.read(isCustomWeaponModeProvider.notifier).state = true;
+            }
+            ref.read(currentNavIndexProvider.notifier).state = 0;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Loaded '${unit.name}' as Attacker into In-Battle Simulator!"),
+                backgroundColor: OmnispexColors.surfaceElevated,
+                duration: const Duration(seconds: 2),
               ),
-              ...unit.categories.take(3).map((cat) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: OmnispexColors.surfaceElevated,
-                    borderRadius: BorderRadius.circular(3),
-                    border: Border.all(color: OmnispexColors.border.withOpacity(0.6)),
-                  ),
-                  child: Text(
-                    cat.toUpperCase(),
-                    style: OmnispexTypography.monoStatBadge.copyWith(
-                      fontSize: 8,
-                      color: OmnispexColors.textSecondary,
-                    ),
+            );
+          },
+        ),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.shield_outlined, size: 12),
+          label: Text("DEFENDER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.background)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: OmnispexColors.amber,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          onPressed: () {
+            ref.read(loadedDefenderNameProvider.notifier).state = unit.name;
+            ref.read(customTargetProfileProvider.notifier).state = unit.unitProfile;
+            ref.read(isCustomTargetModeProvider.notifier).state = true;
+            ref.read(currentNavIndexProvider.notifier).state = 0;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Loaded '${unit.name}' as Defender into In-Battle Simulator!"),
+                backgroundColor: OmnispexColors.surfaceElevated,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
+        ),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.playlist_add, size: 12),
+          label: Text("ADD TO LIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.greenKill)),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: OmnispexColors.greenKill,
+            side: const BorderSide(color: OmnispexColors.greenKill),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          onPressed: () {
+            final list = ref
+                .read(personalStoreProvider.notifier)
+                .addUnitToArmyList(unit: unit);
+            ref.read(activeArmyListIdProvider.notifier).state = list.id;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Added '${unit.name}' to Army List '${list.name}'!"),
+                backgroundColor: OmnispexColors.surfaceElevated,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
+        ),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.bookmark_add_outlined, size: 12),
+          label: Text("WISHLIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.purple)),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: OmnispexColors.purple,
+            side: const BorderSide(color: OmnispexColors.purple),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          onPressed: () {
+            final now = DateTime.now().toIso8601String();
+            ref.read(personalStoreProvider.notifier).upsertWishlistItem(
+                  WishlistItemUi(
+                    id: 'wl-${unit.id}',
+                    factionId: unit.factionId.isNotEmpty
+                        ? unit.factionId
+                        : unit.faction,
+                    factionName: unit.faction,
+                    unitId: unit.id,
+                    unitName: unit.name,
+                    quantityDesired: 1,
+                    quantityOwned: 0,
+                    pointsPerUnit: unit.pointsCost ?? 100,
+                    priority: WishlistPriorityUi.medium,
+                    state: AcquisitionStateUi.wishlist,
+                    updatedAtIso: now,
                   ),
                 );
-              }),
-              Text(
-                "• M ${unit.movement} • T ${p.toughness} • Sv ${p.save}+ • W ${p.woundsPerModel}",
-                style: OmnispexTypography.monoData.copyWith(
-                  fontSize: 10,
-                  color: OmnispexColors.textMuted,
-                ),
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Added '${unit.name}' to ${unit.faction} Wishlist!"),
+                backgroundColor: OmnispexColors.surfaceElevated,
+                duration: const Duration(seconds: 2),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Row 3: Action Buttons
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              ElevatedButton.icon(
-                icon: const Icon(Icons.flash_on, size: 12),
-                label: Text("ATTACKER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.background)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: OmnispexColors.cyan,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () {
-                  ref.read(loadedAttackerNameProvider.notifier).state = unit.name;
-                  if (unit.weapons.isNotEmpty) {
-                    ref.read(customWeaponProfileProvider.notifier).state = unit.weapons.first;
-                    ref.read(isCustomWeaponModeProvider.notifier).state = true;
-                  }
-                  ref.read(currentNavIndexProvider.notifier).state = 0;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Loaded '${unit.name}' as Attacker into In-Battle Simulator!"),
-                      backgroundColor: OmnispexColors.surfaceElevated,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-              ),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.shield_outlined, size: 12),
-                label: Text("DEFENDER", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.background)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: OmnispexColors.amber,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () {
-                  ref.read(loadedDefenderNameProvider.notifier).state = unit.name;
-                  ref.read(customTargetProfileProvider.notifier).state = unit.unitProfile;
-                  ref.read(isCustomTargetModeProvider.notifier).state = true;
-                  ref.read(currentNavIndexProvider.notifier).state = 0;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Loaded '${unit.name}' as Defender into In-Battle Simulator!"),
-                      backgroundColor: OmnispexColors.surfaceElevated,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-              ),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.playlist_add, size: 12),
-                label: Text("ADD TO LIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.greenKill)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: OmnispexColors.greenKill,
-                  side: const BorderSide(color: OmnispexColors.greenKill),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () {
-                  final list = ref
-                      .read(personalStoreProvider.notifier)
-                      .addUnitToArmyList(unit: unit);
-                  ref.read(activeArmyListIdProvider.notifier).state = list.id;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Added '${unit.name}' to Army List '${list.name}'!"),
-                      backgroundColor: OmnispexColors.surfaceElevated,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-              ),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.bookmark_add_outlined, size: 12),
-                label: Text("WISHLIST", style: OmnispexTypography.monoStatBadge.copyWith(fontSize: 9, color: OmnispexColors.purple)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: OmnispexColors.purple,
-                  side: const BorderSide(color: OmnispexColors.purple),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () {
-                  final now = DateTime.now().toIso8601String();
-                  ref.read(personalStoreProvider.notifier).upsertWishlistItem(
-                        WishlistItemUi(
-                          id: 'wl-${unit.id}',
-                          factionId: unit.factionId.isNotEmpty
-                              ? unit.factionId
-                              : unit.faction,
-                          factionName: unit.faction,
-                          unitId: unit.id,
-                          unitName: unit.name,
-                          quantityDesired: 1,
-                          quantityOwned: 0,
-                          pointsPerUnit: unit.pointsCost ?? 100,
-                          priority: WishlistPriorityUi.medium,
-                          state: AcquisitionStateUi.wishlist,
-                          updatedAtIso: now,
-                        ),
-                      );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Added '${unit.name}' to ${unit.faction} Wishlist!"),
-                      backgroundColor: OmnispexColors.surfaceElevated,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
+            );
+          },
+        ),
+      ],
     );
   }
 

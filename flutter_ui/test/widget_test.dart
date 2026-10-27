@@ -2,10 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_ui/main.dart';
+import 'package:flutter_ui/models/bsdata_models.dart';
 import 'package:flutter_ui/models/omnispex_models.dart';
 import 'package:flutter_ui/providers/app_state_provider.dart';
+import 'package:flutter_ui/services/bsdata_service.dart';
+import 'test_fixtures.dart';
 
 void main() {
+  setUp(() async {
+    await TestFixtures.seedDiskCaches();
+    final sm = BsDataFaction.fromRustJson(TestFixtures.compliantChaptersJson);
+    BsDataService.loadedFactionsMap.clear();
+    BsDataService.loadedFactionsMap[sm.id] = sm;
+  });
   testWidgets('OmnispexApp loads and renders main shell and calculator',
       (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: OmnispexApp()));

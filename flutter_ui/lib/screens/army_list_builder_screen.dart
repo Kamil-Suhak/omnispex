@@ -9,6 +9,7 @@ import '../services/faction_registry.dart';
 import '../services/personal_data_service.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
+import '../widgets/compact_unit_tile.dart';
 import '../widgets/scannable_metric_card.dart';
 import '../widgets/stat_badge.dart';
 import '../widgets/tactical_card.dart';
@@ -503,31 +504,35 @@ class ArmyListBuilderScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                value: (activeFaction != null &&
-                        factions.any((f) => f.id == activeFaction.id))
-                    ? activeFaction.id
-                    : (factions.isNotEmpty ? factions.first.id : null),
+                value: () {
+                  final m = FactionRegistry.find(list.factionId) ??
+                      FactionRegistry.find(list.factionName);
+                  if (m != null && FactionRegistry.allFactions.any((f) => f.id == m.id)) {
+                    return m.id;
+                  }
+                  return FactionRegistry.allFactions.first.id;
+                }(),
                 isExpanded: true,
                 dropdownColor: OmnispexColors.surfaceCard,
                 decoration: const InputDecoration(
                   labelText: 'FACTION CATALOGUE',
                   isDense: true,
                 ),
-                items: factions.map((f) {
+                items: FactionRegistry.allFactions.map((meta) {
                   return DropdownMenuItem(
-                    value: f.id,
+                    value: meta.id,
                     child: Text(
-                      '${f.name} (${f.units.length} units)',
+                      meta.name,
                       style: OmnispexTypography.monoData.copyWith(fontSize: 12),
                       overflow: TextOverflow.ellipsis,
                     ),
                   );
                 }).toList(),
-                onChanged: (factionId) {
-                  if (factionId != null) {
-                    final f =
-                        factions.firstWhere((el) => el.id == factionId);
-                    final defaultDet = f.detachments.isNotEmpty
+                onChanged: (metaId) async {
+                  if (metaId != null) {
+                    final meta = FactionRegistry.allFactions.firstWhere((el) => el.id == metaId);
+                    final f = await BsDataService.scopeMemoryToListBuilder(meta.slug);
+                    final defaultDet = (f != null && f.detachments.isNotEmpty)
                         ? [
                             SelectedDetachmentUi(
                               id: f.detachments.first.id,
@@ -539,8 +544,8 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                         : <SelectedDetachmentUi>[];
                     ref.read(personalStoreProvider.notifier).upsertArmyList(
                           list.copyWith(
-                            factionId: f.id,
-                            factionName: f.name,
+                            factionId: meta.id,
+                            factionName: meta.name,
                             detachments: defaultDet,
                             units: [],
                             updatedAtIso: DateTime.now().toIso8601String(),
@@ -734,75 +739,32 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                   itemCount: factionUnits.length,
                   itemBuilder: (context, idx) {
                     final u = factionUnits[idx];
-                    final pts = u.pointsCost ??
-                        (u.legalSizeOptions.isNotEmpty
-                            ? u.legalSizeOptions.first.points
-                            : 100);
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: OmnispexColors.surfaceElevated,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: OmnispexColors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  u.name,
-                                  style: OmnispexTypography.monoData
-                                      .copyWith(fontSize: 12),
-                                ),
-                                Text(
-                                  '$pts pts${u.categories.isNotEmpty ? " • ${u.categories.take(2).join(", ")}" : ""}',
-                                  style: OmnispexTypography.bodyMuted
-                                      .copyWith(fontSize: 11),
-                                ),
-                              ],
-                            ),
+                    return CompactUnitTile(
+                      unit: u,
+                      trailing: ElevatedButton.icon(
+                        icon: const Icon(Icons.add, size: 13),
+                        label: Text(
+                          'ADD',
+                          style: OmnispexTypography.monoStatBadge.copyWith(
+                            fontSize: 10,
+                            color: OmnispexColors.background,
                           ),
-                          OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: OmnispexColors.cyan,
-                              side: const BorderSide(color: OmnispexColors.border),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              visualDensity: VisualDensity.compact,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text('DETAILS', style: TextStyle(fontSize: 10)),
-                            onPressed: () => showUnitDetailsModal(context, u),
-                          ),
-                          const SizedBox(width: 6),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.add, size: 13),
-                            label: Text(
-                              'ADD',
-                              style: OmnispexTypography.monoStatBadge.copyWith(
-                                fontSize: 10,
-                                color: OmnispexColors.background,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: OmnispexColors.cyan,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            onPressed: () {
-                              ref
-                                  .read(personalStoreProvider.notifier)
-                                  .addUnitToArmyList(
-                                    unit: u,
-                                    targetListId: list.id,
-                                  );
-                            },
-                          ),
-                        ],
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: OmnispexColors.cyan,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          visualDensity: VisualDensity.compact,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () {
+                          ref
+                              .read(personalStoreProvider.notifier)
+                              .addUnitToArmyList(
+                                unit: u,
+                                targetListId: list.id,
+                              );
+                        },
                       ),
                     );
                   },
@@ -912,7 +874,13 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                           if (unitData != null) ...[
                             OutlinedButton.icon(
                               icon: const Icon(Icons.info_outline, size: 12),
-                              label: const Text('DETAILS', style: TextStyle(fontSize: 10)),
+                              label: Text(
+                                'DETAILS',
+                                style: OmnispexTypography.monoStatBadge.copyWith(
+                                  fontSize: 10,
+                                  color: OmnispexColors.cyan,
+                                ),
+                              ),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: OmnispexColors.cyan,
                                 side: const BorderSide(color: OmnispexColors.border),

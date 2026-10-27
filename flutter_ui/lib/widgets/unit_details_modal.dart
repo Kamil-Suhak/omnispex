@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/bsdata_models.dart';
 import '../models/simulation_models.dart';
+import '../services/bsdata_service.dart';
 import '../theme/omnispex_colors.dart';
 import '../theme/omnispex_typography.dart';
 import 'stat_badge.dart';
@@ -12,6 +13,20 @@ void showUnitDetailsModal(BuildContext context, BsDataUnit unit) {
     backgroundColor: Colors.transparent,
     builder: (ctx) => _UnitDetailsSheet(unit: unit),
   );
+}
+
+void showUnitDetailsByNameModal(BuildContext context, String unitName) {
+  final unit = BsDataService.findUnitByName(unitName);
+  if (unit != null) {
+    showUnitDetailsModal(context, unit);
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("No loaded datasheet found for '$unitName'."),
+        backgroundColor: OmnispexColors.surfaceElevated,
+      ),
+    );
+  }
 }
 
 class _UnitDetailsSheet extends StatelessWidget {

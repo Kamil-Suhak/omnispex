@@ -60,7 +60,7 @@ fn test_run_matchup_valid_files() {
 }
 
 #[test]
-fn test_run_matchup_with_legacy_models_format() {
+fn test_run_matchup_with_terminators_profile() {
     let root = project_root();
     let attacker_file = root.join("examples/meltagun.json");
     let defender_file = root.join("examples/terminators.json");

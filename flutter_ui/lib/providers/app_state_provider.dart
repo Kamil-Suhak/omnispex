@@ -5,7 +5,6 @@ import '../models/simulation_models.dart';
 import '../services/personal_data_service.dart';
 import '../services/simulation_service.dart';
 
-final isDeepAnalyticsModeProvider = StateProvider<bool>((ref) => false);
 final currentNavIndexProvider = StateProvider<int>((ref) => 0);
 
 final customArsenalProvider = StateProvider<List<WeaponUiProfile>>(

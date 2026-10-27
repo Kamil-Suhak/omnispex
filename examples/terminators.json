@@ -1,56 +1,22 @@
 {
   "name": "Terminator Squad",
   "toughness": 5,
-  "models": [
+  "movement": "5\"",
+  "leadership": "6+",
+  "objective_control": 1,
+  "model_groups": [
     {
-      "name": "Terminator",
-      "wounds": 3,
-      "save": 2,
-      "invulnerable_save": 4,
-      "feel_no_pain": null,
-      "keywords": [
-        "INFANTRY"
-      ]
-    },
-    {
-      "name": "Terminator",
-      "wounds": 3,
-      "save": 2,
-      "invulnerable_save": 4,
-      "feel_no_pain": null,
-      "keywords": [
-        "INFANTRY"
-      ]
-    },
-    {
-      "name": "Terminator",
-      "wounds": 3,
-      "save": 2,
-      "invulnerable_save": 4,
-      "feel_no_pain": null,
-      "keywords": [
-        "INFANTRY"
-      ]
-    },
-    {
-      "name": "Terminator",
-      "wounds": 3,
-      "save": 2,
-      "invulnerable_save": 4,
-      "feel_no_pain": null,
-      "keywords": [
-        "INFANTRY"
-      ]
-    },
-    {
-      "name": "Terminator",
-      "wounds": 3,
-      "save": 2,
-      "invulnerable_save": 4,
-      "feel_no_pain": null,
-      "keywords": [
-        "INFANTRY"
-      ]
+      "count": 5,
+      "model": {
+        "name": "Terminator",
+        "wounds": 3,
+        "save": 2,
+        "invulnerable_save": 4,
+        "feel_no_pain": null,
+        "keywords": [
+          "INFANTRY"
+        ]
+      }
     }
   ],
   "keywords": [

@@ -11,8 +11,13 @@ import 'package:flutter_ui/widgets/scannable_metric_card.dart';
 import 'package:flutter_ui/widgets/stat_badge.dart';
 import 'package:flutter_ui/widgets/tactical_card.dart';
 import 'package:flutter_ui/widgets/tactical_verdict_badge.dart';
+import 'test_fixtures.dart';
 
 void main() {
+  setUp(() async {
+    await TestFixtures.seedDiskCaches();
+    TestFixtures.loadInMemory();
+  });
   testWidgets('TacticalCard and StatBadge render correctly', (WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -136,7 +141,7 @@ void main() {
   });
 
   test('BsDataService accurately isolates Space Marines from Chaos Space Marines', () {
-    final smUnits = BsDataService.searchUnits(factionFilter: "Space Marines");
+    final smUnits = BsDataService.searchUnits(factionFilter: "Adeptus Astartes");
     final csmUnits = BsDataService.searchUnits(factionFilter: "Chaos Space Marines");
 
     expect(smUnits.any((u) => u.name == "Terminator Squad"), isTrue);

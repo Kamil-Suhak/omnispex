@@ -1,11 +1,17 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_ui/services/auth_service.dart';
 import 'package:flutter_ui/services/bsdata_service.dart';
 import 'package:flutter_ui/services/faction_registry.dart';
 import 'package:flutter_ui/services/storage_adapter.dart';
+import 'test_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    await TestFixtures.seedDiskCaches();
+  });
 
   group('Lazy Game Data & In-Memory Scoping Architecture', () {
     test('FactionRegistry contains all 36 Warhammer 40k 11e factions', () {
@@ -21,7 +27,7 @@ void main() {
       expect(rootAstartes, isNotNull);
       expect(rootAstartes!.name, equals('Adeptus Astartes'));
 
-      final sm = FactionRegistry.find('space-marines');
+      final sm = FactionRegistry.find('compliant-chapters');
       expect(sm, isNotNull);
       expect(sm!.name, equals('Adeptus Astartes - Compliant Chapters'));
 
@@ -56,13 +62,14 @@ void main() {
       final afterDelete = await readFactionCacheRaw(orkMeta.slug);
       expect(afterDelete, isNull);
 
-      // Re-download for subsequent scoping tests
-      await BsDataService.downloadAndCacheFaction(orkMeta.slug);
+      // Re-seed for subsequent scoping tests
+      await writeFactionCacheRaw(orkMeta.slug, jsonEncode(TestFixtures.orksJson));
+      await BsDataService.initOnStartup();
     });
 
     test('List Builder memory scope: strictly 1 faction loaded in RAM', () async {
       // Load Space Marines first
-      await BsDataService.loadFactionIntoMemory('space-marines');
+      await BsDataService.loadFactionIntoMemory('compliant-chapters');
 
       // Now scope to Orks for army list building
       final scoped = await BsDataService.scopeMemoryToListBuilder('orks');
@@ -76,12 +83,12 @@ void main() {
 
     test('Live Match memory scope: at most 2 factions loaded in RAM', () async {
       // Scope to Attacker: Orks, Defender: Space Marines
-      await BsDataService.scopeMemoryToMatch('orks', 'space-marines');
+      await BsDataService.scopeMemoryToMatch('orks', 'compliant-chapters');
 
       expect(BsDataService.loadedFactionsMap.length, lessThanOrEqualTo(2));
       final names = BsDataService.loadedFactionsMap.values.map((f) => f.name).toList();
       for (final n in names) {
-        expect(n.contains('Orks') || n.contains('Space Marines'), isTrue);
+        expect(n.contains('Orks') || n.contains('Adeptus Astartes'), isTrue);
       }
     });
 
