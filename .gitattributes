@@ -1,0 +1,5 @@
+# Mark generated Flutter platform runner scaffolding so language stats reflect Rust & Dart
+flutter_ui/windows/** linguist-generated
+flutter_ui/linux/** linguist-generated
+flutter_ui/macos/** linguist-generated
+flutter_ui/ios/** linguist-generated
