@@ -82,7 +82,7 @@ class _KtOperativeBrowserScreenState extends State<KtOperativeBrowserScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedFaction,
+                  initialValue: _selectedFaction,
                   isExpanded: true,
                   items: _factionOptions
                       .map((f) => DropdownMenuItem(value: f, child: Text(f)))
@@ -99,7 +99,7 @@ class _KtOperativeBrowserScreenState extends State<KtOperativeBrowserScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   isExpanded: true,
                   items: const ['All Roles', 'Leader', 'Specialist', 'Warrior']
                       .map((r) => DropdownMenuItem(value: r, child: Text(r)))

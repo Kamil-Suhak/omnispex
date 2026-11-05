@@ -222,6 +222,7 @@ pub struct KtWeaponProfile {
     #[serde(default)]
     pub weapon_type: KtWeaponType,
     pub attacks: u32,
+    #[serde(alias = "hit_stat")]
     pub hit: u32,
     pub normal_damage: u32,
     pub critical_damage: u32,

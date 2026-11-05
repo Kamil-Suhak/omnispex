@@ -79,6 +79,7 @@ pub struct PercentilesReport {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum WishlistPriority {
     Low,
     Medium,
@@ -104,6 +105,7 @@ impl WishlistPriority {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum AcquisitionState {
     Wishlist,
     Ordered,
@@ -146,11 +148,14 @@ impl AcquisitionState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum WishlistSortField {
     PriorityDesc,
     NameAsc,
     FactionAsc,
+    #[serde(alias = "quantity_desc")]
     PointsDesc,
+    #[serde(alias = "state_progress")]
     StateAsc,
 }
 
@@ -161,6 +166,7 @@ impl Default for WishlistSortField {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum MatchResult {
     Win,
     Loss,

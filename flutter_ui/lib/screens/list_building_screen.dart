@@ -412,7 +412,7 @@ class ListBuildingScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<int>(
-            value: weaponIdx,
+            initialValue: weaponIdx,
             isExpanded: true,
             dropdownColor: OmnispexColors.surfaceCard,
             decoration: const InputDecoration(labelText: "WEAPON PROFILE"),

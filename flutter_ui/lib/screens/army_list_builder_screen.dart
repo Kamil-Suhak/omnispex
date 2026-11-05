@@ -1117,7 +1117,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                                 availableEnhancements.isNotEmpty)
                               Expanded(
                                 child: DropdownButtonFormField<String?>(
-                                  value: availableEnhancements.any((e) =>
+                                  initialValue: availableEnhancements.any((e) =>
                                           e.id == entry.enhancementId)
                                       ? entry.enhancementId
                                       : null,
@@ -1175,7 +1175,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                             if (nonCharacterEntries.isNotEmpty)
                               Expanded(
                                 child: DropdownButtonFormField<String?>(
-                                  value: nonCharacterEntries.any((b) =>
+                                  initialValue: nonCharacterEntries.any((b) =>
                                           b.entryId ==
                                           entry.attachedToEntryId)
                                       ? entry.attachedToEntryId
@@ -1248,7 +1248,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
     List<BsDataFaction> factions,
   ) {
     final nameCtrl = TextEditingController(text: 'New Strike Force');
-    final available = FactionRegistry.allFactions;
+    const available = FactionRegistry.allFactions;
     String selectedMetaId = available.first.id;
     BattleSizeUi selectedSize = BattleSizeUi.strikeForce;
 
@@ -1272,7 +1272,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: available.any((m) => m.id == selectedMetaId)
+                      initialValue: available.any((m) => m.id == selectedMetaId)
                           ? selectedMetaId
                           : available.first.id,
                       isExpanded: true,
@@ -1292,7 +1292,7 @@ class ArmyListBuilderScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<BattleSizeUi>(
-                      value: selectedSize,
+                      initialValue: selectedSize,
                       isExpanded: true,
                       dropdownColor: OmnispexColors.surfaceCard,
                       decoration:

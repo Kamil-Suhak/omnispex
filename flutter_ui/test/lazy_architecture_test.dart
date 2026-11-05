@@ -106,17 +106,16 @@ void main() {
   group('Client Cryptographic Authentication & Account Pairing', () {
     test('DeviceCredentials generates valid format and account pairing key', () async {
       final creds = await AuthService.getOrCreateCredentials();
-      expect(creds.userId.startsWith('usr_'), isTrue);
-      expect(creds.secretKey.startsWith('sec_'), isTrue);
-      expect(creds.secretKey.length, greaterThanOrEqualTo(16));
+      expect(creds.accessKey.startsWith('omnispex_'), isTrue);
+      expect(creds.accessKey.length, equals(73)); // 'omnispex_' + 64 hex chars
+      expect(creds.accountKey, equals(creds.accessKey));
 
-      final pairingKey = creds.accountKey;
-      expect(pairingKey, contains(':'));
-
-      final parsed = DeviceCredentials.tryParseAccountKey(pairingKey);
+      final parsed = DeviceCredentials.tryParseAccountKey(creds.accountKey);
       expect(parsed, isNotNull);
-      expect(parsed!.userId, equals(creds.userId));
-      expect(parsed.secretKey, equals(creds.secretKey));
+      expect(parsed!.accessKey, equals(creds.accessKey));
+
+      final imported = await AuthService.importCredentials(creds.accountKey);
+      expect(imported, isTrue);
     });
 
     test('AuthService generates Bearer authorization headers', () async {

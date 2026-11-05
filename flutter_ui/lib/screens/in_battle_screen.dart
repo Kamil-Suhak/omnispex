@@ -236,8 +236,6 @@ class InBattleScreen extends ConsumerWidget {
     final whatIfAbilities = ref.watch(whatIfAbilitiesProvider);
     final hitReroll = ref.watch(hitRerollProvider);
     final woundReroll = ref.watch(woundRerollProvider);
-    final bonusStrength = ref.watch(bonusStrengthProvider);
-    final bonusAp = ref.watch(bonusApProvider);
 
     final defArmorOfContempt = ref.watch(defensiveArmorOfContemptProvider);
     final defMinusWound = ref.watch(defensiveMinusWoundProvider);
@@ -636,7 +634,7 @@ class InBattleScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<int>(
-                  value: isCustomWeapon
+                  initialValue: isCustomWeapon
                       ? -1
                       : (weaponIdx %
                           (weaponNames.isNotEmpty ? weaponNames.length : 1)),
@@ -780,7 +778,7 @@ class InBattleScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<int>(
-                  value: squadIdx,
+                  initialValue: squadIdx,
                   isExpanded: true,
                   dropdownColor: OmnispexColors.surfaceCard,
                   decoration:
@@ -796,10 +794,11 @@ class InBattleScreen extends ConsumerWidget {
                     );
                   }),
                   onChanged: (val) {
-                    if (val != null)
+                    if (val != null) {
                       ref
                           .read(selectedSquadPresetIndexProvider.notifier)
                           .state = val;
+                    }
                   },
                 ),
                 const SizedBox(height: 12),
@@ -870,7 +869,7 @@ class InBattleScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DropdownButtonFormField<int>(
-                value: isCustomTarget ? -1 : targetIdx,
+                initialValue: isCustomTarget ? -1 : targetIdx,
                 isExpanded: true,
                 dropdownColor: OmnispexColors.surfaceCard,
                 decoration:
@@ -946,7 +945,7 @@ class InBattleScreen extends ConsumerWidget {
                   title: Text("Attacker Made Charge Move (Lance +1)",
                       style: OmnispexTypography.body),
                   value: hasCharged,
-                  activeColor: OmnispexColors.accent,
+                  activeThumbColor: OmnispexColors.accent,
                   onChanged: (val) =>
                       ref.read(hasChargedProvider.notifier).state = val,
                 ),
@@ -959,7 +958,7 @@ class InBattleScreen extends ConsumerWidget {
                   title: Text("Target Has Benefit of Cover (+1 Sv)",
                       style: OmnispexTypography.body),
                   value: targetInCover,
-                  activeColor: OmnispexColors.accent,
+                  activeThumbColor: OmnispexColors.accent,
                   onChanged: (val) =>
                       ref.read(targetInCoverProvider.notifier).state = val,
                 ),
@@ -970,7 +969,7 @@ class InBattleScreen extends ConsumerWidget {
                   title: Text("Attacker Stationary (Heavy +1)",
                       style: OmnispexTypography.body),
                   value: isStationary,
-                  activeColor: OmnispexColors.accent,
+                  activeThumbColor: OmnispexColors.accent,
                   onChanged: (val) =>
                       ref.read(isStationaryProvider.notifier).state = val,
                 ),
@@ -1040,7 +1039,7 @@ class InBattleScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<ReRollOption>(
-                      value: hitReroll,
+                      initialValue: hitReroll,
                       isExpanded: true,
                       decoration:
                           const InputDecoration(labelText: "HIT RE-ROLLS"),
@@ -1056,15 +1055,16 @@ class InBattleScreen extends ConsumerWidget {
                             child: Text("Full Re-rolls")),
                       ],
                       onChanged: (val) {
-                        if (val != null)
+                        if (val != null) {
                           ref.read(hitRerollProvider.notifier).state = val;
+                        }
                       },
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<ReRollOption>(
-                      value: woundReroll,
+                      initialValue: woundReroll,
                       isExpanded: true,
                       decoration:
                           const InputDecoration(labelText: "WOUND RE-ROLLS"),
@@ -1080,8 +1080,9 @@ class InBattleScreen extends ConsumerWidget {
                             child: Text("Full Re-rolls")),
                       ],
                       onChanged: (val) {
-                        if (val != null)
+                        if (val != null) {
                           ref.read(woundRerollProvider.notifier).state = val;
+                        }
                       },
                     ),
                   ),
@@ -1296,9 +1297,10 @@ class InBattleScreen extends ConsumerWidget {
                   decoration: const InputDecoration(labelText: "Skill (BS/WS)"),
                   onChanged: (val) {
                     final n = int.tryParse(val);
-                    if (n != null)
+                    if (n != null) {
                       ref.read(customWeaponProfileProvider.notifier).state =
                           custom.copyWith(skill: n);
+                    }
                   },
                 ),
               ),
@@ -1310,9 +1312,10 @@ class InBattleScreen extends ConsumerWidget {
                   decoration: const InputDecoration(labelText: "Strength (S)"),
                   onChanged: (val) {
                     final n = int.tryParse(val);
-                    if (n != null)
+                    if (n != null) {
                       ref.read(customWeaponProfileProvider.notifier).state =
                           custom.copyWith(strength: n);
+                    }
                   },
                 ),
               ),
@@ -1329,9 +1332,10 @@ class InBattleScreen extends ConsumerWidget {
                       const InputDecoration(labelText: "Armor Pen (AP)"),
                   onChanged: (val) {
                     final n = int.tryParse(val);
-                    if (n != null)
+                    if (n != null) {
                       ref.read(customWeaponProfileProvider.notifier).state =
                           custom.copyWith(ap: n);
+                    }
                   },
                 ),
               ),

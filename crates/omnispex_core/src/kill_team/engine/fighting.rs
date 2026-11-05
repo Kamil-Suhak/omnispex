@@ -10,10 +10,10 @@ pub struct KtFightContext {
     #[serde(default)]
     pub defender_injured: bool,
     /// Friendly operatives supporting the attacker in combat (+1 Hit per support in KT24).
-    #[serde(default)]
+    #[serde(default, alias = "attacker_support_friends")]
     pub attacker_combat_support: u32,
     /// Friendly operatives supporting the defender in combat (+1 Hit per support in KT24).
-    #[serde(default)]
+    #[serde(default, alias = "defender_support_friends")]
     pub defender_combat_support: u32,
     #[serde(default)]
     pub attacker_remaining_wounds: Option<u32>,

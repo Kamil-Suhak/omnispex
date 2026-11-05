@@ -157,7 +157,7 @@ class _KtRosterBuilderScreenState
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: activeRoster.id,
+                      initialValue: activeRoster.id,
                       items: rosters
                           .map(
                             (r) => DropdownMenuItem(
@@ -211,14 +211,14 @@ class _KtRosterBuilderScreenState
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: OmnispexColors.surfaceCard,
                     border: Border(
-                      left: const BorderSide(
+                      left: BorderSide(
                           color: OmnispexColors.redIneffective, width: 4),
-                      top: const BorderSide(color: OmnispexColors.border),
-                      right: const BorderSide(color: OmnispexColors.border),
-                      bottom: const BorderSide(color: OmnispexColors.border),
+                      top: BorderSide(color: OmnispexColors.border),
+                      right: BorderSide(color: OmnispexColors.border),
+                      bottom: BorderSide(color: OmnispexColors.border),
                     ),
                   ),
                   child: Column(

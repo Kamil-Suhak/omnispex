@@ -136,8 +136,11 @@ class _KtCombatScreenState extends State<KtCombatScreen> {
           padding: const EdgeInsets.all(24),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 12,
                 children: [
                   Text('KILL TEAM COMBAT RESOLUTION',
                       style: OmnispexTypography.h2),
@@ -206,7 +209,7 @@ class _KtCombatScreenState extends State<KtCombatScreen> {
               Text('ATTACKING OPERATIVE', style: OmnispexTypography.label),
               const SizedBox(height: 8),
               DropdownButtonFormField<OperativeDatacardUi>(
-                value: _attacker,
+                initialValue: _attacker,
                 isExpanded: true,
                 items: _operatives
                     .map(
@@ -232,7 +235,7 @@ class _KtCombatScreenState extends State<KtCombatScreen> {
               Text('WEAPON PROFILE', style: OmnispexTypography.label),
               const SizedBox(height: 8),
               DropdownButtonFormField<KtWeaponProfileUi>(
-                value: availableAttackerWeapons.contains(_selectedWeapon)
+                initialValue: availableAttackerWeapons.contains(_selectedWeapon)
                     ? _selectedWeapon
                     : (availableAttackerWeapons.isNotEmpty
                         ? availableAttackerWeapons.first
@@ -290,7 +293,7 @@ class _KtCombatScreenState extends State<KtCombatScreen> {
               Text('TARGET OPERATIVE', style: OmnispexTypography.label),
               const SizedBox(height: 8),
               DropdownButtonFormField<OperativeDatacardUi>(
-                value: _defender,
+                initialValue: _defender,
                 isExpanded: true,
                 items: _operatives
                     .map(
@@ -317,7 +320,7 @@ class _KtCombatScreenState extends State<KtCombatScreen> {
                 Text('DEFENDER MELEE WEAPON', style: OmnispexTypography.label),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<KtWeaponProfileUi>(
-                  value: availableDefenderMelee.contains(_defenderMeleeWeapon)
+                  initialValue: availableDefenderMelee.contains(_defenderMeleeWeapon)
                       ? _defenderMeleeWeapon
                       : availableDefenderMelee.first,
                   isExpanded: true,

@@ -614,7 +614,7 @@ class MatchesScreen extends ConsumerWidget {
                           style: OmnispexTypography.body,
                         ),
                         value: isDetailed,
-                        activeColor: OmnispexColors.accent,
+                        activeThumbColor: OmnispexColors.accent,
                         onChanged: (val) => setState(() => isDetailed = val),
                       ),
                       Row(

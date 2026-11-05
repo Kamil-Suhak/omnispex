@@ -275,7 +275,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               : () async {
                                   setState(() => _isCheckingMfm = true);
                                   final hasUpdate = await BsDataService.checkForMfmUpdates();
-                                  if (mounted) {
+                                  if (context.mounted) {
                                     setState(() => _isCheckingMfm = false);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -500,7 +500,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   try {
                                     final store = ref.read(personalStoreProvider);
                                     await PersonalDataService.savePersonalStore(store);
-                                    if (mounted) {
+                                    if (context.mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(
                                           content: Text("All army rosters and wishlists synchronized to Cloudflare edge!"),

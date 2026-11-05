@@ -28,6 +28,11 @@ wrangler.toml.local
 *.key
 *.jks
 *.keystore
+android-release-signing-key.txt
+*release-signing*.txt
+*keystore-info*.txt
+key.properties
+**/key.properties
 services/cloud-worker/.wrangler/
 services/cloud-worker/node_modules/
 services/cloud-worker/dist/

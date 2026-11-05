@@ -43,7 +43,6 @@ class TacticalVerdictBanner extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: OmnispexColors.surfaceCard,
-        borderRadius: BorderRadius.circular(4),
         border: Border(
           left: BorderSide(color: color, width: 4),
           top: const BorderSide(color: OmnispexColors.border),

@@ -350,6 +350,53 @@ class SimulationService {
     ),
   ];
 
+  /// Top-level engagement calculation delegating to Rust FFI probability engine.
+  static SimulationUiReport calculateEngagement({
+    required WeaponUiProfile weapon,
+    required UnitUiProfile target,
+    bool isStationary = false,
+    bool hasCharged = false,
+    bool targetInCover = false,
+    int weaponCount = 1,
+    int? distance,
+    Set<String> extraAbilities = const {},
+    ReRollOption hitReroll = ReRollOption.none,
+    ReRollOption woundReroll = ReRollOption.none,
+    int bonusStrength = 0,
+    int bonusAp = 0,
+    bool defensiveArmorOfContempt = false,
+    bool defensiveMinusWound = false,
+    bool defensiveGrantInvuln4 = false,
+    bool defensiveGrantFnp5 = false,
+    bool defensiveGrantHalfDamage = false,
+    bool defensiveGrantMinusDamage1 = false,
+    int iterations = 10000,
+    int seed = 42,
+  }) {
+    return runSimulation(
+      weapon: weapon,
+      target: target,
+      isStationary: isStationary,
+      hasCharged: hasCharged,
+      targetInCover: targetInCover,
+      weaponCount: weaponCount,
+      distance: distance,
+      extraAbilities: extraAbilities,
+      hitReroll: hitReroll,
+      woundReroll: woundReroll,
+      bonusStrength: bonusStrength,
+      bonusAp: bonusAp,
+      defensiveArmorOfContempt: defensiveArmorOfContempt,
+      defensiveMinusWound: defensiveMinusWound,
+      defensiveGrantInvuln4: defensiveGrantInvuln4,
+      defensiveGrantFnp5: defensiveGrantFnp5,
+      defensiveGrantHalfDamage: defensiveGrantHalfDamage,
+      defensiveGrantMinusDamage1: defensiveGrantMinusDamage1,
+      iterations: iterations,
+      seed: seed,
+    );
+  }
+
   static SimulationUiReport runSimulation({
     required WeaponUiProfile weapon,
     required UnitUiProfile target,

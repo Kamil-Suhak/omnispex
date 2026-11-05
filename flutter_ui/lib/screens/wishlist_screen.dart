@@ -168,7 +168,7 @@ class WishlistScreen extends ConsumerWidget {
                         Expanded(
                           flex: 2,
                           child: DropdownButtonFormField<WishlistSortFieldUi>(
-                            value: sortBy,
+                            initialValue: sortBy,
                             isExpanded: true,
                             dropdownColor: OmnispexColors.surfaceCard,
                             decoration: const InputDecoration(
@@ -425,7 +425,7 @@ class WishlistScreen extends ConsumerWidget {
               SizedBox(
                 width: 210,
                 child: DropdownButtonFormField<AcquisitionStateUi>(
-                  value: item.state,
+                  initialValue: item.state,
                   isExpanded: true,
                   dropdownColor: OmnispexColors.surfaceCard,
                   decoration: const InputDecoration(
@@ -459,7 +459,7 @@ class WishlistScreen extends ConsumerWidget {
               SizedBox(
                 width: 150,
                 child: DropdownButtonFormField<WishlistPriorityUi>(
-                  value: item.priority,
+                  initialValue: item.priority,
                   isExpanded: true,
                   dropdownColor: OmnispexColors.surfaceCard,
                   decoration: const InputDecoration(
@@ -677,7 +677,7 @@ class WishlistScreen extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       DropdownButtonFormField<BsDataFaction>(
-                        value: selectedFaction,
+                        initialValue: selectedFaction,
                         isExpanded: true,
                         dropdownColor: OmnispexColors.surfaceCard,
                         decoration:
@@ -705,7 +705,7 @@ class WishlistScreen extends ConsumerWidget {
                       const SizedBox(height: 10),
                       if (selectedFaction.units.isNotEmpty)
                         DropdownButtonFormField<BsDataUnit>(
-                          value: selectedFaction.units
+                          initialValue: selectedFaction.units
                               .where((u) => u.name == unitNameCtrl.text)
                               .firstOrNull,
                           isExpanded: true,
@@ -773,7 +773,7 @@ class WishlistScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<WishlistPriorityUi>(
-                              value: priority,
+                              initialValue: priority,
                               dropdownColor: OmnispexColors.surfaceCard,
                               decoration:
                                   const InputDecoration(labelText: 'PRIORITY'),
@@ -791,7 +791,7 @@ class WishlistScreen extends ConsumerWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: DropdownButtonFormField<AcquisitionStateUi>(
-                              value: state,
+                              initialValue: state,
                               isExpanded: true,
                               dropdownColor: OmnispexColors.surfaceCard,
                               decoration: const InputDecoration(

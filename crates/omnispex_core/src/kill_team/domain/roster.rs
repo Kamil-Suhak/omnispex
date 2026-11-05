@@ -1,6 +1,35 @@
-use super::catalogue::{KillTeamCatalogueDatabase, KtWeaponProfile};
-use serde::{Deserialize, Serialize};
+use super::catalogue::{KillTeamCatalogueDatabase, KtWeaponProfile, KtWeaponType};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
+
+fn deserialize_roster_weapons<'de, D>(deserializer: D) -> Result<Vec<KtWeaponProfile>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum WeaponOrName {
+        Profile(KtWeaponProfile),
+        Name(String),
+    }
+
+    let items: Vec<WeaponOrName> = Vec::deserialize(deserializer)?;
+    Ok(items
+        .into_iter()
+        .map(|item| match item {
+            WeaponOrName::Profile(p) => p,
+            WeaponOrName::Name(n) => KtWeaponProfile {
+                name: n,
+                weapon_type: KtWeaponType::Ranged,
+                attacks: 4,
+                hit: 3,
+                normal_damage: 3,
+                critical_damage: 4,
+                rules: Vec::new(),
+            },
+        })
+        .collect())
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KtSelectedEquipment {
@@ -15,13 +44,19 @@ pub struct KtRosterOperative {
     pub entry_id: String,
     pub operative_id: String,
     pub operative_name: String,
-    pub role: String,
-    pub is_leader: bool,
-    pub apl: u32,
-    pub movement: u32,
-    pub save: u32,
-    pub wounds: u32,
     #[serde(default)]
+    pub role: String,
+    #[serde(default)]
+    pub is_leader: bool,
+    #[serde(default)]
+    pub apl: u32,
+    #[serde(default)]
+    pub movement: u32,
+    #[serde(default)]
+    pub save: u32,
+    #[serde(default)]
+    pub wounds: u32,
+    #[serde(default, deserialize_with = "deserialize_roster_weapons")]
     pub selected_weapons: Vec<KtWeaponProfile>,
     #[serde(default)]
     pub custom_name: String,
@@ -115,7 +150,26 @@ pub fn validate_kill_team_roster(
         .unwrap_or((6, 14));
 
     let total_operatives = roster.operatives.len() as u32;
-    let total_wounds: u32 = roster.operatives.iter().map(|o| o.wounds).sum();
+    let total_wounds: u32 = roster
+        .operatives
+        .iter()
+        .map(|o| {
+            if o.wounds > 0 {
+                o.wounds
+            } else if let Some(f) = faction_opt {
+                f.operatives
+                    .iter()
+                    .find(|op| {
+                        op.id.eq_ignore_ascii_case(&o.operative_id)
+                            || op.name.eq_ignore_ascii_case(&o.operative_name)
+                    })
+                    .map(|op| op.wounds)
+                    .unwrap_or(10)
+            } else {
+                10
+            }
+        })
+        .sum();
 
     // 1. Operative Count Check
     if total_operatives == 0 {

@@ -13,7 +13,7 @@ class KtWeaponRuleUi {
   factory KtWeaponRuleUi.fromRustJson(Map<String, dynamic> json) {
     return KtWeaponRuleUi(
       type: json['type']?.toString() ?? 'Custom',
-      value: json['value'],
+      value: json['data'] ?? json['value'],
     );
   }
 
@@ -21,7 +21,7 @@ class KtWeaponRuleUi {
     if (value == null) {
       return {'type': type};
     }
-    return {'type': type, 'value': value};
+    return {'type': type, 'data': value, 'value': value};
   }
 
   String get label {
@@ -133,7 +133,9 @@ class KtWeaponProfileUi {
       name: json['name']?.toString() ?? 'Weapon',
       weaponType: json['weapon_type']?.toString() ?? 'ranged',
       attacks: (json['attacks'] as num?)?.toInt() ?? 4,
-      hitStat: (json['hit_stat'] as num?)?.toInt() ?? 3,
+      hitStat: (json['hit'] as num?)?.toInt() ??
+          (json['hit_stat'] as num?)?.toInt() ??
+          3,
       normalDamage: (json['normal_damage'] as num?)?.toInt() ?? 3,
       criticalDamage: (json['critical_damage'] as num?)?.toInt() ?? 4,
       rules: (json['rules'] as List? ?? [])
@@ -146,7 +148,7 @@ class KtWeaponProfileUi {
         'name': name,
         'weapon_type': weaponType,
         'attacks': attacks,
-        'hit_stat': hitStat,
+        'hit': hitStat,
         'normal_damage': normalDamage,
         'critical_damage': criticalDamage,
         'rules': rules.map((r) => r.toRustJson()).toList(),
@@ -570,8 +572,8 @@ class KtFightContextUi {
         'defender_starting_wounds': defenderStartingWounds,
         'attacker_injured': attackerInjured,
         'defender_injured': defenderInjured,
-        'attacker_support_friends': attackerSupportFriends,
-        'defender_support_friends': defenderSupportFriends,
+        'attacker_combat_support': attackerSupportFriends,
+        'defender_combat_support': defenderSupportFriends,
       };
 }
 

@@ -1,0 +1,132 @@
+name: Omnispex End-to-End CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - rewrite
+  pull_request:
+    branches:
+      - main
+      - rewrite
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zero-coupling:
+    name: Architecture & Zero-Coupling Enforcement
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Verify wh40k does not reference kill_team
+        run: |
+          echo "Checking wh40k module isolation..."
+          if grep -rni "kill_team" crates/omnispex_core/src/wh40k/; then
+            echo "::error::Strict zero-coupling violation: crates/omnispex_core/src/wh40k references kill_team!"
+            exit 1
+          fi
+
+      - name: Verify kill_team does not reference wh40k
+        run: |
+          echo "Checking kill_team module isolation..."
+          if grep -rni "wh40k" crates/omnispex_core/src/kill_team/; then
+            echo "::error::Strict zero-coupling violation: crates/omnispex_core/src/kill_team references wh40k!"
+            exit 1
+          fi
+
+      - name: Verify flutter_ui/lib/features/kill_team has zero imports from 40k
+        run: |
+          echo "Checking Flutter Kill Team UI module isolation..."
+          if grep -rEn "screens/(in_battle|list_building|army_list|unit_browser)|services/(bsdata|simulation)|models/(bsdata|simulation)" flutter_ui/lib/features/kill_team/; then
+            echo "::error::Strict zero-coupling violation: flutter_ui/lib/features/kill_team imports 40k screens/services/models!"
+            exit 1
+          fi
+
+  rust-workspace:
+    name: Rust Workspace Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run Rust Workspace Tests
+        run: cargo test --workspace
+
+  cloud-worker:
+    name: Cloudflare Worker Authentication & Sync Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: services/cloud-worker/package-lock.json
+
+      - name: Run Cloud Worker Tests
+        working-directory: services/cloud-worker
+        run: |
+          npm ci
+          npm test
+
+  flutter-e2e:
+    name: Flutter Analysis, FFI Binary & Tests
+    runs-on: ubuntu-latest
+    needs: [zero-coupling, rust-workspace]
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Build Release omnispex_flutter Shared Library
+        run: |
+          cargo build --release -p omnispex_flutter
+          mkdir -p flutter_ui/target/release
+          cp target/release/libomnispex_flutter.so flutter_ui/
+          cp target/release/libomnispex_flutter.so flutter_ui/target/release/
+
+      - name: Flutter Pub Get
+        working-directory: flutter_ui
+        run: flutter pub get
+
+      - name: Flutter Static Analysis
+        working-directory: flutter_ui
+        run: flutter analyze
+
+      - name: Flutter Tests with Rust FFI Engine
+        working-directory: flutter_ui
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/flutter_ui:${{ github.workspace }}/target/release
+        run: flutter test

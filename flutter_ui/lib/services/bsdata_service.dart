@@ -79,7 +79,6 @@ class BsDataService {
   }
 
   static bool isFactionCached(String idOrSlugOrName) {
-    if (_fullBundleLoaded) return true;
     final meta = FactionRegistry.find(idOrSlugOrName);
     if (meta == null) return false;
     return _cachedFactionSlugs.contains(meta.slug);
@@ -142,24 +141,45 @@ class BsDataService {
     _loadedFactions.remove(meta.slug);
   }
 
+  /// List Builder Scope: strictly ONLY the list's chosen faction in memory
   static Future<BsDataFaction?> scopeMemoryToListBuilder(
       String factionIdOrName) async {
-    return loadFactionIntoMemory(factionIdOrName);
+    final faction = await loadFactionIntoMemory(factionIdOrName);
+    if (faction != null) {
+      _loadedFactions.removeWhere((k, _) => k != faction.id && k != faction.name);
+    }
+    return faction;
   }
 
+  /// Live Match Scope: at most 2 factions in memory
   static Future<void> scopeMemoryToMatch(
     String factionA, [
     String? factionB,
   ]) async {
-    await loadFactionIntoMemory(factionA);
-    if (factionB != null) {
-      await loadFactionIntoMemory(factionB);
+    final keepIds = <String>{};
+    final fA = await loadFactionIntoMemory(factionA);
+    if (fA != null) {
+      keepIds.add(fA.id);
+      keepIds.add(fA.name);
     }
+    if (factionB != null) {
+      final fB = await loadFactionIntoMemory(factionB);
+      if (fB != null) {
+        keepIds.add(fB.id);
+        keepIds.add(fB.name);
+      }
+    }
+    _loadedFactions.removeWhere((k, _) => !keepIds.contains(k));
   }
 
+  /// Browser Scope: strictly ONLY the browsed faction in memory
   static Future<BsDataFaction?> scopeMemoryToBrowser(
       String factionIdOrName) async {
-    return loadFactionIntoMemory(factionIdOrName);
+    final faction = await loadFactionIntoMemory(factionIdOrName);
+    if (faction != null) {
+      _loadedFactions.removeWhere((k, _) => k != faction.id && k != faction.name);
+    }
+    return faction;
   }
 
   static Future<BsDataFaction?> loadFactionIntoMemory(
@@ -278,32 +298,72 @@ class BsDataService {
     String categoryFilter = 'All Types',
     bool includeLegends = false,
   }) {
-    final String? rustFactionFilter =
-        (factionFilter.isEmpty || factionFilter == 'All Factions')
-            ? null
-            : factionFilter;
-    String? rustCategoryFilter;
-    if (categoryFilter == 'Infantry') {
-      rustCategoryFilter = 'INFANTRY';
-    } else if (categoryFilter == 'Vehicle / Monster') {
-      rustCategoryFilter = null; // Filtered below across both VEHICLE and MONSTER
-    } else if (categoryFilter == 'Character') {
-      rustCategoryFilter = 'CHARACTER';
-    } else if (categoryFilter == 'Battleline') {
-      rustCategoryFilter = 'BATTLELINE';
+    final cleanQuery = query.trim().toLowerCase();
+    final combined = <BsDataUnit>[];
+    final seen = <String>{};
+
+    if (OmnispexRustBridge.isReady) {
+      final String? rustFactionFilter =
+          (factionFilter.isEmpty || factionFilter == 'All Factions')
+              ? null
+              : factionFilter;
+      String? rustCategoryFilter;
+      if (categoryFilter == 'Infantry') {
+        rustCategoryFilter = 'INFANTRY';
+      } else if (categoryFilter == 'Vehicle / Monster') {
+        rustCategoryFilter = null; // Filtered below across both VEHICLE and MONSTER
+      } else if (categoryFilter == 'Character') {
+        rustCategoryFilter = 'CHARACTER';
+      } else if (categoryFilter == 'Battleline') {
+        rustCategoryFilter = 'BATTLELINE';
+      }
+
+      final results = OmnispexRustBridge.wh40kSearchUnitsFull(
+        query: query,
+        faction: rustFactionFilter,
+        category: rustCategoryFilter,
+        includeLegends: includeLegends,
+      );
+
+      for (final u in results) {
+        if (categoryFilter == 'Vehicle / Monster' && !u.isVehicleOrMonster) continue;
+        if (seen.add(u.name.toLowerCase())) {
+          combined.add(u);
+        }
+      }
     }
 
-    final results = OmnispexRustBridge.wh40kSearchUnitsFull(
-      query: query,
-      faction: rustFactionFilter,
-      category: rustCategoryFilter,
-      includeLegends: includeLegends,
-    );
+    // Also search in-memory loaded factions (e.g. custom imported or test fixtures)
+    for (final faction in _loadedFactions.values) {
+      if (factionFilter != 'All Factions' &&
+          factionFilter.isNotEmpty &&
+          faction.name.toLowerCase() != factionFilter.toLowerCase() &&
+          !faction.name.toLowerCase().contains(factionFilter.toLowerCase()) &&
+          faction.id.toLowerCase() != factionFilter.toLowerCase()) {
+        continue;
+      }
 
-    if (categoryFilter == 'Vehicle / Monster') {
-      return results.where((u) => u.isVehicleOrMonster).toList();
+      for (final unit in faction.units) {
+        if (categoryFilter == 'Infantry' && !unit.isInfantry) continue;
+        if (categoryFilter == 'Vehicle / Monster' && !unit.isVehicleOrMonster) continue;
+        if (categoryFilter == 'Character' && !unit.isCharacter) continue;
+        if (categoryFilter == 'Battleline' && !unit.isBattleline) continue;
+
+        if (cleanQuery.isNotEmpty) {
+          final matchesName = unit.name.toLowerCase().contains(cleanQuery);
+          final matchesFaction = unit.faction.toLowerCase().contains(cleanQuery);
+          final matchesCategory =
+              unit.categories.any((c) => c.toLowerCase().contains(cleanQuery));
+          if (!matchesName && !matchesFaction && !matchesCategory) continue;
+        }
+
+        if (seen.add(unit.name.toLowerCase())) {
+          combined.add(unit);
+        }
+      }
     }
-    return results;
+
+    return combined;
   }
 
   static BsDataUnit? findUnitById(String id) {
