@@ -1,7 +1,10 @@
+pub mod common;
 pub mod domain;
 pub mod engine;
+pub mod kill_team;
 pub mod parser;
 pub mod storage;
+pub mod wh40k;
 
 pub use domain::*;
 pub use engine::*;
@@ -898,5 +901,484 @@ units:
         assert_eq!(store.schema_version, CURRENT_PERSONAL_SCHEMA_VERSION);
         assert_eq!(store.custom_archetypes.archetypes.len(), 5);
         assert_eq!(store.settings.default_iterations, 10_000);
+    }
+
+    #[test]
+    fn test_strict_wh40k_and_kill_team_module_isolation() {
+        use std::fs;
+        use std::path::Path;
+
+        fn collect_rs_files(dir: &Path, out: &mut Vec<(String, String)>) {
+            if let Ok(entries) = fs::read_dir(dir) {
+                for entry in entries.flatten() {
+                    let p = entry.path();
+                    if p.is_dir() {
+                        collect_rs_files(&p, out);
+                    } else if p.extension().and_then(|s| s.to_str()) == Some("rs") {
+                        if let Ok(content) = fs::read_to_string(&p) {
+                            out.push((p.display().to_string(), content));
+                        }
+                    }
+                }
+            }
+        }
+
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let mut wh40k_files = Vec::new();
+        collect_rs_files(&manifest_dir.join("src/wh40k"), &mut wh40k_files);
+        assert!(!wh40k_files.is_empty());
+        for (path, content) in &wh40k_files {
+            assert!(
+                !content.contains("kill_team") && !content.contains("KillTeam"),
+                "wh40k module file {} must not reference kill_team",
+                path
+            );
+        }
+
+        let mut kt_files = Vec::new();
+        collect_rs_files(&manifest_dir.join("src/kill_team"), &mut kt_files);
+        assert!(!kt_files.is_empty());
+        for (path, content) in &kt_files {
+            assert!(
+                !content.contains("wh40k") && !content.contains("Warhammer40k"),
+                "kill_team module file {} must not reference wh40k",
+                path
+            );
+        }
+    }
+
+    #[test]
+    fn test_half_damage_applies_before_melta_and_minus_one_damage_non_stacking() {
+        // 40K Rules Commentary (Modifiers & Melta):
+        // Base D = 4, HalfDamage -> ceil(4 / 2) = 2, + Melta 2 = 4.
+        // If Melta were added before HalfDamage, it would be ceil((4 + 2)/2) = 3.
+        let melta_gun = WeaponProfile::new(
+            "Test Melta",
+            18,
+            ValueExpr::Flat(1),
+            2,
+            24,
+            4,
+            ValueExpr::Flat(4),
+            vec![
+                WeaponAbility::Torrent,
+                WeaponAbility::Melta(2),
+                WeaponAbility::Anti {
+                    target: Keyword::Monster,
+                    threshold: 2,
+                },
+                WeaponAbility::DevastatingWounds,
+            ],
+        );
+
+        let model = ModelProfile::new("Avatar", 14, 7, None, None);
+        let target = UnitProfile::uniform("Avatar", 11, model, 1, vec![Keyword::Monster])
+            .with_defensive_abilities(vec![DefensiveAbility::HalfDamage]);
+
+        let ctx = CombatContext::default()
+            .with_distance(6)
+            .with_wound_reroll(ReRollMode::Full);
+        let probs = compute_exact_stage_probabilities(&melta_gun, &target, &ctx);
+        assert!(
+            (probs.expected_damage_per_unsaved - 4.0).abs() < 1e-6,
+            "HalfDamage must divide base damage (4->2) BEFORE adding Melta 2 (=4), got {}",
+            probs.expected_damage_per_unsaved
+        );
+
+        let mut rng = rand::thread_rng();
+        for _ in 0..20 {
+            let mut wounds = target.initial_wounds();
+            let outcome = resolve_volley(&melta_gun, &target, &ctx, &mut wounds, &mut rng);
+            if outcome.wounds_inflicted > 0 {
+                assert_eq!(outcome.damage_dealt, 4);
+            }
+        }
+
+        // Verify -1 Damage on datasheet and context.minus_one_damage do NOT stack to -2
+        let dread_model = ModelProfile::new("Dreadnought", 12, 7, None, None);
+        let dread_target =
+            UnitProfile::uniform("Dreadnought", 10, dread_model, 1, vec![Keyword::Vehicle])
+                .with_defensive_abilities(vec![DefensiveAbility::DamageReduction(1)]);
+        let mut ctx_minus = CombatContext::default();
+        ctx_minus.minus_one_damage = true;
+
+        let probs_dread =
+            compute_exact_stage_probabilities(&melta_gun, &dread_target, &ctx_minus);
+        assert!(
+            (probs_dread.expected_damage_per_unsaved - 3.0).abs() < 1e-6,
+            "Duplicate -1 Damage sources must not stack to -2 (expected 4 - 1 = 3, got {})",
+            probs_dread.expected_damage_per_unsaved
+        );
+    }
+
+    #[test]
+    fn test_squad_blast_uses_declaration_model_count() {
+        let frag_first = WeaponProfile::new(
+            "Auto-Wipe Cannon",
+            24,
+            ValueExpr::Flat(15),
+            2,
+            10,
+            6,
+            ValueExpr::Flat(2),
+            vec![WeaponAbility::Torrent],
+        );
+        let blast_second = WeaponProfile::new(
+            "Secondary Blast Gun",
+            24,
+            ValueExpr::Flat(1),
+            3,
+            4,
+            0,
+            ValueExpr::Flat(1),
+            vec![WeaponAbility::Blast],
+        );
+        let loadout = vec![
+            WeaponLoadoutEntry::new(frag_first, 1),
+            WeaponLoadoutEntry::new(blast_second, 1),
+        ];
+
+        // Target has 10 models (1W each, 7+ save), except 1 model has 10W so the unit survives weapon 1
+        // with only 1 model left alive. Weapon 2 must still receive +2 Blast attacks from the 10 models at declaration!
+        let chaff = ModelProfile::new("Trooper", 1, 7, None, None);
+        let tanky_leader = ModelProfile::new("Boss", 50, 7, None, None);
+        let target = UnitProfile::new(
+            "Mixed Squad",
+            3,
+            vec![ModelGroup::new(9, chaff), ModelGroup::new(1, tanky_leader)],
+            vec![Keyword::Infantry],
+        );
+
+        let mut wounds = target.initial_wounds();
+        let mut rng = rand::thread_rng();
+        let outcome = resolve_squad_volley(
+            &loadout,
+            &target,
+            &CombatContext::default(),
+            &mut wounds,
+            &mut rng,
+        );
+        // Weapon 1 generates 15 attacks, kills all 9 chaff models (leaving 1 model alive).
+        // Weapon 2 generates 1 base + (10 / 5 = 2) Blast attacks = 3 attacks -> total = 18!
+        assert_eq!(
+            outcome.attacks_generated, 18,
+            "Second weapon in squad must use initial declaration model count (10) for Blast (+2)"
+        );
+    }
+
+    #[test]
+    fn test_dice_valued_weapon_abilities_and_custom_preservation() {
+        assert_eq!(
+            parse_weapon_ability("Sustained Hits D3"),
+            Some(WeaponAbility::SustainedHitsDice(ValueExpr::D3))
+        );
+        assert_eq!(
+            parse_weapon_ability("Rapid Fire D6+1"),
+            Some(WeaponAbility::RapidFireDice(ValueExpr::D6Plus(1)))
+        );
+        assert_eq!(
+            parse_weapon_ability("Melta D3"),
+            Some(WeaponAbility::MeltaDice(ValueExpr::D3))
+        );
+        assert_eq!(
+            parse_weapon_ability("Conversion"),
+            Some(WeaponAbility::Custom("Conversion".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_dedicated_transport_and_multi_leader_list_validation() {
+        let cat = wh40k::default_wh40k_seed_catalogue();
+        let mut list = ArmyList {
+            id: "test-dt".to_string(),
+            name: "Transport Test".to_string(),
+            faction_id: "sm-seed".to_string(),
+            faction_name: "Space Marines".to_string(),
+            battle_size: BattleSize::Incursion,
+            points_limit: 1000,
+            detachments: vec![SelectedDetachment {
+                id: "det-sm-gladius".to_string(),
+                name: "Gladius Task Force".to_string(),
+                dp_cost: 3,
+                unique_tag: None,
+            }],
+            units: vec![
+                RosterUnitEntry {
+                    entry_id: "c1".to_string(),
+                    unit_id: "sm-captain".to_string(),
+                    unit_name: "Captain".to_string(),
+                    models_count: 1,
+                    option_description: None,
+                    base_points: 80,
+                    requisition_tier_label: None,
+                    selected_wargear: vec![],
+                    enhancement_id: Some("enh-1".to_string()),
+                    enhancement_name: Some("Fire Discipline".to_string()),
+                    enhancement_points: 25,
+                    enhancement_is_upgrade: false,
+                    is_warlord: true,
+                    attached_to_entry_id: Some("bg1".to_string()),
+                    categories: vec!["Character".to_string(), "Infantry".to_string()],
+                    custom_weapons: vec![],
+                    notes: String::new(),
+                },
+                RosterUnitEntry {
+                    entry_id: "c2".to_string(),
+                    unit_id: "sm-captain".to_string(),
+                    unit_name: "Captain".to_string(),
+                    models_count: 1,
+                    option_description: None,
+                    base_points: 80,
+                    requisition_tier_label: None,
+                    selected_wargear: vec![],
+                    enhancement_id: Some("enh-2".to_string()),
+                    enhancement_name: Some("The Honour Vehement".to_string()),
+                    enhancement_points: 15,
+                    enhancement_is_upgrade: false,
+                    is_warlord: false,
+                    attached_to_entry_id: Some("bg1".to_string()),
+                    categories: vec!["Character".to_string(), "Infantry".to_string()],
+                    custom_weapons: vec![],
+                    notes: String::new(),
+                },
+                RosterUnitEntry {
+                    entry_id: "bg1".to_string(),
+                    unit_id: "sm-intercessors".to_string(),
+                    unit_name: "Intercessor Squad".to_string(),
+                    models_count: 5,
+                    option_description: None,
+                    base_points: 80,
+                    requisition_tier_label: None,
+                    selected_wargear: vec![],
+                    enhancement_id: None,
+                    enhancement_name: None,
+                    enhancement_points: 0,
+                    enhancement_is_upgrade: false,
+                    is_warlord: false,
+                    attached_to_entry_id: None,
+                    categories: vec!["Battleline".to_string(), "Infantry".to_string()],
+                    custom_weapons: vec![],
+                    notes: String::new(),
+                },
+                RosterUnitEntry {
+                    entry_id: "dt1".to_string(),
+                    unit_id: "sm-impulsor".to_string(),
+                    unit_name: "Impulsor".to_string(),
+                    models_count: 1,
+                    option_description: None,
+                    base_points: 80,
+                    requisition_tier_label: None,
+                    selected_wargear: vec![],
+                    enhancement_id: None,
+                    enhancement_name: None,
+                    enhancement_points: 0,
+                    enhancement_is_upgrade: false,
+                    is_warlord: false,
+                    attached_to_entry_id: None,
+                    categories: vec![
+                        "Vehicle".to_string(),
+                        "Dedicated Transport".to_string(),
+                    ],
+                    custom_weapons: vec![],
+                    notes: String::new(),
+                },
+                RosterUnitEntry {
+                    entry_id: "dt2".to_string(),
+                    unit_id: "sm-impulsor".to_string(),
+                    unit_name: "Impulsor".to_string(),
+                    models_count: 1,
+                    option_description: None,
+                    base_points: 80,
+                    requisition_tier_label: None,
+                    selected_wargear: vec![],
+                    enhancement_id: None,
+                    enhancement_name: None,
+                    enhancement_points: 0,
+                    enhancement_is_upgrade: false,
+                    is_warlord: false,
+                    attached_to_entry_id: None,
+                    categories: vec![
+                        "Vehicle".to_string(),
+                        "Dedicated Transport".to_string(),
+                    ],
+                    custom_weapons: vec![],
+                    notes: String::new(),
+                },
+            ],
+            notes: String::new(),
+            created_at_iso: String::new(),
+            updated_at_iso: String::new(),
+        };
+
+        let report = validate_army_list(&list, Some(&cat));
+        assert!(!report.is_valid);
+        let codes: Vec<&str> = report.violations.iter().map(|v| v.code.as_str()).collect();
+        assert!(
+            codes.contains(&"MAX_LEADERS_EXCEEDED"),
+            "Should flag 2 non-Support Captains attached to 1 Intercessor Squad: {:?}",
+            codes
+        );
+        assert!(
+            codes.contains(&"ATTACHED_UNIT_DUPLICATE_ENHANCEMENT"),
+            "Should flag 2 Enhancements in the same Attached Unit: {:?}",
+            codes
+        );
+        assert!(
+            codes.contains(&"DEDICATED_TRANSPORT_UNEMBARKED"),
+            "Should flag 2 Dedicated Transports with only 1 independent unit able to embark: {:?}",
+            codes
+        );
+
+        // Chained leader attachment check
+        list.units[1].attached_to_entry_id = Some("c1".to_string());
+        let report_chain = validate_army_list(&list, Some(&cat));
+        assert!(report_chain
+            .violations
+            .iter()
+            .any(|v| v.code == "CHAINED_LEADER_ATTACHMENT"));
+    }
+
+    #[test]
+    fn test_kt24_shooting_and_fight_engines_and_roster_validation() {
+        use kill_team::*;
+
+        let kt_cat = default_kill_team_catalogue();
+        assert!(kt_cat.factions.len() >= 16);
+
+        let aod = kt_cat.find_faction("angels-of-death").unwrap();
+        let sniper = aod
+            .operatives
+            .iter()
+            .find(|o| o.name == "Eliminator Sniper")
+            .unwrap();
+        let mortis_rifle = &sniper.weapons[1]; // Devastating 3, Piercing 1
+
+        let kommando_faction = kt_cat.find_faction("kommandos").unwrap();
+        let ork_boy = kommando_faction
+            .operatives
+            .iter()
+            .find(|o| o.name == "Kommando Boy")
+            .unwrap();
+
+        let shoot_rep = run_kt_shooting_simulation(
+            mortis_rifle,
+            ork_boy,
+            &KtShootingContext::default(),
+            3000,
+        );
+        assert!(shoot_rep.expected_damage_dealt > 6.0);
+        assert!(shoot_rep.stage_probabilities.expected_devastating_damage > 0.0);
+
+        // Obscured target must downgrade all crits (0 devastating damage) and reduce damage
+        let mut obs_ctx = KtShootingContext::default();
+        obs_ctx.target_obscured = true;
+        let obs_rep = run_kt_shooting_simulation(mortis_rifle, ork_boy, &obs_ctx, 3000);
+        assert_eq!(obs_rep.stage_probabilities.expected_critical_hits, 0.0);
+        assert_eq!(obs_rep.stage_probabilities.expected_devastating_damage, 0.0);
+        assert!(obs_rep.expected_damage_dealt < shoot_rep.expected_damage_dealt);
+
+        // Fight (Melee Strike/Parry Duel): Captain (Power Fist, Brutal, 15W) vs Kommando Boy (Choppa, 10W)
+        let captain = &aod.operatives[0];
+        let power_fist = &captain.weapons[2];
+        let choppa = &ork_boy.weapons[1];
+        let fight_rep = run_kt_fight_simulation(
+            captain,
+            power_fist,
+            ork_boy,
+            choppa,
+            &KtFightContext::default(),
+            2000,
+        );
+        assert!(
+            fight_rep.attacker_kill_probability > 0.65,
+            "Space Marine Captain with Power Fist should have >65% kill probability vs 10W Kommando Boy (got {})",
+            fight_rep.attacker_kill_probability
+        );
+        assert!(fight_rep.attacker_survival_probability > 0.90);
+
+        // KT24 Roster Validation: 1 Leader + 5 Warriors = 6 Operatives, max 4 Equipment
+        let warrior = aod
+            .operatives
+            .iter()
+            .find(|o| o.name == "Intercessor Warrior")
+            .unwrap();
+        let mut roster = KillTeamRoster {
+            id: "r1".to_string(),
+            name: "AoD Strike Team".to_string(),
+            faction_id: aod.id.clone(),
+            faction_name: aod.name.clone(),
+            selected_archetype: "Seek & Destroy".to_string(),
+            operatives: vec![KtRosterOperative {
+                entry_id: "op-1".to_string(),
+                operative_id: captain.id.clone(),
+                operative_name: captain.name.clone(),
+                role: captain.role.clone(),
+                is_leader: true,
+                apl: captain.apl,
+                movement: captain.movement,
+                save: captain.save,
+                wounds: captain.wounds,
+                selected_weapons: captain.weapons.clone(),
+                custom_name: String::new(),
+                notes: String::new(),
+            }],
+            equipment: vec![],
+            notes: String::new(),
+            created_at_iso: String::new(),
+            updated_at_iso: String::new(),
+        };
+        for i in 2..=6 {
+            roster.operatives.push(KtRosterOperative {
+                entry_id: format!("op-{}", i),
+                operative_id: warrior.id.clone(),
+                operative_name: warrior.name.clone(),
+                role: warrior.role.clone(),
+                is_leader: false,
+                apl: warrior.apl,
+                movement: warrior.movement,
+                save: warrior.save,
+                wounds: warrior.wounds,
+                selected_weapons: warrior.weapons.clone(),
+                custom_name: String::new(),
+                notes: String::new(),
+            });
+        }
+
+        let val_ok = validate_kill_team_roster(&roster, Some(&kt_cat));
+        assert!(
+            val_ok.is_valid,
+            "6-operative AoD roster with 1 Leader must be valid: {:?}",
+            val_ok.violations
+        );
+
+        // Add 5 equipment options -> must fail KT24_EQUIPMENT_LIMIT (4)
+        for i in 1..=5 {
+            roster.equipment.push(KtSelectedEquipment {
+                equipment_id: format!("eq-{}", i),
+                name: format!("Equipment {}", i),
+                is_universal: true,
+            });
+        }
+        let val_eq_fail = validate_kill_team_roster(&roster, Some(&kt_cat));
+        assert!(!val_eq_fail.is_valid);
+        assert!(val_eq_fail
+            .violations
+            .iter()
+            .any(|v| v.code == "EQUIPMENT_LIMIT_EXCEEDED"));
+
+        // KT24 Match Scoring: 5 Crit Op + 4 Tac Op + 6 Kill Op, Primary = CritOp (+3 bonus), +2 Painted = 20 VP
+        let mut kt_details = KtMatchDetails::default();
+        kt_details.player_primary_op = KtPrimaryOp::CritOp;
+        kt_details.turning_points[1].player_crit_op = 2;
+        kt_details.turning_points[2].player_crit_op = 2;
+        kt_details.turning_points[3].player_crit_op = 1;
+        kt_details.turning_points[1].player_tac_op = 2;
+        kt_details.turning_points[2].player_tac_op = 2;
+        kt_details.turning_points[3].player_kill_op = 6;
+        kt_details.player_painted_bonus = true;
+        kt_details.recalculate_totals();
+        assert_eq!(kt_details.player_crit_total, 5);
+        assert_eq!(kt_details.player_primary_bonus, 3); // ceil(5 / 2) = 3
+        assert_eq!(kt_details.player_total, 5 + 4 + 6 + 3 + 2);
     }
 }

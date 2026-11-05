@@ -31,3 +31,6 @@ wrangler.toml.local
 services/cloud-worker/.wrangler/
 services/cloud-worker/node_modules/
 services/cloud-worker/dist/
+flutter_ui/omnispex_flutter.dll
+flutter_ui/libomnispex_flutter.so
+flutter_ui/libomnispex_flutter.dylib

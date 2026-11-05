@@ -876,20 +876,80 @@ impl BsDataParser {
             .map(|c| c.models.max(1) as usize)
             .unwrap_or(1);
 
-        let model = ModelProfile::new(name.clone(), wounds, save, invuln, feel_no_pain)
-            .with_keywords(keywords.clone());
+        let mut all_unit_profiles = Vec::new();
+        Self::collect_profiles_by_type(entry, "Unit", &mut all_unit_profiles);
 
-        let mut unit_profile = UnitProfile::uniform(
-            name.clone(),
-            toughness,
-            model,
-            default_model_count,
-            keywords,
-        );
+        let mut model_groups = Vec::new();
+        if all_unit_profiles.len() > 1 && default_model_count > 1 {
+            let mut distinct_models: Vec<ModelProfile> = Vec::new();
+            for up in &all_unit_profiles {
+                let cmap = Self::extract_characteristics(up);
+                let pname = up
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(&name)
+                    .trim()
+                    .to_string();
+                let mw = cmap
+                    .get("W")
+                    .and_then(|s| s.trim().parse::<u32>().ok())
+                    .unwrap_or(wounds);
+                let msv = cmap
+                    .get("Sv")
+                    .and_then(|s| s.trim().trim_end_matches('+').parse::<u32>().ok())
+                    .unwrap_or(save);
+                let minv = cmap
+                    .get("InSv")
+                    .and_then(|s| s.trim().trim_end_matches('+').parse::<u32>().ok())
+                    .or(invuln);
+                if !distinct_models.iter().any(|m| {
+                    m.name.eq_ignore_ascii_case(&pname)
+                        || (m.wounds == mw && m.save == msv && m.invulnerable_save == minv)
+                }) {
+                    distinct_models.push(
+                        ModelProfile::new(pname, mw, msv, minv, feel_no_pain)
+                            .with_keywords(keywords.clone()),
+                    );
+                }
+            }
+            if distinct_models.len() > 1 && distinct_models.len() <= default_model_count {
+                let secondary_count = distinct_models.len() - 1;
+                let primary_count = default_model_count - secondary_count;
+                let mut iter = distinct_models.into_iter();
+                if let Some(first_model) = iter.next() {
+                    model_groups.push(crate::domain::unit::ModelGroup::new(
+                        primary_count,
+                        first_model,
+                    ));
+                }
+                for sec_model in iter {
+                    model_groups.push(crate::domain::unit::ModelGroup::new(1, sec_model));
+                }
+            }
+        }
+
+        if model_groups.is_empty() {
+            let model = ModelProfile::new(name.clone(), wounds, save, invuln, feel_no_pain)
+                .with_keywords(keywords.clone());
+            model_groups.push(crate::domain::unit::ModelGroup::new(
+                default_model_count,
+                model,
+            ));
+        }
+
+        let mut unit_profile =
+            UnitProfile::new(name.clone(), toughness, model_groups, keywords);
         unit_profile.movement = movement;
         unit_profile.leadership = leadership;
         unit_profile.objective_control = objective_control;
         unit_profile.defensive_abilities = defensive_rules;
+
+        let transport_capacity = Self::find_first_profile_by_type(entry, "Transport")
+            .and_then(|tp| {
+                let tmap = Self::extract_characteristics(tp);
+                tmap.get("Capacity").cloned()
+            })
+            .filter(|s| !s.trim().is_empty());
 
         Some(DatasheetUnit {
             id,
@@ -909,7 +969,7 @@ impl BsDataParser {
             wargear_costs: Vec::new(),
             leader_to,
             support_to: Vec::new(),
-            transport_capacity: None,
+            transport_capacity,
         })
     }
 
@@ -1115,6 +1175,25 @@ impl BsDataParser {
         map
     }
 
+    fn collect_profiles_by_type<'a>(
+        val: &'a serde_json::Value,
+        type_name: &str,
+        out: &mut Vec<&'a serde_json::Value>,
+    ) {
+        if let Some(obj) = val.as_object() {
+            if obj.get("typeName").and_then(|v| v.as_str()) == Some(type_name) {
+                out.push(val);
+            }
+            for v in obj.values() {
+                Self::collect_profiles_by_type(v, type_name, out);
+            }
+        } else if let Some(arr) = val.as_array() {
+            for item in arr {
+                Self::collect_profiles_by_type(item, type_name, out);
+            }
+        }
+    }
+
     fn find_first_profile_by_type<'a>(
         val: &'a serde_json::Value,
         type_name: &str,
@@ -1246,12 +1325,30 @@ impl BsDataParser {
             rules.push(DefensiveAbility::HalfDamage);
         }
 
-        if lower.contains("stealth") || lower.contains("subtract 1 from the hit roll") {
+        if lower.contains("stealth") && !lower.contains("subtract 1 from the hit roll") {
             rules.push(DefensiveAbility::Stealth);
+        } else if lower.contains("subtract 1 from the hit roll") {
+            if lower.contains("ranged attack") || lower.contains("stealth:") {
+                rules.push(DefensiveAbility::Stealth);
+            } else {
+                rules.push(DefensiveAbility::MinusHit(1));
+            }
         }
 
         if lower.contains("subtract 1 from the wound roll") {
             rules.push(DefensiveAbility::MinusOneToWound);
+        }
+
+        if lower.contains("cannot re-roll the wound roll")
+            || lower.contains("cannot re-roll wound rolls")
+        {
+            rules.push(DefensiveAbility::NoWoundReRolls);
+        }
+
+        if lower.contains("cannot re-roll the hit roll")
+            || lower.contains("cannot re-roll hit rolls")
+        {
+            rules.push(DefensiveAbility::NoHitReRolls);
         }
 
         let fnp_re = Regex::new(r"(?i)(?:feel no pain|fnp)\s*(\d)\+").unwrap();

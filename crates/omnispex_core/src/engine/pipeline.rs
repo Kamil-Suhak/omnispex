@@ -117,10 +117,10 @@ pub fn compute_exact_stage_probabilities(
         expected_attacks += (living_count / 5) as f64;
     }
     if weapon.is_ranged() {
-        if let Some(rf) = weapon.rapid_fire_bonus() {
+        if let Some(rf_expr) = weapon.rapid_fire_expr() {
             if let Some(dist) = context.distance_inches {
                 if dist <= weapon.range / 2 {
-                    expected_attacks += rf as f64;
+                    expected_attacks += rf_expr.expected_value().max(0.0);
                 }
             }
         }
@@ -188,7 +188,9 @@ pub fn compute_exact_stage_probabilities(
         )
     };
 
-    let sustained_val = weapon.sustained_hits_value().unwrap_or(0) as f64;
+    let sustained_val = weapon
+        .sustained_hits_expr()
+        .map_or(0.0, |expr| expr.expected_value().max(0.0));
     let p_non_crit_hit = (p_hit - p_crit_hit).max(0.0);
     let expected_hits_per_attack = p_hit + p_crit_hit * sustained_val;
     let expected_hits = expected_attacks * expected_hits_per_attack;
@@ -278,95 +280,125 @@ pub fn compute_exact_stage_probabilities(
     let expected_wounds =
         expected_attacks * (normal_wounds_per_attack + dev_wounds_per_attack);
 
-    // Save stage (evaluated against primary model group)
-    let primary_model = target
-        .model_groups
-        .first()
-        .map(|g| &g.model)
-        .cloned()
-        .unwrap_or_else(|| ModelProfile::new("Target", 1, 4, None, None));
-
+    // Save & Damage stage (weighted across target model groups for heterogeneous units)
     let has_cover = (context.target_has_benefit_of_cover
         || (weapon.has_indirect_fire() && !context.target_visible))
         && !weapon.has_ignores_cover();
 
-    let ap_reduction =
-        (if target.has_minus_one_ap() || primary_model.has_minus_one_ap() { 1 } else { 0 })
-            + (if context.armor_of_contempt { 1 } else { 0 });
-    let effective_ap = weapon.ap.saturating_sub(ap_reduction);
+    let is_within_half_range = weapon.is_ranged()
+        && context
+            .distance_inches
+            .map_or(false, |d| d <= weapon.range / 2);
 
-    let cover_bonus = if has_cover {
-        if effective_ap == 0 && primary_model.save <= 3 {
-            0
-        } else {
+    let melta_pmf = if is_within_half_range {
+        weapon
+            .melta_expr()
+            .map_or_else(|| vec![(0, 1.0)], |expr| expr.pmf())
+    } else {
+        vec![(0, 1.0)]
+    };
+
+    let fallback_group = [crate::domain::unit::ModelGroup::new(
+        1,
+        ModelProfile::new("Target", 1, 4, None, None),
+    )];
+    let groups_slice = if target.model_groups.is_empty() {
+        &fallback_group[..]
+    } else {
+        &target.model_groups[..]
+    };
+
+    let total_group_models: f64 = groups_slice
+        .iter()
+        .map(|g| g.count.max(1) as f64)
+        .sum::<f64>()
+        .max(1.0);
+
+    let mut p_unsaved = 0.0;
+    let mut expected_damage_per_unsaved = 0.0;
+
+    for group in groups_slice {
+        let weight = (group.count.max(1) as f64) / total_group_models;
+        let model = &group.model;
+
+        let ap_reduction = (if target.has_minus_one_ap() || model.has_minus_one_ap() {
             1
+        } else {
+            0
+        }) + (if context.armor_of_contempt { 1 } else { 0 });
+        let effective_ap = weapon.ap.saturating_sub(ap_reduction);
+
+        let cover_bonus = if has_cover {
+            if effective_ap == 0 && model.save <= 3 {
+                0
+            } else {
+                1
+            }
+        } else {
+            0
+        };
+
+        let effective_armor =
+            (model.save as i32 + effective_ap as i32 - cover_bonus as i32).max(2) as u32;
+        let best_invuln = match (model.invulnerable_save, context.grant_invuln_4) {
+            (Some(inv), true) => Some(inv.min(4)),
+            (Some(inv), false) => Some(inv),
+            (None, true) => Some(4),
+            (None, false) => None,
+        };
+        let chosen_save = match best_invuln {
+            Some(invuln) => effective_armor.min(invuln),
+            None => effective_armor,
+        };
+
+        let p_save_success = if chosen_save > 6 {
+            0.0
+        } else {
+            (7 - chosen_save.max(2)) as f64 / 6.0
+        };
+        p_unsaved += weight * (1.0 - p_save_success);
+
+        // 40K Rules Commentary (Modifiers & Melta):
+        // 1. Division (Half Damage, rounded up) applies BEFORE addition (Melta X)
+        // 2. Subtraction (-1 Damage, min 1) applies AFTER addition
+        // 3. Duplicate -1 Damage sources do not stack unless explicitly cumulative
+        let half_dmg = target.has_half_damage() || model.has_half_damage() || context.half_damage;
+        let dmg_red = target
+            .damage_reduction_value()
+            .max(model.damage_reduction_value())
+            .max(if context.minus_one_damage { 1 } else { 0 });
+
+        let best_fnp = match (model.feel_no_pain, context.grant_fnp_5) {
+            (Some(fnp), true) => Some(fnp.min(5)),
+            (Some(fnp), false) => Some(fnp),
+            (None, true) => Some(5),
+            (None, false) => None,
+        };
+        let fnp_pass_multiplier = match best_fnp {
+            Some(fnp) if (2..=6).contains(&fnp) => (fnp - 1) as f64 / 6.0,
+            _ => 1.0,
+        };
+
+        let mut group_expected_dmg = 0.0;
+        for (base_d, prob_d) in weapon.damage.pmf() {
+            let after_half = if half_dmg {
+                base_d.div_ceil(2)
+            } else {
+                base_d
+            };
+            for &(melta_d, prob_m) in &melta_pmf {
+                let mut d = after_half + melta_d;
+                if dmg_red > 0 {
+                    d = d.saturating_sub(dmg_red).max(1);
+                }
+                group_expected_dmg += (d as f64) * fnp_pass_multiplier * prob_d * prob_m;
+            }
         }
-    } else {
-        0
-    };
-
-    let effective_armor =
-        (primary_model.save as i32 + effective_ap as i32 - cover_bonus as i32).max(2) as u32;
-    let best_invuln = match (primary_model.invulnerable_save, context.grant_invuln_4) {
-        (Some(inv), true) => Some(inv.min(4)),
-        (Some(inv), false) => Some(inv),
-        (None, true) => Some(4),
-        (None, false) => None,
-    };
-    let chosen_save = match best_invuln {
-        Some(invuln) => effective_armor.min(invuln),
-        None => effective_armor,
-    };
-
-    let p_save_success = if chosen_save > 6 {
-        0.0
-    } else {
-        (7 - chosen_save.max(2)) as f64 / 6.0
-    };
-    let p_unsaved = 1.0 - p_save_success;
+        expected_damage_per_unsaved += weight * group_expected_dmg;
+    }
 
     let expected_unsaved_wounds =
         expected_attacks * (normal_wounds_per_attack * p_unsaved + dev_wounds_per_attack);
-
-    // Damage per unsaved wound (exact PMF over weapon.damage)
-    let melta_bonus = if weapon.is_ranged() {
-        weapon
-            .melta_bonus()
-            .and_then(|m| context.distance_inches.map(|d| if d <= weapon.range / 2 { m } else { 0 }))
-            .unwrap_or(0)
-    } else {
-        0
-    };
-
-    let half_dmg = target.has_half_damage() || primary_model.has_half_damage() || context.half_damage;
-    let dmg_red = target
-        .damage_reduction_value()
-        .max(primary_model.damage_reduction_value())
-        + (if context.minus_one_damage { 1 } else { 0 });
-
-    let best_fnp = match (primary_model.feel_no_pain, context.grant_fnp_5) {
-        (Some(fnp), true) => Some(fnp.min(5)),
-        (Some(fnp), false) => Some(fnp),
-        (None, true) => Some(5),
-        (None, false) => None,
-    };
-    let fnp_pass_multiplier = match best_fnp {
-        Some(fnp) if (2..=6).contains(&fnp) => (fnp - 1) as f64 / 6.0,
-        _ => 1.0,
-    };
-
-    let mut expected_damage_per_unsaved = 0.0;
-    for (base_d, prob) in weapon.damage.pmf() {
-        let mut d = base_d + melta_bonus;
-        if half_dmg {
-            d = ((d as f64) / 2.0).ceil() as u32;
-        }
-        if dmg_red > 0 {
-            d = d.saturating_sub(dmg_red).max(1);
-        }
-        expected_damage_per_unsaved += (d as f64) * fnp_pass_multiplier * prob;
-    }
-
     let expected_total_unclipped_damage = expected_unsaved_wounds * expected_damage_per_unsaved;
 
     StageProbabilities {
@@ -406,7 +438,16 @@ pub fn resolve_squad_volley(
             if UnitProfile::living_models_count(wounds) == 0 {
                 break;
             }
-            let sub = resolve_volley(&entry.weapon, target, context, wounds, rng);
+            // Per 40K Core Rules, all weapons in a unit declare targets simultaneously before any
+            // attacks are resolved, so Blast bonus attacks use initial_living at declaration time.
+            let sub = resolve_volley_with_blast_count(
+                &entry.weapon,
+                target,
+                context,
+                wounds,
+                initial_living,
+                rng,
+            );
             combined.attacks_generated += sub.attacks_generated;
             combined.hits_scored += sub.hits_scored;
             combined.critical_hits += sub.critical_hits;
@@ -434,6 +475,25 @@ pub fn resolve_volley(
     wounds: &mut [u32],
     rng: &mut impl Rng,
 ) -> VolleyOutcome {
+    let blast_living_count = UnitProfile::living_models_count(wounds);
+    resolve_volley_with_blast_count(
+        raw_weapon,
+        target,
+        context,
+        wounds,
+        blast_living_count,
+        rng,
+    )
+}
+
+pub fn resolve_volley_with_blast_count(
+    raw_weapon: &WeaponProfile,
+    target: &UnitProfile,
+    context: &CombatContext,
+    wounds: &mut [u32],
+    blast_living_count: usize,
+    rng: &mut impl Rng,
+) -> VolleyOutcome {
     let weapon = effective_weapon_with_context(raw_weapon, context);
     let mut outcome = VolleyOutcome::default();
 
@@ -454,15 +514,15 @@ pub fn resolve_volley(
 
     let mut attack_count = weapon.attacks.roll(rng);
 
-    if weapon.is_ranged() && weapon.has_blast() && living_count >= 5 {
-        attack_count += (living_count / 5) as u32;
+    if weapon.is_ranged() && weapon.has_blast() && blast_living_count >= 5 {
+        attack_count += (blast_living_count / 5) as u32;
     }
 
     if weapon.is_ranged() {
-        if let Some(rf) = weapon.rapid_fire_bonus() {
+        if let Some(rf_expr) = weapon.rapid_fire_expr() {
             if let Some(dist) = context.distance_inches {
                 if dist <= weapon.range / 2 {
-                    attack_count += rf;
+                    attack_count += rf_expr.roll(rng);
                 }
             }
         }
@@ -470,7 +530,8 @@ pub fn resolve_volley(
 
     outcome.attacks_generated = attack_count;
 
-    let mut pending_wounds: Vec<WoundKind> = Vec::new();
+    let mut pending_standard_wounds: Vec<WoundKind> = Vec::new();
+    let mut pending_devastating_wounds: Vec<WoundKind> = Vec::new();
     let mut pending_hits_sources: Vec<WoundSource> = Vec::new();
 
     let mut raw_hit_mod: i32 = context.hit_modifier;
@@ -532,13 +593,14 @@ pub fn resolve_volley(
                 outcome.critical_hits += 1;
 
                 if weapon.has_lethal_hits() {
-                    pending_wounds.push(WoundKind::Standard(WoundSource::LethalHits));
+                    pending_standard_wounds.push(WoundKind::Standard(WoundSource::LethalHits));
                     outcome.wounds_inflicted += 1;
                 } else {
                     pending_hits_sources.push(WoundSource::Standard);
                 }
 
-                if let Some(sustained) = weapon.sustained_hits_value() {
+                if let Some(sustained_expr) = weapon.sustained_hits_expr() {
+                    let sustained = sustained_expr.roll(rng);
                     for _ in 0..sustained {
                         pending_hits_sources.push(WoundSource::SustainedHits);
                     }
@@ -604,19 +666,29 @@ pub fn resolve_volley(
             if wound_success.is_crit {
                 outcome.critical_wounds += 1;
                 if weapon.has_devastating_wounds() {
-                    pending_wounds.push(WoundKind::Devastating(WoundSource::DevastatingWounds));
+                    let dev_source = if source == WoundSource::SustainedHits {
+                        WoundSource::SustainedHits
+                    } else {
+                        WoundSource::DevastatingWounds
+                    };
+                    pending_devastating_wounds.push(WoundKind::Devastating(dev_source));
                 } else {
-                    pending_wounds.push(WoundKind::Standard(source));
+                    pending_standard_wounds.push(WoundKind::Standard(source));
                 }
             } else {
-                pending_wounds.push(WoundKind::Standard(source));
+                pending_standard_wounds.push(WoundKind::Standard(source));
             }
         }
     }
 
     let expanded_models = target.expanded_models();
 
-    for wound_kind in pending_wounds {
+    // Per 40K Core Rules (Devastating Wounds / Mortal Wounds), all normal attacks (which allow
+    // saving throws) are resolved completely BEFORE Devastating Wounds are allocated.
+    for wound_kind in pending_standard_wounds
+        .into_iter()
+        .chain(pending_devastating_wounds)
+    {
         let alloc_idx = match find_allocated_model_index(wounds, &expanded_models) {
             Some(idx) => idx,
             None => break,
@@ -669,25 +741,28 @@ pub fn resolve_volley(
 
         outcome.saves_failed += 1;
 
+        // 40K Rules Commentary (Modifiers & Melta):
+        // 1. Division (Half Damage, rounded up) applies BEFORE addition (Melta X)
+        // 2. Subtraction (-1 Damage, min 1) applies AFTER addition
         let mut damage = weapon.damage.roll(rng);
+        if target.has_half_damage() || model.has_half_damage() || context.half_damage {
+            damage = damage.div_ceil(2);
+        }
+
         if weapon.is_ranged() {
-            if let Some(melta) = weapon.melta_bonus() {
+            if let Some(melta_expr) = weapon.melta_expr() {
                 if let Some(dist) = context.distance_inches {
                     if dist <= weapon.range / 2 {
-                        damage += melta;
+                        damage += melta_expr.roll(rng);
                     }
                 }
             }
         }
 
-        if target.has_half_damage() || model.has_half_damage() || context.half_damage {
-            damage = ((damage as f64) / 2.0).ceil() as u32;
-        }
-
         let dmg_reduction = target
             .damage_reduction_value()
             .max(model.damage_reduction_value())
-            + (if context.minus_one_damage { 1 } else { 0 });
+            .max(if context.minus_one_damage { 1 } else { 0 });
         if dmg_reduction > 0 {
             damage = damage.saturating_sub(dmg_reduction).max(1);
         }

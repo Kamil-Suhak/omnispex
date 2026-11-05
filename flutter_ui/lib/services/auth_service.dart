@@ -4,39 +4,54 @@ import 'package:http/http.dart' as http;
 import 'storage_adapter.dart';
 
 class DeviceCredentials {
-  final String userId;
-  final String secretKey;
+  final String accessKey;
   final String createdAtIso;
 
   const DeviceCredentials({
-    required this.userId,
-    required this.secretKey,
+    required this.accessKey,
     required this.createdAtIso,
   });
 
-  String get accountKey => '$userId:$secretKey';
+  /// Single key displayed in the UI for cross-platform copy/paste.
+  String get accountKey => accessKey;
+  String get secretKey => accessKey;
+  String get userId => accessKey.length >= 16
+      ? accessKey.substring(0, 16)
+      : accessKey;
 
   Map<String, dynamic> toJson() => {
-        'user_id': userId,
-        'secret_key': secretKey,
+        'access_key': accessKey,
         'created_at': createdAtIso,
       };
 
   factory DeviceCredentials.fromJson(Map<String, dynamic> json) {
+    final directKey = json['access_key']?.toString().trim() ?? '';
+    final legacySecret = json['secret_key']?.toString().trim() ?? '';
+    final resolvedKey = directKey.isNotEmpty ? directKey : legacySecret;
     return DeviceCredentials(
-      userId: json['user_id']?.toString() ?? '',
-      secretKey: json['secret_key']?.toString() ?? '',
-      createdAtIso: json['created_at']?.toString() ?? DateTime.now().toUtc().toIso8601String(),
+      accessKey: resolvedKey,
+      createdAtIso: json['created_at']?.toString() ??
+          DateTime.now().toUtc().toIso8601String(),
     );
   }
 
-  static DeviceCredentials? tryParseAccountKey(String key) {
-    final clean = key.trim();
-    final parts = clean.split(':');
-    if (parts.length == 2 && parts[0].isNotEmpty && parts[1].length >= 8) {
+  static DeviceCredentials? tryParseAccountKey(String rawInput) {
+    final clean = rawInput.trim();
+    if (clean.isEmpty) return null;
+    // Support both new single-key (`omnispex_<hex>`) and legacy `usr_...:sec_...` input
+    if (clean.contains(':')) {
+      final parts = clean.split(':');
+      if (parts.length == 2 && parts[1].trim().length >= 16) {
+        return DeviceCredentials(
+          accessKey: parts[1].trim(),
+          createdAtIso: DateTime.now().toUtc().toIso8601String(),
+        );
+      }
+      return null;
+    }
+    if (clean.length >= 16 && RegExp(r'^[A-Za-z0-9_\-]+$').hasMatch(clean)) {
       return DeviceCredentials(
-        userId: parts[0],
-        secretKey: parts[1],
+        accessKey: clean,
         createdAtIso: DateTime.now().toUtc().toIso8601String(),
       );
     }
@@ -45,7 +60,8 @@ class DeviceCredentials {
 }
 
 class AuthService {
-  static const String defaultEndpoint = 'https://omnispex-cloud.kamilsuhak.workers.dev';
+  static const String defaultEndpoint =
+      'https://omnispex-cloud.kamilsuhak.workers.dev';
   static DeviceCredentials? _cachedCredentials;
 
   static String _generateSecureHex(int bytesCount) {
@@ -67,7 +83,7 @@ class AuthService {
         final decoded = jsonDecode(raw);
         if (decoded is Map<String, dynamic>) {
           final creds = DeviceCredentials.fromJson(decoded);
-          if (creds.userId.isNotEmpty && creds.secretKey.length >= 8) {
+          if (creds.accessKey.length >= 16) {
             _cachedCredentials = creds;
             return creds;
           }
@@ -75,46 +91,39 @@ class AuthService {
       } catch (_) {}
     }
 
-    // Generate fresh credentials
-    final newUserId = 'usr_${_generateSecureHex(8)}';
-    final newSecret = 'sec_${_generateSecureHex(16)}';
+    // Generate a unique 256-bit cryptographic key on first app launch
+    final freshKey = 'omnispex_${_generateSecureHex(32)}';
     final creds = DeviceCredentials(
-      userId: newUserId,
-      secretKey: newSecret,
+      accessKey: freshKey,
       createdAtIso: DateTime.now().toUtc().toIso8601String(),
     );
 
-    // Save locally
     await writeCredentialsRaw(jsonEncode(creds.toJson()));
     _cachedCredentials = creds;
 
-    // Register with Cloudflare D1
     try {
-      await registerDeviceWithCloud(creds, endpoint: endpoint);
+      await verifyKeyWithCloud(creds, endpoint: endpoint);
     } catch (_) {}
 
     return creds;
   }
 
-  static Future<bool> registerDeviceWithCloud(
+  static Future<bool> verifyKeyWithCloud(
     DeviceCredentials credentials, {
     String endpoint = defaultEndpoint,
   }) async {
     try {
-      final uri = Uri.parse('$endpoint/api/auth/register');
-      final res = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id': credentials.userId,
-          'secret_key': credentials.secretKey,
-        }),
-      );
-      if (res.statusCode == 200) {
-        return true;
-      }
-    } catch (_) {}
-    return false;
+      final uri = Uri.parse('$endpoint/api/auth/verify');
+      final res = await http
+          .post(
+            uri,
+            headers: getAuthHeaders(credentials),
+          )
+          .timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<bool> importCredentials(
@@ -124,34 +133,18 @@ class AuthService {
     final parsed = DeviceCredentials.tryParseAccountKey(accountKey);
     if (parsed == null) return false;
 
-    // Verify against cloud
-    final verified = await registerDeviceWithCloud(parsed, endpoint: endpoint);
-    if (!verified) {
-      // Test GET /api/sync/:userId with Bearer token
-      try {
-        final testUri = Uri.parse('$endpoint/api/sync/${parsed.userId}');
-        final res = await http.get(
-          testUri,
-          headers: {'Authorization': 'Bearer ${parsed.secretKey}'},
-        );
-        if (res.statusCode != 200) {
-          return false;
-        }
-      } catch (_) {
-        return false;
-      }
-    }
-
     await writeCredentialsRaw(jsonEncode(parsed.toJson()));
     _cachedCredentials = parsed;
+
+    // Best-effort touch against cloud worker (still succeeds offline if key format is valid)
+    await verifyKeyWithCloud(parsed, endpoint: endpoint);
     return true;
   }
 
   static Map<String, String> getAuthHeaders(DeviceCredentials credentials) {
     return {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ${credentials.secretKey}',
+      'Authorization': 'Bearer ${credentials.accessKey}',
     };
   }
 }
-

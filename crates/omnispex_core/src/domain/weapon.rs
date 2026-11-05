@@ -102,11 +102,14 @@ pub enum WeaponAbility {
     Torrent,
     LethalHits,
     SustainedHits(u32),
+    SustainedHitsDice(ValueExpr),
     DevastatingWounds,
     TwinLinked,
     Blast,
     RapidFire(u32),
+    RapidFireDice(ValueExpr),
     Melta(u32),
+    MeltaDice(ValueExpr),
     IgnoresCover,
     Heavy,
     Lance,
@@ -129,11 +132,14 @@ impl WeaponAbility {
             WeaponAbility::Torrent => "Torrent".to_string(),
             WeaponAbility::LethalHits => "Lethal Hits".to_string(),
             WeaponAbility::SustainedHits(x) => format!("Sustained Hits {}", x),
+            WeaponAbility::SustainedHitsDice(expr) => format!("Sustained Hits {}", expr),
             WeaponAbility::DevastatingWounds => "Devastating Wounds".to_string(),
             WeaponAbility::TwinLinked => "Twin-Linked".to_string(),
             WeaponAbility::Blast => "Blast".to_string(),
             WeaponAbility::RapidFire(x) => format!("Rapid Fire {}", x),
+            WeaponAbility::RapidFireDice(expr) => format!("Rapid Fire {}", expr),
             WeaponAbility::Melta(x) => format!("Melta {}", x),
+            WeaponAbility::MeltaDice(expr) => format!("Melta {}", expr),
             WeaponAbility::IgnoresCover => "Ignores Cover".to_string(),
             WeaponAbility::Heavy => "Heavy".to_string(),
             WeaponAbility::Lance => "Lance".to_string(),
@@ -295,6 +301,15 @@ impl WeaponProfile {
     pub fn sustained_hits_value(&self) -> Option<u32> {
         self.abilities.iter().find_map(|a| match a {
             WeaponAbility::SustainedHits(x) => Some(*x),
+            WeaponAbility::SustainedHitsDice(expr) => Some(expr.expected_value().round() as u32),
+            _ => None,
+        })
+    }
+
+    pub fn sustained_hits_expr(&self) -> Option<ValueExpr> {
+        self.abilities.iter().find_map(|a| match a {
+            WeaponAbility::SustainedHits(x) => Some(ValueExpr::Flat(*x)),
+            WeaponAbility::SustainedHitsDice(expr) => Some(expr.clone()),
             _ => None,
         })
     }
@@ -320,6 +335,15 @@ impl WeaponProfile {
     pub fn rapid_fire_bonus(&self) -> Option<u32> {
         self.abilities.iter().find_map(|a| match a {
             WeaponAbility::RapidFire(x) => Some(*x),
+            WeaponAbility::RapidFireDice(expr) => Some(expr.expected_value().round() as u32),
+            _ => None,
+        })
+    }
+
+    pub fn rapid_fire_expr(&self) -> Option<ValueExpr> {
+        self.abilities.iter().find_map(|a| match a {
+            WeaponAbility::RapidFire(x) => Some(ValueExpr::Flat(*x)),
+            WeaponAbility::RapidFireDice(expr) => Some(expr.clone()),
             _ => None,
         })
     }
@@ -327,6 +351,15 @@ impl WeaponProfile {
     pub fn melta_bonus(&self) -> Option<u32> {
         self.abilities.iter().find_map(|a| match a {
             WeaponAbility::Melta(x) => Some(*x),
+            WeaponAbility::MeltaDice(expr) => Some(expr.expected_value().round() as u32),
+            _ => None,
+        })
+    }
+
+    pub fn melta_expr(&self) -> Option<ValueExpr> {
+        self.abilities.iter().find_map(|a| match a {
+            WeaponAbility::Melta(x) => Some(ValueExpr::Flat(*x)),
+            WeaponAbility::MeltaDice(expr) => Some(expr.clone()),
             _ => None,
         })
     }
@@ -414,8 +447,8 @@ pub fn parse_weapon_ability(s: &str) -> Option<WeaponAbility> {
         if let Ok(val) = val_str.parse::<u32>() {
             return Some(WeaponAbility::SustainedHits(val));
         }
-        if val_str == "D3" {
-            return Some(WeaponAbility::SustainedHits(2));
+        if let Ok(expr) = val_str.parse::<ValueExpr>() {
+            return Some(WeaponAbility::SustainedHitsDice(expr));
         }
     }
 
@@ -424,11 +457,8 @@ pub fn parse_weapon_ability(s: &str) -> Option<WeaponAbility> {
         if let Ok(val) = val_str.parse::<u32>() {
             return Some(WeaponAbility::RapidFire(val));
         }
-        if val_str == "D3" {
-            return Some(WeaponAbility::RapidFire(2));
-        }
-        if val_str == "D6" {
-            return Some(WeaponAbility::RapidFire(3));
+        if let Ok(expr) = val_str.parse::<ValueExpr>() {
+            return Some(WeaponAbility::RapidFireDice(expr));
         }
     }
 
@@ -437,8 +467,8 @@ pub fn parse_weapon_ability(s: &str) -> Option<WeaponAbility> {
         if let Ok(val) = val_str.parse::<u32>() {
             return Some(WeaponAbility::Melta(val));
         }
-        if val_str == "D3" {
-            return Some(WeaponAbility::Melta(2));
+        if let Ok(expr) = val_str.parse::<ValueExpr>() {
+            return Some(WeaponAbility::MeltaDice(expr));
         }
     }
 
@@ -454,5 +484,5 @@ pub fn parse_weapon_ability(s: &str) -> Option<WeaponAbility> {
         }
     }
 
-    None
+    Some(WeaponAbility::Custom(clean.to_string()))
 }

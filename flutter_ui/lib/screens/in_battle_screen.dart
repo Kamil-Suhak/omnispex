@@ -71,6 +71,149 @@ final defensiveGrantFnp5Provider = StateProvider<bool>((ref) => false);
 final defensiveGrantMinusDamage1Provider = StateProvider<bool>((ref) => false);
 final defensiveGrantHalfDamageProvider = StateProvider<bool>((ref) => false);
 
+final inBattleComputedReportProvider = Provider<
+    ({
+      SimulationUiReport report,
+      List<SimulationUiReport> currentProfileReports,
+    })>((ref) {
+  final attackMode = ref.watch(attackModeProvider);
+  final weaponIdx = ref.watch(selectedWeaponIndexProvider);
+  final profileIdx = ref.watch(selectedProfileIndexProvider);
+  final isCustomWeapon = ref.watch(isCustomWeaponModeProvider);
+  final customWeapon = ref.watch(customWeaponProfileProvider);
+  final weaponCount = ref.watch(weaponCountProvider);
+  final squadIdx = ref.watch(selectedSquadPresetIndexProvider);
+
+  final targetIdx = ref.watch(selectedTargetIndexProvider);
+  final isStationary = ref.watch(isStationaryProvider);
+  final hasCharged = ref.watch(hasChargedProvider);
+  final targetInCover = ref.watch(targetInCoverProvider);
+  final distance = ref.watch(combatDistanceProvider);
+
+  final whatIfAbilities = ref.watch(whatIfAbilitiesProvider);
+  final hitReroll = ref.watch(hitRerollProvider);
+  final woundReroll = ref.watch(woundRerollProvider);
+  final bonusStrength = ref.watch(bonusStrengthProvider);
+  final bonusAp = ref.watch(bonusApProvider);
+
+  final defArmorOfContempt = ref.watch(defensiveArmorOfContemptProvider);
+  final defMinusWound = ref.watch(defensiveMinusWoundProvider);
+  final defGrantInvuln4 = ref.watch(defensiveGrantInvuln4Provider);
+  final defGrantFnp5 = ref.watch(defensiveGrantFnp5Provider);
+  final defGrantMinusDmg1 = ref.watch(defensiveGrantMinusDamage1Provider);
+  final defGrantHalfDmg = ref.watch(defensiveGrantHalfDamageProvider);
+
+  final isCustomTarget = ref.watch(isCustomTargetModeProvider);
+  final customTarget = ref.watch(customTargetProfileProvider);
+  final iterations = ref.watch(simulationIterationsProvider);
+
+  final weapons = SimulationService.defaultWeapons;
+  final squadPresets = SimulationService.defaultSquadPresets;
+  final targets = SimulationService.defaultTargets;
+
+  final Map<String, List<WeaponUiProfile>> groupedWeapons = {};
+  for (final w in weapons) {
+    groupedWeapons.putIfAbsent(w.name, () => []).add(w);
+  }
+  final weaponNames = groupedWeapons.keys.toList();
+
+  final List<WeaponUiProfile> currentProfiles;
+  if (isCustomWeapon) {
+    currentProfiles = [customWeapon];
+  } else {
+    final wName = weaponNames.isNotEmpty
+        ? weaponNames[weaponIdx % weaponNames.length]
+        : '';
+    currentProfiles = groupedWeapons[wName] ?? [weapons.first];
+  }
+
+  final activeWeapon = isCustomWeapon
+      ? customWeapon
+      : currentProfiles[profileIdx % currentProfiles.length];
+  final activeTarget =
+      isCustomTarget ? customTarget : targets[targetIdx % targets.length];
+  final activeSquad = squadPresets[squadIdx % squadPresets.length];
+
+  final SimulationUiReport report;
+  if (attackMode == AttackMode.squadBundle) {
+    report = SimulationService.runSquadSimulation(
+      loadout: activeSquad.loadout,
+      target: activeTarget,
+      isStationary: isStationary,
+      hasCharged: hasCharged,
+      targetInCover: targetInCover,
+      distance: distance,
+      extraAbilities: whatIfAbilities,
+      hitReroll: hitReroll,
+      woundReroll: woundReroll,
+      bonusStrength: bonusStrength,
+      bonusAp: bonusAp,
+      defensiveArmorOfContempt: defArmorOfContempt,
+      defensiveMinusWound: defMinusWound,
+      defensiveGrantInvuln4: defGrantInvuln4,
+      defensiveGrantFnp5: defGrantFnp5,
+      defensiveGrantMinusDamage1: defGrantMinusDmg1,
+      defensiveGrantHalfDamage: defGrantHalfDmg,
+      iterations: iterations,
+    );
+  } else {
+    report = SimulationService.runSimulation(
+      weapon: activeWeapon,
+      target: activeTarget,
+      isStationary: isStationary,
+      hasCharged: hasCharged,
+      targetInCover: targetInCover,
+      weaponCount: weaponCount,
+      distance: distance,
+      extraAbilities: whatIfAbilities,
+      hitReroll: hitReroll,
+      woundReroll: woundReroll,
+      bonusStrength: bonusStrength,
+      bonusAp: bonusAp,
+      defensiveArmorOfContempt: defArmorOfContempt,
+      defensiveMinusWound: defMinusWound,
+      defensiveGrantInvuln4: defGrantInvuln4,
+      defensiveGrantFnp5: defGrantFnp5,
+      defensiveGrantMinusDamage1: defGrantMinusDmg1,
+      defensiveGrantHalfDamage: defGrantHalfDmg,
+      iterations: iterations,
+    );
+  }
+
+  final List<SimulationUiReport> currentProfileReports = [];
+  if (attackMode == AttackMode.singleWeapon &&
+      !isCustomWeapon &&
+      currentProfiles.length > 1) {
+    for (final p in currentProfiles) {
+      currentProfileReports.add(
+        SimulationService.runSimulation(
+          weapon: p,
+          target: activeTarget,
+          isStationary: isStationary,
+          hasCharged: hasCharged,
+          targetInCover: targetInCover,
+          weaponCount: weaponCount,
+          distance: distance,
+          extraAbilities: whatIfAbilities,
+          hitReroll: hitReroll,
+          woundReroll: woundReroll,
+          bonusStrength: bonusStrength,
+          bonusAp: bonusAp,
+          defensiveArmorOfContempt: defArmorOfContempt,
+          defensiveMinusWound: defMinusWound,
+          defensiveGrantInvuln4: defGrantInvuln4,
+          defensiveGrantFnp5: defGrantFnp5,
+          defensiveGrantMinusDamage1: defGrantMinusDmg1,
+          defensiveGrantHalfDamage: defGrantHalfDmg,
+          iterations: iterations,
+        ),
+      );
+    }
+  }
+
+  return (report: report, currentProfileReports: currentProfileReports);
+});
+
 class InBattleScreen extends ConsumerWidget {
   const InBattleScreen({super.key});
 
@@ -136,79 +279,9 @@ class InBattleScreen extends ConsumerWidget {
         isCustomTarget ? customTarget : targets[targetIdx % targets.length];
     final activeSquad = squadPresets[squadIdx % squadPresets.length];
 
-    final SimulationUiReport report;
-    if (attackMode == AttackMode.squadBundle) {
-      report = SimulationService.runSquadSimulation(
-        loadout: activeSquad.loadout,
-        target: activeTarget,
-        isStationary: isStationary,
-        hasCharged: hasCharged,
-        targetInCover: targetInCover,
-        distance: distance,
-        extraAbilities: whatIfAbilities,
-        hitReroll: hitReroll,
-        woundReroll: woundReroll,
-        bonusStrength: bonusStrength,
-        bonusAp: bonusAp,
-        defensiveArmorOfContempt: defArmorOfContempt,
-        defensiveMinusWound: defMinusWound,
-        defensiveGrantInvuln4: defGrantInvuln4,
-        defensiveGrantFnp5: defGrantFnp5,
-        defensiveGrantMinusDamage1: defGrantMinusDmg1,
-        defensiveGrantHalfDamage: defGrantHalfDmg,
-      );
-    } else {
-      report = SimulationService.runSimulation(
-        weapon: activeWeapon,
-        target: activeTarget,
-        isStationary: isStationary,
-        hasCharged: hasCharged,
-        targetInCover: targetInCover,
-        weaponCount: weaponCount,
-        distance: distance,
-        extraAbilities: whatIfAbilities,
-        hitReroll: hitReroll,
-        woundReroll: woundReroll,
-        bonusStrength: bonusStrength,
-        bonusAp: bonusAp,
-        defensiveArmorOfContempt: defArmorOfContempt,
-        defensiveMinusWound: defMinusWound,
-        defensiveGrantInvuln4: defGrantInvuln4,
-        defensiveGrantFnp5: defGrantFnp5,
-        defensiveGrantMinusDamage1: defGrantMinusDmg1,
-        defensiveGrantHalfDamage: defGrantHalfDmg,
-      );
-    }
-
-    final List<SimulationUiReport> currentProfileReports = [];
-    if (attackMode == AttackMode.singleWeapon &&
-        !isCustomWeapon &&
-        currentProfiles.length > 1) {
-      for (final p in currentProfiles) {
-        currentProfileReports.add(
-          SimulationService.runSimulation(
-            weapon: p,
-            target: activeTarget,
-            isStationary: isStationary,
-            hasCharged: hasCharged,
-            targetInCover: targetInCover,
-            weaponCount: weaponCount,
-            distance: distance,
-            extraAbilities: whatIfAbilities,
-            hitReroll: hitReroll,
-            woundReroll: woundReroll,
-            bonusStrength: bonusStrength,
-            bonusAp: bonusAp,
-            defensiveArmorOfContempt: defArmorOfContempt,
-            defensiveMinusWound: defMinusWound,
-            defensiveGrantInvuln4: defGrantInvuln4,
-            defensiveGrantFnp5: defGrantFnp5,
-            defensiveGrantMinusDamage1: defGrantMinusDmg1,
-            defensiveGrantHalfDamage: defGrantHalfDmg,
-          ),
-        );
-      }
-    }
+    final computed = ref.watch(inBattleComputedReportProvider);
+    final report = computed.report;
+    final currentProfileReports = computed.currentProfileReports;
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 900;

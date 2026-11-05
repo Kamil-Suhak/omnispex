@@ -25,3 +25,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/data/wh40k_11e_bundle.json
+    - assets/data/kill_team_bundle.json

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../features/kill_team/models/kill_team_models.dart';
 import '../models/bsdata_models.dart';
 import '../models/omnispex_models.dart';
 import '../models/simulation_models.dart';
@@ -6,6 +7,84 @@ import '../services/personal_data_service.dart';
 import '../services/simulation_service.dart';
 
 final currentNavIndexProvider = StateProvider<int>((ref) => 0);
+
+/// Active game system (`GameSystemUi.warhammer40k` or `GameSystemUi.killTeam`).
+/// Toggled at any time via the persistent top-bar switch button.
+final activeGameSystemProvider =
+    StateProvider<GameSystemUi>((ref) => GameSystemUi.warhammer40k);
+
+final killTeamRostersProvider = StateProvider<List<KillTeamRosterUi>>((ref) {
+  final now = DateTime.now().toUtc().toIso8601String();
+  return [
+    KillTeamRosterUi(
+      id: 'kt-starter-aod',
+      name: 'Angels of Death Strike Team',
+      factionId: 'kt-angels-of-death',
+      factionName: 'Angels of Death',
+      selectedPrimaryArchetype: 'Seek & Destroy',
+      operatives: const [
+        SelectedOperativeEntryUi(
+          entryId: 'op-1',
+          operativeId: 'aod-captain',
+          operativeName: 'Space Marine Captain',
+          role: 'Leader',
+          isLeader: true,
+          selectedWeapons: ['Master-crafted Heavy Bolt Pistol', 'Power Fist'],
+        ),
+        SelectedOperativeEntryUi(
+          entryId: 'op-2',
+          operativeId: 'aod-eliminator',
+          operativeName: 'Eliminator Sniper',
+          role: 'Specialist',
+          selectedWeapons: ['Bolt Sniper Rifle (Executioner)', 'Fists'],
+        ),
+        SelectedOperativeEntryUi(
+          entryId: 'op-3',
+          operativeId: 'aod-heavy-gunner',
+          operativeName: 'Heavy Intercessor Gunner',
+          role: 'Specialist',
+          selectedWeapons: ['Heavy Bolter (Focused)', 'Fists'],
+        ),
+        SelectedOperativeEntryUi(
+          entryId: 'op-4',
+          operativeId: 'aod-grenadier',
+          operativeName: 'Assault Intercessor Grenadier',
+          role: 'Specialist',
+          selectedWeapons: ['Heavy Bolt Pistol', 'Astartes Chainsword'],
+        ),
+        SelectedOperativeEntryUi(
+          entryId: 'op-5',
+          operativeId: 'aod-intercessor-warrior',
+          operativeName: 'Intercessor Warrior',
+          role: 'Warrior',
+          selectedWeapons: ['Auto Bolt Rifle', 'Fists'],
+        ),
+        SelectedOperativeEntryUi(
+          entryId: 'op-6',
+          operativeId: 'aod-assault-warrior',
+          operativeName: 'Assault Intercessor Warrior',
+          role: 'Warrior',
+          selectedWeapons: ['Heavy Bolt Pistol', 'Astartes Chainsword'],
+        ),
+      ],
+      equipment: const [
+        SelectedEquipmentEntryUi(
+          equipmentId: 'aod-eq-purity-seals',
+          name: 'Purity Seals',
+          isUniversal: false,
+        ),
+        SelectedEquipmentEntryUi(
+          equipmentId: 'univ-eq-krak-grenades',
+          name: 'Krak Grenades (x2)',
+          isUniversal: true,
+        ),
+      ],
+      notes: 'Balanced 6-operative Astartes strike force for Killzone Volkus.',
+      createdAtIso: now,
+      updatedAtIso: now,
+    ),
+  ];
+});
 
 final customArsenalProvider = StateProvider<List<WeaponUiProfile>>(
     (ref) => List.from(SimulationService.defaultWeapons));
@@ -262,12 +341,23 @@ class PersonalStoreNotifier extends StateNotifier<PersonalDataStoreUi> {
     }
     state = state.copyWith(armyLists: lists);
     _persist();
+    PersonalDataService.upsertRemoteRosterRow(
+      id: list.id,
+      gameSystem: 'wh40k',
+      name: list.name,
+      factionId: list.factionId,
+      factionName: list.factionName,
+      pointsLimit: list.pointsLimit,
+      totalPoints: list.totalPoints,
+      payload: list.toRustJson(),
+    );
   }
 
   void deleteArmyList(String listId) {
     final lists = state.armyLists.where((l) => l.id != listId).toList();
     state = state.copyWith(armyLists: lists);
     _persist();
+    PersonalDataService.deleteRemoteRow('rosters', listId);
   }
 
   ArmyListUi duplicateArmyList(ArmyListUi source) {
@@ -341,6 +431,7 @@ class PersonalStoreNotifier extends StateNotifier<PersonalDataStoreUi> {
     );
     state = state.copyWith(wishlistItems: res.items);
     _persist();
+    PersonalDataService.upsertRemoteWishlistRow(item);
   }
 
   void deleteWishlistItem(String itemId) {
@@ -348,6 +439,7 @@ class PersonalStoreNotifier extends StateNotifier<PersonalDataStoreUi> {
         state.wishlistItems.where((i) => i.id != itemId).toList();
     state = state.copyWith(wishlistItems: updated);
     _persist();
+    PersonalDataService.deleteRemoteRow('wishlists', itemId);
   }
 
   void upsertMatch(MatchRecordUi match) {
@@ -360,12 +452,14 @@ class PersonalStoreNotifier extends StateNotifier<PersonalDataStoreUi> {
     }
     state = state.copyWith(matches: list);
     _persist();
+    PersonalDataService.upsertRemoteMatchRow(match);
   }
 
   void deleteMatch(String matchId) {
     final list = state.matches.where((m) => m.id != matchId).toList();
     state = state.copyWith(matches: list);
     _persist();
+    PersonalDataService.deleteRemoteRow('matches', matchId);
   }
 
   void saveCalculationConfig(SavedCalculationConfigUi config) {

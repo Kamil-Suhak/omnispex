@@ -17,24 +17,78 @@ class OmnispexRustBridge {
 
   static bool get isReady => isPlatformRustBridgeReady;
 
-  static Map<String, dynamic> _call(String op, Object? payload) {
+  /// Low-level JSON RPC dispatcher used by both game systems (`wh40k` and `kill_team`).
+  static dynamic callRpc(String op, Object? payload) {
     final payloadStr = payload == null
-        ? ''
+        ? '{}'
         : (payload is String ? payload : jsonEncode(payload));
     final raw = invokePlatformRustRpc(op, payloadStr);
     final decoded = jsonDecode(raw);
     if (decoded is Map<String, dynamic>) {
       if (decoded['ok'] == true) {
-        final data = decoded['data'];
-        if (data is Map<String, dynamic>) {
-          return data;
-        }
-        return {'value': data};
+        return decoded['data'];
       }
       throw StateError(
           decoded['error']?.toString() ?? 'Unknown Rust bridge error ($op)');
     }
     throw StateError('Malformed Rust bridge response for $op');
+  }
+
+  static Map<String, dynamic> _call(String op, Object? payload) {
+    final data = callRpc(op, payload);
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+    return {'value': data};
+  }
+
+  static Map<String, dynamic> engineStatus() {
+    return _call('engine_status', {});
+  }
+
+  static Map<String, dynamic> wh40kLoadCatalogue(String bundleJson) {
+    return _call('wh40k_load_catalogue', bundleJson);
+  }
+
+  static List<Map<String, dynamic>> wh40kGetFactionsSummary() {
+    final res = callRpc('wh40k_get_factions_summary', {});
+    if (res is List) {
+      return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return const [];
+  }
+
+  static BsDataFaction wh40kGetFactionDetail(String idOrName) {
+    final res = _call('wh40k_get_faction_detail', {'id_or_name': idOrName});
+    return BsDataFaction.fromRustJson(res);
+  }
+
+  static BsDataUnit wh40kGetUnitDetail(String idOrName, {String? faction}) {
+    final res = _call('wh40k_get_unit_detail', {
+      'id_or_name': idOrName,
+      'faction': faction,
+    });
+    return BsDataUnit.fromRustJson(res);
+  }
+
+  static List<BsDataUnit> wh40kSearchUnitsFull({
+    String query = '',
+    String? faction,
+    String? category,
+    bool includeLegends = false,
+  }) {
+    final res = callRpc('wh40k_search_units_full', {
+      'query': query,
+      'faction': faction,
+      'category': category,
+      'include_legends': includeLegends,
+    });
+    if (res is List) {
+      return res
+          .map((e) => BsDataUnit.fromRustJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+    return const [];
   }
 
   static Map<String, dynamic> buildCombatContextJson({

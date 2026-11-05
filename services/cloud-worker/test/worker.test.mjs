@@ -1,14 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import worker from "../src/index.ts";
+import worker, { sha256Hex } from "../src/index.ts";
 
-// Mock D1 database implementation with users table
 class MockD1Database {
   constructor() {
-    this.usersStore = new Map();
-    this.syncStore = new Map();
-    this.rosterStore = new Map();
-    this.wishlistStore = new Map();
+    this.apiKeys = new Map();
+    this.armyRosters = new Map();
+    this.wishlists = new Map();
+    this.matchHistory = new Map();
   }
 
   prepare(query) {
@@ -21,238 +20,342 @@ class MockD1Database {
         return stmt;
       },
       async first() {
-        if (query.includes("SELECT 1 as alive")) {
-          return { alive: 1 };
-        }
-        if (query.includes("SELECT count(*) as count FROM users")) {
-          return { count: db.usersStore.size };
-        }
-        if (query.includes("SELECT user_id, secret_hash FROM users WHERE user_id = ?")) {
-          const userId = bound[0];
-          return db.usersStore.get(userId) || null;
-        }
-        if (query.includes("FROM user_sync WHERE user_id = ?")) {
-          const userId = bound[0];
-          const item = db.syncStore.get(userId);
-          return item ? { data: item.data, updated_at: item.updated_at } : null;
+        if (query.includes("SELECT key_hash FROM api_keys WHERE key_hash = ?1")) {
+          const kh = bound[0];
+          return db.apiKeys.get(kh) || null;
         }
         return null;
       },
       async all() {
-        if (query.includes("FROM user_rosters WHERE user_id = ?")) {
-          const userId = bound[0];
-          const results = Array.from(db.rosterStore.values()).filter(
-            (r) => r.user_id === userId
+        if (query.includes("SELECT COUNT(*) AS cnt FROM army_rosters")) {
+          const kh = bound[0];
+          const cnt = Array.from(db.armyRosters.values()).filter((r) => r.key_hash === kh).length;
+          return { results: [{ cnt }] };
+        }
+        if (query.includes("SELECT COUNT(*) AS cnt FROM wishlists")) {
+          const kh = bound[0];
+          const cnt = Array.from(db.wishlists.values()).filter((w) => w.key_hash === kh).length;
+          return { results: [{ cnt }] };
+        }
+        if (query.includes("SELECT COUNT(*) AS cnt FROM match_history")) {
+          const kh = bound[0];
+          const cnt = Array.from(db.matchHistory.values()).filter((m) => m.key_hash === kh).length;
+          return { results: [{ cnt }] };
+        }
+        if (query.includes("FROM army_rosters WHERE key_hash = ?1")) {
+          const kh = bound[0];
+          const gs = bound[1];
+          const results = Array.from(db.armyRosters.values()).filter(
+            (r) => r.key_hash === kh && (!gs || r.game_system === gs),
           );
           return { results };
         }
-        if (query.includes("FROM user_wishlists WHERE user_id = ?")) {
-          const userId = bound[0];
-          const results = Array.from(db.wishlistStore.values()).filter(
-            (w) => w.user_id === userId
+        if (query.includes("FROM wishlists WHERE key_hash = ?1")) {
+          const kh = bound[0];
+          const gs = bound[1];
+          const results = Array.from(db.wishlists.values()).filter(
+            (w) => w.key_hash === kh && (!gs || w.game_system === gs),
+          );
+          return { results };
+        }
+        if (query.includes("FROM match_history WHERE key_hash = ?1")) {
+          const kh = bound[0];
+          const gs = bound[1];
+          const results = Array.from(db.matchHistory.values()).filter(
+            (m) => m.key_hash === kh && (!gs || m.game_system === gs),
           );
           return { results };
         }
         return { results: [] };
       },
       async run() {
-        if (query.includes("INSERT INTO users")) {
-          const [userId, secretHash] = bound;
-          db.usersStore.set(userId, { user_id: userId, secret_hash: secretHash });
-          return { success: true };
-        }
-        if (query.includes("UPDATE users SET last_active_at")) {
-          return { success: true };
-        }
-        if (query.includes("INSERT INTO user_sync")) {
-          const [userId, data] = bound;
-          db.syncStore.set(userId, { data, updated_at: new Date().toISOString() });
-          return { success: true };
-        }
-        if (query.includes("INSERT INTO user_rosters")) {
-          const [userId, rosterId, name, faction, points, roster_json] = bound;
-          db.rosterStore.set(`${userId}:${rosterId}`, {
-            user_id: userId,
-            roster_id: rosterId,
-            name,
-            faction,
-            points,
-            roster_json,
-            updated_at: new Date().toISOString(),
+        if (query.includes("INSERT INTO api_keys")) {
+          const [keyHash, nowIso] = bound;
+          const existing = db.apiKeys.get(keyHash);
+          db.apiKeys.set(keyHash, {
+            key_hash: keyHash,
+            created_at: existing ? existing.created_at : nowIso,
+            last_active_at: nowIso,
           });
           return { success: true };
         }
-        if (query.includes("DELETE FROM user_rosters")) {
-          const [userId, rosterId] = bound;
-          db.rosterStore.delete(`${userId}:${rosterId}`);
+        if (query.includes("INSERT INTO army_rosters")) {
+          const [keyHash, id, gameSystem, factionId, name, payloadJson, updatedAt] = bound;
+          const k = `${keyHash}:${id}`;
+          const existing = db.armyRosters.get(k);
+          if (!existing || updatedAt >= existing.updated_at) {
+            db.armyRosters.set(k, {
+              key_hash: keyHash,
+              id,
+              game_system: gameSystem,
+              faction_id: factionId,
+              name,
+              payload_json: payloadJson,
+              updated_at: updatedAt,
+            });
+          }
           return { success: true };
         }
-        if (query.includes("INSERT INTO user_wishlists")) {
-          const [userId, factionId, wishlist_json] = bound;
-          db.wishlistStore.set(`${userId}:${factionId}`, {
-            user_id: userId,
-            faction_id: factionId,
-            wishlist_json,
-            updated_at: new Date().toISOString(),
-          });
+        if (query.includes("DELETE FROM army_rosters")) {
+          const [keyHash, id] = bound;
+          db.armyRosters.delete(`${keyHash}:${id}`);
+          return { success: true };
+        }
+        if (query.includes("INSERT INTO wishlists")) {
+          const [keyHash, id, gameSystem, factionId, unitId, payloadJson, updatedAt] = bound;
+          const k = `${keyHash}:${id}`;
+          const existing = db.wishlists.get(k);
+          if (!existing || updatedAt >= existing.updated_at) {
+            db.wishlists.set(k, {
+              key_hash: keyHash,
+              id,
+              game_system: gameSystem,
+              faction_id: factionId,
+              unit_id: unitId,
+              payload_json: payloadJson,
+              updated_at: updatedAt,
+            });
+          }
+          return { success: true };
+        }
+        if (query.includes("DELETE FROM wishlists")) {
+          const [keyHash, id] = bound;
+          db.wishlists.delete(`${keyHash}:${id}`);
+          return { success: true };
+        }
+        if (query.includes("INSERT INTO match_history")) {
+          const [keyHash, id, gameSystem, payloadJson, updatedAt] = bound;
+          const k = `${keyHash}:${id}`;
+          const existing = db.matchHistory.get(k);
+          if (!existing || updatedAt >= existing.updated_at) {
+            db.matchHistory.set(k, {
+              key_hash: keyHash,
+              id,
+              game_system: gameSystem,
+              payload_json: payloadJson,
+              updated_at: updatedAt,
+            });
+          }
+          return { success: true };
+        }
+        if (query.includes("DELETE FROM match_history")) {
+          const [keyHash, id] = bound;
+          db.matchHistory.delete(`${keyHash}:${id}`);
           return { success: true };
         }
         return { success: true };
       },
     };
-
     return stmt;
+  }
+
+  async batch(statements) {
+    const out = [];
+    for (const s of statements) {
+      await s.run();
+      const res = await s.all();
+      out.push(res);
+    }
+    return out;
   }
 }
 
-describe("Omnispex Cloudflare Worker Authenticated API", () => {
+describe("Omnispex Multi-User Key-Authenticated Cloud Worker", () => {
   const env = {
     DB: new MockD1Database(),
   };
 
-  const validSecret = "sec_test_secret_12345678";
-  const authHeaders = {
+  const userKeyA = "omnispex_a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+  const userKeyB = "omnispex_9999999999999999999999999999999999999999999999999999999999999999";
+
+  const headersA = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${validSecret}`,
+    Authorization: `Bearer ${userKeyA}`,
+  };
+  const headersB = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${userKeyB}`,
   };
 
   it("handles CORS OPTIONS preflight", async () => {
-    const req = new Request("http://localhost/api/health", { method: "OPTIONS" });
+    const req = new Request("http://localhost/health", { method: "OPTIONS" });
     const res = await worker.fetch(req, env);
     assert.equal(res.status, 204);
     assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
   });
 
-  it("GET /api/health returns database status ok without auth", async () => {
-    const req = new Request("http://localhost/api/health", { method: "GET" });
+  it("GET /health returns status ok and normalized table list without auth", async () => {
+    const req = new Request("http://localhost/health", { method: "GET" });
     const res = await worker.fetch(req, env);
     assert.equal(res.status, 200);
     const data = await res.json();
     assert.equal(data.status, "ok");
-    assert.equal(data.service, "omnispex-cloud");
-    assert.equal(data.database, "connected");
+    assert.equal(data.auth, "key_sha256");
+    assert.deepEqual(data.tables, ["army_rosters", "wishlists", "match_history"]);
   });
 
-  it("rejects sync request without Authorization header", async () => {
-    const req = new Request("http://localhost/api/sync/user_unauth", { method: "GET" });
+  it("rejects requests without valid 32+ char Bearer key", async () => {
+    const req1 = new Request("http://localhost/api/rosters", { method: "GET" });
+    const res1 = await worker.fetch(req1, env);
+    assert.equal(res1.status, 401);
+
+    const req2 = new Request("http://localhost/api/rosters", {
+      method: "GET",
+      headers: { Authorization: "Bearer too_short" },
+    });
+    const res2 = await worker.fetch(req2, env);
+    assert.equal(res2.status, 401);
+  });
+
+  it("POST /api/auth/verify registers a new key using SHA-256 hash and never stores raw key", async () => {
+    const req = new Request("http://localhost/api/auth/verify", {
+      method: "POST",
+      headers: headersA,
+    });
     const res = await worker.fetch(req, env);
-    assert.equal(res.status, 401);
+    assert.equal(res.status, 200);
     const data = await res.json();
-    assert.equal(data.ok, false);
-  });
+    assert.equal(data.ok, true);
+    assert.equal(data.is_new_key, true);
+    assert.equal(data.key_hash, await sha256Hex(userKeyA));
+    assert.equal(env.DB.apiKeys.has(userKeyA), false, "Raw key must never be stored in D1");
+    assert.equal(env.DB.apiKeys.has(data.key_hash), true, "SHA-256 key_hash must be stored in D1");
 
-  it("auto-registers user on first valid call and stores data", async () => {
-    const userId = "inquisitor_kamil";
-    const payload = {
-      schema_version: 1,
-      rosters: [{ id: "roster_1", name: "Speed Freeks", faction: "Orks" }],
-      wishlists: [{ faction_id: "orks", entries: [{ unit_id: "ghaz" }] }],
-    };
-
-    const postReq = new Request(`http://localhost/api/sync/${userId}`, {
+    // Second verify with same key from another device returns is_new_key: false
+    const reqSecond = new Request("http://localhost/api/auth/verify", {
       method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify(payload),
+      headers: headersA,
     });
-    const postRes = await worker.fetch(postReq, env);
-    assert.equal(postRes.status, 200);
-    const postData = await postRes.json();
-    assert.equal(postData.ok, true);
-
-    const getReq = new Request(`http://localhost/api/sync/${userId}`, {
-      method: "GET",
-      headers: authHeaders,
-    });
-    const getRes = await worker.fetch(getReq, env);
-    assert.equal(getRes.status, 200);
-    const getData = await getRes.json();
-    assert.equal(getData.ok, true);
-    assert.equal(getData.exists, true);
-    assert.equal(getData.data.rosters[0].name, "Speed Freeks");
+    const resSecond = await worker.fetch(reqSecond, env);
+    const dataSecond = await resSecond.json();
+    assert.equal(dataSecond.is_new_key, false);
   });
 
-  it("rejects request if wrong secret is supplied for registered user", async () => {
-    const userId = "inquisitor_kamil";
-    const wrongReq = new Request(`http://localhost/api/sync/${userId}`, {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer sec_wrong_secret_999999",
-      },
+  it("isolates army_rosters, wishlists, and match_history strictly by key_hash and game_system", async () => {
+    // User A saves a 40K roster and a Kill Team roster
+    const put40k = new Request("http://localhost/api/rosters/r-40k-1", {
+      method: "PUT",
+      headers: headersA,
+      body: JSON.stringify({
+        game_system: "wh40k",
+        faction_id: "orks",
+        name: "Waaagh Strike Force",
+        updated_at: "2026-11-05T01:00:00Z",
+        payload: { id: "r-40k-1", name: "Waaagh Strike Force", points_limit: 2000 },
+      }),
     });
-    const wrongRes = await worker.fetch(wrongReq, env);
-    assert.equal(wrongRes.status, 401);
+    assert.equal((await worker.fetch(put40k, env)).status, 200);
+
+    const putKt = new Request("http://localhost/api/rosters/r-kt-1", {
+      method: "PUT",
+      headers: headersA,
+      body: JSON.stringify({
+        game_system: "kill_team",
+        faction_id: "kt-kommandos",
+        name: "Kommandos Strike Team",
+        updated_at: "2026-11-05T01:05:00Z",
+        payload: { id: "r-kt-1", name: "Kommandos Strike Team" },
+      }),
+    });
+    assert.equal((await worker.fetch(putKt, env)).status, 200);
+
+    // User A saves a wishlist item
+    const putWish = new Request("http://localhost/api/wishlists/w-1", {
+      method: "PUT",
+      headers: headersA,
+      body: JSON.stringify({
+        game_system: "wh40k",
+        faction_id: "orks",
+        unit_id: "u-boyz",
+        updated_at: "2026-11-05T01:10:00Z",
+        payload: { id: "w-1", unit_name: "Boyz", quantity_desired: 2 },
+      }),
+    });
+    assert.equal((await worker.fetch(putWish, env)).status, 200);
+
+    // User B queries rosters -> must see 0 rosters
+    const resB = await worker.fetch(
+      new Request("http://localhost/api/rosters", { method: "GET", headers: headersB }),
+      env,
+    );
+    const dataB = await resB.json();
+    assert.equal(dataB.rosters.length, 0);
+
+    // User A queries 40K rosters only
+    const resA40k = await worker.fetch(
+      new Request("http://localhost/api/rosters?game_system=wh40k", {
+        method: "GET",
+        headers: headersA,
+      }),
+      env,
+    );
+    const dataA40k = await resA40k.json();
+    assert.equal(dataA40k.rosters.length, 1);
+    assert.equal(dataA40k.rosters[0].name, "Waaagh Strike Force");
+
+    // User A queries Kill Team rosters only
+    const resAKt = await worker.fetch(
+      new Request("http://localhost/api/rosters?game_system=kill_team", {
+        method: "GET",
+        headers: headersA,
+      }),
+      env,
+    );
+    const dataAKt = await resAKt.json();
+    assert.equal(dataAKt.rosters.length, 1);
+    assert.equal(dataAKt.rosters[0].name, "Kommandos Strike Team");
   });
 
-  it("POST /api/rosters/:userId upserts and GET returns rosters when authenticated", async () => {
-    const userId = "warlord_thraka";
-    const roster = {
-      id: "da_great_waaagh",
-      name: "Da Great Waaagh!",
-      faction: "Orks",
-      points: 2000,
-      units: [{ name: "Ghazghkull Thraka", points: 290 }],
-    };
+  it("supports atomic batch sync and optimistic updated_at conflict protection", async () => {
+    // Attempt to overwrite r-40k-1 with an older timestamp -> must be ignored
+    const stalePut = new Request("http://localhost/api/rosters/r-40k-1", {
+      method: "PUT",
+      headers: headersA,
+      body: JSON.stringify({
+        game_system: "wh40k",
+        faction_id: "orks",
+        name: "Stale Name",
+        updated_at: "2026-11-05T00:00:00Z",
+        payload: { id: "r-40k-1", name: "Stale Name" },
+      }),
+    });
+    await worker.fetch(stalePut, env);
 
-    const postReq = new Request(`http://localhost/api/rosters/${userId}`, {
+    const syncGet = await worker.fetch(
+      new Request("http://localhost/api/sync", { method: "GET", headers: headersA }),
+      env,
+    );
+    const syncData = await syncGet.json();
+    const r40k = syncData.rosters.find((r) => r.id === "r-40k-1");
+    assert.equal(r40k.name, "Waaagh Strike Force", "Stale write must not overwrite newer row");
+
+    // Batch delete w-1 and add match m-1
+    const batchPost = new Request("http://localhost/api/sync/batch", {
       method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify(roster),
+      headers: headersA,
+      body: JSON.stringify({
+        deleted_wishlist_ids: ["w-1"],
+        matches: [
+          {
+            id: "m-1",
+            game_system: "wh40k",
+            updated_at: "2026-11-05T02:00:00Z",
+            payload: { id: "m-1", player_score: 90, opponent_score: 70 },
+          },
+        ],
+      }),
     });
-    const postRes = await worker.fetch(postReq, env);
-    assert.equal(postRes.status, 200);
+    const batchRes = await worker.fetch(batchPost, env);
+    assert.equal(batchRes.status, 200);
 
-    const getReq = new Request(`http://localhost/api/rosters/${userId}`, {
-      method: "GET",
-      headers: authHeaders,
-    });
-    const getRes = await worker.fetch(getReq, env);
-    assert.equal(getRes.status, 200);
-    const getData = await getRes.json();
-    assert.equal(getData.rosters.length, 1);
-    assert.equal(getData.rosters[0].name, "Da Great Waaagh!");
-  });
-
-  it("DELETE /api/rosters/:userId/:rosterId deletes the roster when authenticated", async () => {
-    const userId = "warlord_thraka";
-    const delReq = new Request(`http://localhost/api/rosters/${userId}/da_great_waaagh`, {
-      method: "DELETE",
-      headers: authHeaders,
-    });
-    const delRes = await worker.fetch(delReq, env);
-    assert.equal(delRes.status, 200);
-
-    const getReq = new Request(`http://localhost/api/rosters/${userId}`, {
-      method: "GET",
-      headers: authHeaders,
-    });
-    const getRes = await worker.fetch(getReq, env);
-    const getData = await getRes.json();
-    assert.equal(getData.rosters.length, 0);
-  });
-
-  it("POST /api/wishlists/:userId saves and GET retrieves wishlists when authenticated", async () => {
-    const userId = "iron_priest";
-    const wishlist = {
-      faction_id: "space_wolves",
-      entries: [{ unit_id: "bjorn", priority: "High", quantity: 1 }],
-    };
-
-    const postReq = new Request(`http://localhost/api/wishlists/${userId}`, {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify(wishlist),
-    });
-    const postRes = await worker.fetch(postReq, env);
-    assert.equal(postRes.status, 200);
-
-    const getReq = new Request(`http://localhost/api/wishlists/${userId}`, {
-      method: "GET",
-      headers: authHeaders,
-    });
-    const getRes = await worker.fetch(getReq, env);
-    assert.equal(getRes.status, 200);
-    const getData = await getRes.json();
-    assert.equal(getData.wishlists.length, 1);
-    assert.equal(getData.wishlists[0].faction_id, "space_wolves");
+    const syncAfter = await (
+      await worker.fetch(
+        new Request("http://localhost/api/sync", { method: "GET", headers: headersA }),
+        env,
+      )
+    ).json();
+    assert.equal(syncAfter.wishlists.length, 0);
+    assert.equal(syncAfter.matches.length, 1);
+    assert.equal(syncAfter.matches[0].payload.player_score, 90);
   });
 });

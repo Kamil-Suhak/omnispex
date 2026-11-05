@@ -110,7 +110,9 @@ pub enum WishlistSortField {
     #[default]
     PriorityDesc,
     NameAsc,
+    #[serde(alias = "quantity_desc")]
     PointsDesc,
+    #[serde(alias = "state_progress")]
     StateAsc,
 }
 

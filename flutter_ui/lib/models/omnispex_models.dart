@@ -773,8 +773,9 @@ class WishlistSummaryUi {
           (json['painted_entries_count'] as num?)?.toInt() ?? 0,
       acquiredEntriesCount:
           (json['acquired_entries_count'] as num?)?.toInt() ?? 0,
-      completionPercent:
-          (json['completion_percent'] as num?)?.toDouble() ?? 0.0,
+      completionPercent: (json['completion_percent'] as num?)?.toDouble() ??
+          (json['acquisition_progress_percent'] as num?)?.toDouble() ??
+          0.0,
     );
   }
 }
@@ -815,8 +816,16 @@ enum GameSystemUi {
   String toRustJson() =>
       this == GameSystemUi.warhammer40k ? 'warhammer40k' : 'kill_team';
 
-  static GameSystemUi fromRustJson(String? raw) =>
-      raw == 'kill_team' ? GameSystemUi.killTeam : GameSystemUi.warhammer40k;
+  String get apiKey =>
+      this == GameSystemUi.warhammer40k ? 'wh40k' : 'kill_team';
+
+  static GameSystemUi fromRustJson(String? raw) {
+    final s = (raw ?? '').trim().toLowerCase();
+    if (s == 'kill_team' || s == 'killteam' || s == 'kt') {
+      return GameSystemUi.killTeam;
+    }
+    return GameSystemUi.warhammer40k;
+  }
 
   String get label =>
       this == GameSystemUi.warhammer40k ? 'Warhammer 40,000' : 'Kill Team';

@@ -663,6 +663,161 @@ pub fn validate_army_list(
         }
     }
 
+    // 6b. Multi-leader attachment, chained attachment, and Attached Unit enhancement checks
+    let mut leaders_by_bodyguard: HashMap<String, Vec<&RosterUnitEntry>> = HashMap::new();
+    for entry in &list.units {
+        if let Some(bg_id) = &entry.attached_to_entry_id {
+            if let Some(bg_entry) = list.units.iter().find(|u| &u.entry_id == bg_id) {
+                if bg_entry.attached_to_entry_id.is_some() {
+                    violations.push(ValidationIssue {
+                        severity: ValidationSeverity::Error,
+                        code: "CHAINED_LEADER_ATTACHMENT".to_string(),
+                        message: format!(
+                            "Leader '{}' cannot attach to '{}', which is already attached to another unit.",
+                            entry.unit_name, bg_entry.unit_name
+                        ),
+                        affected_entry_id: Some(entry.entry_id.clone()),
+                    });
+                }
+                leaders_by_bodyguard
+                    .entry(bg_id.clone())
+                    .or_default()
+                    .push(entry);
+            }
+        }
+    }
+
+    for (bg_id, attached_leaders) in &leaders_by_bodyguard {
+        if let Some(bg_entry) = list.units.iter().find(|u| &u.entry_id == bg_id) {
+            if attached_leaders.len() > 2 {
+                violations.push(ValidationIssue {
+                    severity: ValidationSeverity::Error,
+                    code: "MAX_LEADERS_EXCEEDED".to_string(),
+                    message: format!(
+                        "Bodyguard unit '{}' has {} Leaders attached (maximum 1 normal Leader, or 2 if one is a Support character).",
+                        bg_entry.unit_name,
+                        attached_leaders.len()
+                    ),
+                    affected_entry_id: Some(bg_entry.entry_id.clone()),
+                });
+            } else if attached_leaders.len() == 2 {
+                let has_support_leader = if let Some(fcat) = faction_cat {
+                    attached_leaders.iter().any(|leader| {
+                        let unit_has_support = fcat
+                            .units
+                            .iter()
+                            .find(|u| {
+                                u.id.eq_ignore_ascii_case(&leader.unit_id)
+                                    || u.name.eq_ignore_ascii_case(&leader.unit_name)
+                            })
+                            .map_or(false, |u| {
+                                u.support_to
+                                    .iter()
+                                    .any(|t| t.eq_ignore_ascii_case(&bg_entry.unit_name))
+                            });
+                        let enh_has_support =
+                            leader.enhancement_name.as_ref().map_or(false, |ename| {
+                                fcat.detachments.iter().any(|d| {
+                                    d.enhancements.iter().any(|e| {
+                                        e.name.eq_ignore_ascii_case(ename)
+                                            && e.support_to
+                                                .iter()
+                                                .any(|t| t.eq_ignore_ascii_case(&bg_entry.unit_name))
+                                    })
+                                })
+                            });
+                        unit_has_support || enh_has_support
+                    })
+                } else {
+                    false
+                };
+
+                if !has_support_leader {
+                    violations.push(ValidationIssue {
+                        severity: ValidationSeverity::Error,
+                        code: "MAX_LEADERS_EXCEEDED".to_string(),
+                        message: format!(
+                            "Bodyguard unit '{}' has 2 Leaders attached ('{}' and '{}'), but neither has a Support attachment rule allowing a second Leader.",
+                            bg_entry.unit_name,
+                            attached_leaders[0].unit_name,
+                            attached_leaders[1].unit_name
+                        ),
+                        affected_entry_id: Some(bg_entry.entry_id.clone()),
+                    });
+                }
+            }
+
+            let attached_enhancements_count = (if bg_entry.enhancement_id.is_some()
+                || bg_entry.enhancement_name.is_some()
+            {
+                1
+            } else {
+                0
+            }) + attached_leaders
+                .iter()
+                .filter(|l| l.enhancement_id.is_some() || l.enhancement_name.is_some())
+                .count();
+
+            if attached_enhancements_count > 1 {
+                violations.push(ValidationIssue {
+                    severity: ValidationSeverity::Error,
+                    code: "ATTACHED_UNIT_DUPLICATE_ENHANCEMENT".to_string(),
+                    message: format!(
+                        "Attached unit '{}' has {} Enhancements across its attached Characters (maximum 1 Enhancement per Attached unit).",
+                        bg_entry.unit_name, attached_enhancements_count
+                    ),
+                    affected_entry_id: Some(bg_entry.entry_id.clone()),
+                });
+            }
+        }
+    }
+
+    // 6c. Dedicated Transport embarkation rule:
+    // Every DEDICATED TRANSPORT unit in the army must start the battle with at least 1 unit embarked inside it.
+    let mut dedicated_transport_count = 0usize;
+    let mut embarkable_unit_count = 0usize;
+    for entry in &list.units {
+        let mut is_dt = entry.is_dedicated_transport();
+        let mut is_fortification = entry
+            .categories
+            .iter()
+            .any(|c| c.eq_ignore_ascii_case("Fortification"));
+        if let Some(fcat) = faction_cat {
+            if let Some(ds) = fcat.units.iter().find(|u| {
+                u.id.eq_ignore_ascii_case(&entry.unit_id)
+                    || u.name.eq_ignore_ascii_case(&entry.unit_name)
+            }) {
+                if ds.is_dedicated_transport() {
+                    is_dt = true;
+                }
+                if ds
+                    .categories
+                    .iter()
+                    .any(|c| c.eq_ignore_ascii_case("Fortification"))
+                {
+                    is_fortification = true;
+                }
+            }
+        }
+        if is_dt {
+            dedicated_transport_count += 1;
+        } else if !is_fortification && entry.attached_to_entry_id.is_none() {
+            embarkable_unit_count += 1;
+        }
+    }
+
+    if dedicated_transport_count > embarkable_unit_count {
+        violations.push(ValidationIssue {
+            severity: ValidationSeverity::Error,
+            code: "DEDICATED_TRANSPORT_UNEMBARKED".to_string(),
+            message: format!(
+                "Roster contains {} Dedicated Transport unit(s) but only {} independent non-transport unit(s) able to start embarked (every Dedicated Transport must start the battle with at least one unit embarked).",
+                dedicated_transport_count, embarkable_unit_count
+            ),
+            affected_entry_id: None,
+        });
+    }
+
     // 7. Explicitly report unverified prose rules so the validator never overclaims compliance
     unverified_rules.push(
         "Per-model wargear replacement ratios (e.g. 'for every 5 models, 1 model may replace...') must be verified against the unit's Wargear Options text on its datasheet."

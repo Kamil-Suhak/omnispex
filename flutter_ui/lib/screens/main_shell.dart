@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../bridge/omnispex_rust_bridge.dart';
+import '../features/kill_team/screens/kt_combat_screen.dart';
+import '../features/kill_team/screens/kt_operative_browser_screen.dart';
+import '../features/kill_team/screens/kt_roster_builder_screen.dart';
+import '../features/kill_team/services/kill_team_service.dart';
+import '../models/omnispex_models.dart';
+import '../providers/app_state_provider.dart';
+import '../services/bsdata_service.dart';
+import '../services/personal_data_service.dart';
+import '../theme/omnispex_colors.dart';
+import '../theme/omnispex_typography.dart';
+import '../widgets/access_key_dialog.dart';
+import '../widgets/game_system_switcher.dart';
 import 'in_battle_screen.dart';
 import 'list_building_screen.dart';
 import 'matches_screen.dart';
 import 'settings_screen.dart';
 import 'unit_browser_screen.dart';
 import 'wishlist_screen.dart';
-import '../bridge/omnispex_rust_bridge.dart';
-import '../providers/app_state_provider.dart';
-import '../services/bsdata_service.dart';
-import '../theme/omnispex_colors.dart';
-import '../theme/omnispex_typography.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
@@ -29,7 +37,12 @@ class _MainShellState extends ConsumerState<MainShell> {
   Future<void> _initServices() async {
     await OmnispexRustBridge.initialize();
     await BsDataService.initOnStartup();
+    await KillTeamService.ensureCatalogueLoaded();
     await ref.read(personalStoreProvider.notifier).loadFromDisk();
+    if (PersonalDataService.killTeamRosters.isNotEmpty && mounted) {
+      ref.read(killTeamRostersProvider.notifier).state =
+          List.from(PersonalDataService.killTeamRosters);
+    }
     if (mounted) {
       ref.read(catalogueRevisionEpochProvider.notifier).state++;
       setState(() {});
@@ -39,83 +52,94 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     final navIndex = ref.watch(currentNavIndexProvider);
+    final activeSystem = ref.watch(activeGameSystemProvider);
+    final is40k = activeSystem == GameSystemUi.warhammer40k;
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 768;
 
-    const destinations = [
-      NavigationDestination(
+    final destinations = [
+      const NavigationDestination(
         icon: Icon(Icons.flash_on_outlined),
         selectedIcon: Icon(Icons.flash_on),
         label: 'In-Battle',
       ),
       NavigationDestination(
-        icon: Icon(Icons.list_alt_outlined),
-        selectedIcon: Icon(Icons.list_alt),
-        label: 'List-Build',
+        icon: const Icon(Icons.list_alt_outlined),
+        selectedIcon: const Icon(Icons.list_alt),
+        label: is40k ? 'List-Build' : 'Rosters',
       ),
       NavigationDestination(
-        icon: Icon(Icons.library_books_outlined),
-        selectedIcon: Icon(Icons.library_books),
-        label: 'Datasheets',
+        icon: const Icon(Icons.library_books_outlined),
+        selectedIcon: const Icon(Icons.library_books),
+        label: is40k ? 'Datasheets' : 'Operatives',
       ),
-      NavigationDestination(
+      const NavigationDestination(
         icon: Icon(Icons.bookmark_border),
         selectedIcon: Icon(Icons.bookmark),
         label: 'Wishlist',
       ),
-      NavigationDestination(
+      const NavigationDestination(
         icon: Icon(Icons.emoji_events_outlined),
         selectedIcon: Icon(Icons.emoji_events),
         label: 'Matches',
       ),
-      NavigationDestination(
+      const NavigationDestination(
         icon: Icon(Icons.settings_outlined),
         selectedIcon: Icon(Icons.settings),
         label: 'Settings',
       ),
     ];
 
-    const railDestinations = [
-      NavigationRailDestination(
+    final railDestinations = [
+      const NavigationRailDestination(
         icon: Icon(Icons.flash_on_outlined),
         selectedIcon: Icon(Icons.flash_on),
         label: Text('In-Battle'),
       ),
       NavigationRailDestination(
-        icon: Icon(Icons.list_alt_outlined),
-        selectedIcon: Icon(Icons.list_alt),
-        label: Text('List-Build'),
+        icon: const Icon(Icons.list_alt_outlined),
+        selectedIcon: const Icon(Icons.list_alt),
+        label: Text(is40k ? 'List-Build' : 'Rosters'),
       ),
       NavigationRailDestination(
-        icon: Icon(Icons.library_books_outlined),
-        selectedIcon: Icon(Icons.library_books),
-        label: Text('Datasheets'),
+        icon: const Icon(Icons.library_books_outlined),
+        selectedIcon: const Icon(Icons.library_books),
+        label: Text(is40k ? 'Datasheets' : 'Operatives'),
       ),
-      NavigationRailDestination(
+      const NavigationRailDestination(
         icon: Icon(Icons.bookmark_border),
         selectedIcon: Icon(Icons.bookmark),
         label: Text('Wishlist'),
       ),
-      NavigationRailDestination(
+      const NavigationRailDestination(
         icon: Icon(Icons.emoji_events_outlined),
         selectedIcon: Icon(Icons.emoji_events),
         label: Text('Matches'),
       ),
-      NavigationRailDestination(
+      const NavigationRailDestination(
         icon: Icon(Icons.settings_outlined),
         selectedIcon: Icon(Icons.settings),
         label: Text('Settings'),
       ),
     ];
 
-    const pages = [
-      InBattleScreen(),
-      ListBuildingScreen(),
-      UnitBrowserScreen(),
-      WishlistScreen(),
-      MatchesScreen(),
-      SettingsScreen(),
-    ];
+    final pages = is40k
+        ? const [
+            InBattleScreen(),
+            ListBuildingScreen(),
+            UnitBrowserScreen(),
+            WishlistScreen(),
+            MatchesScreen(),
+            SettingsScreen(),
+          ]
+        : const [
+            KtCombatScreen(),
+            KtRosterBuilderScreen(),
+            KtOperativeBrowserScreen(),
+            WishlistScreen(),
+            MatchesScreen(),
+            SettingsScreen(),
+          ];
 
     final safeIndex = navIndex.clamp(0, pages.length - 1);
 
@@ -126,19 +150,37 @@ class _MainShellState extends ConsumerState<MainShell> {
         title: Row(
           children: [
             Text(
-              "OMNISPEX",
+              'OMNISPEX',
               style: OmnispexTypography.h3.copyWith(letterSpacing: 2),
             ),
             const SizedBox(width: 12),
             Flexible(
               child: Text(
-                "PROBABILITY ENGINE",
+                'PROBABILITY ENGINE',
                 style: OmnispexTypography.label,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
+        actions: [
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: GameSystemSwitcherButton(),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'Access Key',
+            icon: const Icon(Icons.vpn_key_outlined, size: 20),
+            onPressed: () {
+              showDialog<void>(
+                context: context,
+                builder: (_) => const AccessKeyVaultDialog(),
+              );
+            },
+          ),
+          const SizedBox(width: 12),
+        ],
       ),
       body: Row(
         children: [
@@ -155,7 +197,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           ],
           Expanded(
             child: KeyedSubtree(
-              key: ValueKey(safeIndex),
+              key: ValueKey('${activeSystem.name}-$safeIndex'),
               child: pages[safeIndex],
             ),
           ),

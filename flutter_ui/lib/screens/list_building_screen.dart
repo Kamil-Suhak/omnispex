@@ -29,46 +29,47 @@ final benchIsStationaryProvider = StateProvider<bool>((ref) => true);
 final benchHasChargedProvider = StateProvider<bool>((ref) => false);
 final benchTargetInCoverProvider = StateProvider<bool>((ref) => false);
 
+final archetypeBenchmarkReportProvider =
+    Provider<BenchmarkRosterReportUi>((ref) {
+  final weaponIdxA = ref.watch(benchWeaponIndexAProvider);
+  final countA = ref.watch(benchWeaponCountAProvider);
+  final pointsA = ref.watch(benchPointsAProvider);
+
+  final isDualCompare = ref.watch(benchIsDualCompareProvider);
+  final weaponIdxB = ref.watch(benchWeaponIndexBProvider);
+  final countB = ref.watch(benchWeaponCountBProvider);
+  final pointsB = ref.watch(benchPointsBProvider);
+
+  final isStationary = ref.watch(benchIsStationaryProvider);
+  final hasCharged = ref.watch(benchHasChargedProvider);
+  final targetInCover = ref.watch(benchTargetInCoverProvider);
+
+  final weapons = SimulationService.defaultWeapons;
+  final activeWeaponA = weapons[weaponIdxA % weapons.length];
+  final activeWeaponB = weapons[weaponIdxB % weapons.length];
+
+  final loadoutA = [WeaponLoadoutEntry(weapon: activeWeaponA, count: countA)];
+  final loadoutB = isDualCompare
+      ? [WeaponLoadoutEntry(weapon: activeWeaponB, count: countB)]
+      : null;
+
+  return SimulationService.evaluateArchetypesBenchmark(
+    loadoutA: loadoutA,
+    pointsA: pointsA,
+    loadoutB: loadoutB,
+    pointsB: pointsB,
+    isStationary: isStationary,
+    hasCharged: hasCharged,
+    targetInCover: targetInCover,
+  );
+});
+
 class ListBuildingScreen extends ConsumerWidget {
   const ListBuildingScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final subMode = ref.watch(listBuildSubModeProvider);
-    final weaponIdxA = ref.watch(benchWeaponIndexAProvider);
-    final countA = ref.watch(benchWeaponCountAProvider);
-    final pointsA = ref.watch(benchPointsAProvider);
-
-    final isDualCompare = ref.watch(benchIsDualCompareProvider);
-    final weaponIdxB = ref.watch(benchWeaponIndexBProvider);
-    final countB = ref.watch(benchWeaponCountBProvider);
-    final pointsB = ref.watch(benchPointsBProvider);
-
-    final isStationary = ref.watch(benchIsStationaryProvider);
-    final hasCharged = ref.watch(benchHasChargedProvider);
-    final targetInCover = ref.watch(benchTargetInCoverProvider);
-
-    final weapons = SimulationService.defaultWeapons;
-    final activeWeaponA = weapons[weaponIdxA % weapons.length];
-    final activeWeaponB = weapons[weaponIdxB % weapons.length];
-
-    final loadoutA = [WeaponLoadoutEntry(weapon: activeWeaponA, count: countA)];
-    final loadoutB = isDualCompare
-        ? [WeaponLoadoutEntry(weapon: activeWeaponB, count: countB)]
-        : null;
-
-    final benchmarkReport = SimulationService.evaluateArchetypesBenchmark(
-      loadoutA: loadoutA,
-      pointsA: pointsA,
-      loadoutB: loadoutB,
-      pointsB: pointsB,
-      isStationary: isStationary,
-      hasCharged: hasCharged,
-      targetInCover: targetInCover,
-    );
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 900;
 
     return Column(
       children: [
@@ -103,7 +104,36 @@ class ListBuildingScreen extends ConsumerWidget {
         Expanded(
           child: subMode == ListBuildSubMode.rosterBuilder
               ? const ArmyListBuilderScreen()
-              : SingleChildScrollView(
+              : _buildArchetypeBenchmarkBody(context, ref),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildArchetypeBenchmarkBody(BuildContext context, WidgetRef ref) {
+    final weaponIdxA = ref.watch(benchWeaponIndexAProvider);
+    final countA = ref.watch(benchWeaponCountAProvider);
+    final pointsA = ref.watch(benchPointsAProvider);
+
+    final isDualCompare = ref.watch(benchIsDualCompareProvider);
+    final weaponIdxB = ref.watch(benchWeaponIndexBProvider);
+    final countB = ref.watch(benchWeaponCountBProvider);
+    final pointsB = ref.watch(benchPointsBProvider);
+
+    final isStationary = ref.watch(benchIsStationaryProvider);
+    final hasCharged = ref.watch(benchHasChargedProvider);
+    final targetInCover = ref.watch(benchTargetInCoverProvider);
+
+    final weapons = SimulationService.defaultWeapons;
+    final activeWeaponA = weapons[weaponIdxA % weapons.length];
+    final activeWeaponB = weapons[weaponIdxB % weapons.length];
+
+    final benchmarkReport = ref.watch(archetypeBenchmarkReportProvider);
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 900;
+
+    return SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Center(
                     child: ConstrainedBox(
@@ -318,13 +348,10 @@ class ListBuildingScreen extends ConsumerWidget {
                 return _buildArchetypeCard(
                     context, eval, activeWeaponA, activeWeaponB, isDualCompare);
               }),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 

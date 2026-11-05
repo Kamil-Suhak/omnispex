@@ -29,7 +29,18 @@ class _NativeBridgeBindings {
 
 _NativeBridgeBindings? _bindings;
 
-bool get isPlatformRustBridgeReady => _bindings != null;
+bool _ensureBindings() {
+  if (_bindings != null) return true;
+  try {
+    final dylib = _openNativeLibrary();
+    _bindings = _NativeBridgeBindings(dylib);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+bool get isPlatformRustBridgeReady => _ensureBindings();
 
 DynamicLibrary _openNativeLibrary() {
   if (Platform.isAndroid || Platform.isLinux) {

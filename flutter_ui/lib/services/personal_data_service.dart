@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../bridge/omnispex_rust_bridge.dart';
+import '../features/kill_team/models/kill_team_models.dart';
 import '../models/bsdata_models.dart';
 import '../models/omnispex_models.dart';
 import 'auth_service.dart';
@@ -41,176 +42,120 @@ class PersonalDataService {
     'Chaos Cult',
   ];
 
+  static const String defaultCloudSyncEndpoint =
+      'https://omnispex-cloud.kamilsuhak.workers.dev';
+
+  static final List<KillTeamRosterUi> _killTeamRosters = [];
+  static List<KillTeamRosterUi> get killTeamRosters =>
+      List.unmodifiable(_killTeamRosters);
+
   static Future<PersonalDataStoreUi> loadPersonalStore() async {
-    // 1. Cloud-authoritative: attempt to pull latest cloud state
+    // 1. Attempt to pull from normalized remote D1 tables (army_rosters, wishlists, match_history)
     try {
       final creds = await AuthService.getOrCreateCredentials();
       final cloudStore = await pullFromCloudSync(
-        userId: creds.userId,
-        secretKey: creds.secretKey,
+        accessKey: creds.accessKey,
       );
       if (cloudStore != null) {
         return cloudStore;
       }
     } catch (_) {}
 
-    // 2. Offline safety net mirror
+    // 2. Local offline cache fallback
     final raw = await readPersonalStoreRaw();
     if (raw == null || raw.trim().isEmpty) {
       return const PersonalDataStoreUi();
     }
     try {
-      if (OmnispexRustBridge.isReady) {
-        return OmnispexRustBridge.migratePersonalStore(raw);
-      }
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) {
-        return PersonalDataStoreUi.fromRustJson(decoded);
+        _extractKillTeamRostersFromMap(decoded);
       }
-    } catch (_) {}
-    return const PersonalDataStoreUi();
+      return OmnispexRustBridge.migratePersonalStore(raw);
+    } catch (_) {
+      return const PersonalDataStoreUi();
+    }
+  }
+
+  static void _extractKillTeamRostersFromMap(Map<String, dynamic> map) {
+    final ktRaw = map['kill_team_rosters'];
+    if (ktRaw is List) {
+      _killTeamRosters
+        ..clear()
+        ..addAll(ktRaw.map(
+          (e) => KillTeamRosterUi.fromRustJson(Map<String, dynamic>.from(e)),
+        ));
+    }
   }
 
   static Future<void> savePersonalStore(PersonalDataStoreUi store) async {
-    final jsonStr =
-        const JsonEncoder.withIndent('  ').convert(store.toRustJson());
-    // 1. Write offline mirror
+    final map = store.toRustJson();
+    map['kill_team_rosters'] =
+        _killTeamRosters.map((r) => r.toRustJson()).toList();
+    final jsonStr = const JsonEncoder.withIndent('  ').convert(map);
     await writePersonalStoreRaw(jsonStr);
 
-    // 2. Cloud-authoritative write-through immediately
     try {
       final creds = await AuthService.getOrCreateCredentials();
       await pushToCloudSync(
-        userId: creds.userId,
-        secretKey: creds.secretKey,
+        accessKey: creds.accessKey,
         store: store,
       );
     } catch (_) {}
   }
 
+  static Future<void> saveKillTeamRoster(
+    KillTeamRosterUi roster,
+    PersonalDataStoreUi currentStore,
+  ) async {
+    final idx = _killTeamRosters.indexWhere((r) => r.id == roster.id);
+    if (idx >= 0) {
+      _killTeamRosters[idx] = roster;
+    } else {
+      _killTeamRosters.add(roster);
+    }
+    await savePersonalStore(currentStore);
+    await upsertRemoteRosterRow(
+      id: roster.id,
+      gameSystem: 'kill_team',
+      name: roster.name,
+      factionId: roster.factionId,
+      factionName: roster.factionName,
+      pointsLimit: roster.operatives.length,
+      totalPoints: roster.operatives.length,
+      payload: roster.toRustJson(),
+    );
+  }
+
+  static Future<void> deleteKillTeamRoster(
+    String rosterId,
+    PersonalDataStoreUi currentStore,
+  ) async {
+    _killTeamRosters.removeWhere((r) => r.id == rosterId);
+    await savePersonalStore(currentStore);
+    await deleteRemoteRow('rosters', rosterId);
+  }
+
   static String exportBackupJson(PersonalDataStoreUi store) {
-    return const JsonEncoder.withIndent('  ').convert(store.toRustJson());
+    final map = store.toRustJson();
+    map['kill_team_rosters'] =
+        _killTeamRosters.map((r) => r.toRustJson()).toList();
+    return const JsonEncoder.withIndent('  ').convert(map);
   }
 
   static PersonalDataStoreUi restoreFromBackupJson(String rawJson) {
-    if (OmnispexRustBridge.isReady) {
-      return OmnispexRustBridge.migratePersonalStore(rawJson);
-    }
     final decoded = jsonDecode(rawJson);
-    if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('Invalid JSON backup object.');
+    if (decoded is Map<String, dynamic>) {
+      _extractKillTeamRostersFromMap(decoded);
     }
-    return PersonalDataStoreUi.fromRustJson(decoded);
+    return OmnispexRustBridge.migratePersonalStore(rawJson);
   }
 
   static ArmyListEvaluationUi evaluateArmyList({
     required ArmyListUi list,
     BsDataFaction? faction,
   }) {
-    if (OmnispexRustBridge.isReady) {
-      return OmnispexRustBridge.evaluateArmyList(list: list, faction: faction);
-    }
-    // Fallback for test environments where native FFI library is not loaded
-    final violations = <ValidationIssueUi>[];
-    final warnings = <ValidationIssueUi>[];
-    final unverified = <String>[];
-    final totalPts = list.totalPoints;
-    final ptsLimit = list.pointsLimit;
-    final totalDp = list.totalDp;
-    final dpLimit = list.battleSize.dpLimit;
-    final enhLimit = list.battleSize.enhancementLimit;
-
-    if (totalPts > ptsLimit) {
-      violations.add(ValidationIssueUi(
-        severity: 'error',
-        code: 'POINTS_EXCEEDED',
-        message:
-            'Army total ($totalPts pts) exceeds the battle size limit of $ptsLimit pts.',
-      ));
-    }
-    if (totalDp > dpLimit) {
-      violations.add(ValidationIssueUi(
-        severity: 'error',
-        code: 'DP_EXCEEDED',
-        message:
-            'Detachment Points spent ($totalDp DP) exceed ${list.battleSize.label} limit of $dpLimit DP.',
-      ));
-    }
-    final warlords = list.units.where((u) => u.isWarlord).toList();
-    if (list.units.isNotEmpty && warlords.isEmpty) {
-      violations.add(const ValidationIssueUi(
-        severity: 'error',
-        code: 'MISSING_WARLORD',
-        message: 'Every army list must designate exactly 1 Warlord.',
-      ));
-    } else if (warlords.length > 1) {
-      violations.add(ValidationIssueUi(
-        severity: 'error',
-        code: 'MULTIPLE_WARLORDS',
-        message:
-            'Only 1 model can be designated Warlord (${warlords.length} selected).',
-      ));
-    }
-    int enhSlots = 0;
-    for (final u in list.units) {
-      if (u.enhancementId != null) {
-        enhSlots += u.enhancementIsUpgrade ? 2 : 1;
-        if (u.isEpicHero) {
-          violations.add(ValidationIssueUi(
-            severity: 'error',
-            code: 'EPIC_HERO_ENHANCEMENT',
-            message:
-                "Epic Hero '${u.unitName}' cannot be given an Enhancement.",
-            affectedEntryId: u.entryId,
-          ));
-        }
-      }
-    }
-    if (enhSlots > enhLimit) {
-      violations.add(ValidationIssueUi(
-        severity: 'error',
-        code: 'ENHANCEMENT_SLOTS_EXCEEDED',
-        message:
-            'Enhancement slots used ($enhSlots) exceed limit of $enhLimit.',
-      ));
-    }
-
-    final report = ListValidationReportUi(
-      isValid: violations.isEmpty,
-      totalPoints: totalPts,
-      pointsLimit: ptsLimit,
-      totalDp: totalDp,
-      dpLimit: dpLimit,
-      enhancementSlotsUsed: enhSlots,
-      enhancementLimit: enhLimit,
-      violations: violations,
-      warnings: warnings,
-      unverifiedRules: unverified,
-    );
-
-    final buf = StringBuffer();
-    buf.writeln('=== ${list.name} ===');
-    buf.writeln('Faction: ${list.factionName}');
-    buf.writeln(
-        'Battle Size: ${list.battleSize.label} [$totalPts / $ptsLimit pts]');
-    buf.writeln('Detachments ($totalDp / $dpLimit DP):');
-    for (final d in list.detachments) {
-      buf.writeln('  - ${d.name} (${d.dpCost} DP)');
-    }
-    buf.writeln('\nUnits (${list.units.length}):');
-    for (final u in list.units) {
-      final wl = u.isWarlord ? ' [WARLORD]' : '';
-      final enh =
-          u.enhancementName != null ? ' + ${u.enhancementName}' : '';
-      buf.writeln(
-          '  * ${u.unitName} (${u.modelsCount} models)$wl$enh — ${u.totalPoints} pts');
-    }
-
-    return ArmyListEvaluationUi(
-      list: list,
-      validation: report,
-      exportedText: buf.toString(),
-    );
+    return OmnispexRustBridge.evaluateArmyList(list: list, faction: faction);
   }
 
   static WishlistOperationResponseUi upsertWishlist({
@@ -218,24 +163,11 @@ class PersonalDataService {
     required WishlistItemUi item,
     String? activeFactionId,
   }) {
-    if (OmnispexRustBridge.isReady) {
-      return OmnispexRustBridge.upsertWishlist(
-        items: items,
-        item: item,
-        activeFactionId: activeFactionId,
-      );
-    }
-    final updated = List<WishlistItemUi>.from(items);
-    final idx = updated.indexWhere((existing) =>
-        existing.id == item.id ||
-        (existing.factionId.toLowerCase() == item.factionId.toLowerCase() &&
-            existing.unitName.toLowerCase() == item.unitName.toLowerCase()));
-    if (idx >= 0) {
-      updated[idx] = item;
-    } else {
-      updated.add(item);
-    }
-    return queryWishlist(items: updated, factionId: activeFactionId);
+    return OmnispexRustBridge.upsertWishlist(
+      items: items,
+      item: item,
+      activeFactionId: activeFactionId,
+    );
   }
 
   static WishlistOperationResponseUi queryWishlist({
@@ -246,87 +178,13 @@ class PersonalDataService {
     AcquisitionStateUi? stateFilter,
     WishlistSortFieldUi sortBy = WishlistSortFieldUi.priorityDesc,
   }) {
-    if (OmnispexRustBridge.isReady) {
-      return OmnispexRustBridge.queryWishlist(
-        items: items,
-        factionId: factionId,
-        query: query,
-        priorityFilter: priorityFilter,
-        stateFilter: stateFilter,
-        sortBy: sortBy,
-      );
-    }
-    final q = query.trim().toLowerCase();
-    final filtered = items.where((item) {
-      if (factionId != null &&
-          factionId.isNotEmpty &&
-          factionId != 'All Factions' &&
-          item.factionId.toLowerCase() != factionId.toLowerCase() &&
-          item.factionName.toLowerCase() != factionId.toLowerCase()) {
-        return false;
-      }
-      if (priorityFilter != null && item.priority != priorityFilter) {
-        return false;
-      }
-      if (stateFilter != null && item.state != stateFilter) {
-        return false;
-      }
-      if (q.isNotEmpty &&
-          !item.unitName.toLowerCase().contains(q) &&
-          !item.factionName.toLowerCase().contains(q) &&
-          !item.notes.toLowerCase().contains(q)) {
-        return false;
-      }
-      return true;
-    }).toList();
-
-    final scoped = items.where((item) {
-      if (factionId != null &&
-          factionId.isNotEmpty &&
-          factionId != 'All Factions') {
-        return item.factionId.toLowerCase() == factionId.toLowerCase() ||
-            item.factionName.toLowerCase() == factionId.toLowerCase();
-      }
-      return true;
-    }).toList();
-
-    final desired = scoped.fold(0, (s, i) => s + i.quantityDesired);
-    final owned = scoped.fold(0, (s, i) => s + i.quantityOwned);
-    final rem = scoped.fold(0, (s, i) => s + i.remainingToAcquire);
-    final ptsDesired = scoped.fold(0, (s, i) => s + i.totalPointsDesired);
-    final ptsOwned =
-        scoped.fold(0, (s, i) => s + i.quantityOwned * i.pointsPerUnit);
-
-    return WishlistOperationResponseUi(
+    return OmnispexRustBridge.queryWishlist(
       items: items,
-      filteredItems: filtered,
-      summary: WishlistSummaryUi(
-        factionFilter: factionId,
-        totalDistinctUnits: scoped.length,
-        totalBoxesDesired: desired,
-        totalBoxesOwned: owned,
-        totalBoxesRemaining: rem,
-        totalPointsDesired: ptsDesired,
-        totalPointsOwned: ptsOwned,
-        criticalPriorityCount: scoped
-            .where((i) => i.priority == WishlistPriorityUi.critical)
-            .length,
-        highPriorityCount:
-            scoped.where((i) => i.priority == WishlistPriorityUi.high).length,
-        paintedEntriesCount: scoped
-            .where((i) =>
-                i.state == AcquisitionStateUi.battleReady ||
-                i.state == AcquisitionStateUi.paradeReady)
-            .length,
-        acquiredEntriesCount: scoped
-            .where((i) =>
-                i.state != AcquisitionStateUi.wishlist &&
-                i.state != AcquisitionStateUi.ordered)
-            .length,
-        completionPercent: desired > 0
-            ? ((owned / desired) * 100.0).clamp(0.0, 100.0)
-            : 0.0,
-      ),
+      factionId: factionId,
+      query: query,
+      priorityFilter: priorityFilter,
+      stateFilter: stateFilter,
+      sortBy: sortBy,
     );
   }
 
@@ -337,131 +195,322 @@ class PersonalDataService {
     String? factionFilter,
     MatchResultUi? resultFilter,
   }) {
-    if (OmnispexRustBridge.isReady) {
-      return OmnispexRustBridge.evaluateMatches(
-        matches: matches,
-        gameSystem: gameSystem,
-        query: query,
-        factionFilter: factionFilter,
-        resultFilter: resultFilter,
-      );
-    }
-    final q = query.trim().toLowerCase();
-    final filtered = matches.where((m) {
-      if (gameSystem != null && m.gameSystem != gameSystem) return false;
-      if (resultFilter != null && m.result != resultFilter) return false;
-      if (factionFilter != null &&
-          factionFilter.isNotEmpty &&
-          factionFilter != 'All Factions' &&
-          m.playerFaction.toLowerCase() != factionFilter.toLowerCase() &&
-          m.opponentFaction.toLowerCase() != factionFilter.toLowerCase()) {
-        return false;
-      }
-      if (q.isNotEmpty &&
-          !m.playerFaction.toLowerCase().contains(q) &&
-          !m.opponentFaction.toLowerCase().contains(q) &&
-          !m.opponentName.toLowerCase().contains(q) &&
-          !m.notes.toLowerCase().contains(q)) {
-        return false;
-      }
-      return true;
-    }).toList();
-
-    final completed = filtered
-        .where((m) => m.result != MatchResultUi.inProgress)
-        .toList();
-    final wins = completed.where((m) => m.result == MatchResultUi.win).length;
-    final losses =
-        completed.where((m) => m.result == MatchResultUi.loss).length;
-    final draws = completed.where((m) => m.result == MatchResultUi.draw).length;
-    final total = completed.length;
-    final winRate = total > 0 ? (wins / total) * 100.0 : 0.0;
-    final avgPlayer = total > 0
-        ? completed.fold(0, (s, m) => s + m.playerScore) / total
-        : 0.0;
-    final avgOpp = total > 0
-        ? completed.fold(0, (s, m) => s + m.opponentScore) / total
-        : 0.0;
-
-    return MatchDashboardResponseUi(
-      filteredMatches: filtered,
-      statistics: MatchStatisticsReportUi(
-        scopeExplanation:
-            'Completed matches only (in-progress games excluded from win rates).',
-        gameSystemFilter: gameSystem,
-        totalCompletedGames: total,
-        incompleteGamesExcluded: filtered.length - total,
-        wins: wins,
-        losses: losses,
-        draws: draws,
-        winRatePercent: winRate,
-        averagePlayerScore: avgPlayer,
-        averageOpponentScore: avgOpp,
-        averageDifferential: avgPlayer - avgOpp,
-        recentResults: completed.take(10).map((m) => m.result).toList(),
-      ),
-      killTeamFactions: defaultKillTeamFactions,
+    return OmnispexRustBridge.evaluateMatches(
+      matches: matches,
+      gameSystem: gameSystem,
+      query: query,
+      factionFilter: factionFilter,
+      resultFilter: resultFilter,
     );
   }
 
-  static const String defaultCloudSyncEndpoint =
-      'https://omnispex-cloud.kamilsuhak.workers.dev';
+  // ==========================================================================
+  // Normalized Remote Table Operations (`army_rosters`, `wishlists`, `match_history`)
+  // ==========================================================================
 
-  /// Synchronize the local PersonalDataStore to the Cloudflare Worker D1 storage
-  static Future<bool> pushToCloudSync({
-    required String userId,
-    required String secretKey,
-    PersonalDataStoreUi? store,
+  static Future<bool> upsertRemoteRosterRow({
+    required String id,
+    required String gameSystem,
+    required String name,
+    required String factionId,
+    required String factionName,
+    required int pointsLimit,
+    required int totalPoints,
+    required Map<String, dynamic> payload,
     String endpoint = defaultCloudSyncEndpoint,
   }) async {
     try {
-      final payload = store != null
-          ? jsonEncode(store.toRustJson())
-          : await readPersonalStoreRaw();
-      if (payload == null || payload.trim().isEmpty) return false;
-      final uri = Uri.parse('$endpoint/api/sync/$userId');
-      final res = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $secretKey',
-        },
-        body: payload,
-      );
+      final creds = await AuthService.getOrCreateCredentials(endpoint: endpoint);
+      final uri = Uri.parse('$endpoint/api/rosters/$id');
+      final res = await http
+          .put(
+            uri,
+            headers: AuthService.getAuthHeaders(creds),
+            body: jsonEncode({
+              'id': id,
+              'game_system': gameSystem,
+              'name': name,
+              'faction_id': factionId,
+              'faction_name': factionName,
+              'points_limit': pointsLimit,
+              'total_points': totalPoints,
+              'payload': payload,
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
       return res.statusCode == 200;
     } catch (_) {
       return false;
     }
   }
 
-  /// Pull user data from Cloudflare Worker D1 storage into local storage
-  static Future<PersonalDataStoreUi?> pullFromCloudSync({
-    required String userId,
-    required String secretKey,
+  static Future<bool> upsertRemoteWishlistRow(
+    WishlistItemUi item, {
+    String gameSystem = 'wh40k',
     String endpoint = defaultCloudSyncEndpoint,
   }) async {
     try {
-      final uri = Uri.parse('$endpoint/api/sync/$userId');
-      final res = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $secretKey',
-        },
-      );
+      final creds = await AuthService.getOrCreateCredentials(endpoint: endpoint);
+      final uri = Uri.parse('$endpoint/api/wishlists/${item.id}');
+      final res = await http
+          .put(
+            uri,
+            headers: AuthService.getAuthHeaders(creds),
+            body: jsonEncode({
+              'id': item.id,
+              'game_system': gameSystem,
+              'faction_id': item.factionId,
+              'faction_name': item.factionName,
+              'unit_id': item.unitId,
+              'unit_name': item.unitName,
+              'quantity_desired': item.quantityDesired,
+              'quantity_owned': item.quantityOwned,
+              'points_per_unit': item.pointsPerUnit,
+              'priority': item.priority.toRustJson(),
+              'state': item.state.toRustJson(),
+              'notes': item.notes,
+              'updated_at_iso': item.updatedAtIso,
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> upsertRemoteMatchRow(
+    MatchRecordUi match, {
+    String endpoint = defaultCloudSyncEndpoint,
+  }) async {
+    try {
+      final creds = await AuthService.getOrCreateCredentials(endpoint: endpoint);
+      final uri = Uri.parse('$endpoint/api/matches/${match.id}');
+      final res = await http
+          .put(
+            uri,
+            headers: AuthService.getAuthHeaders(creds),
+            body: jsonEncode({
+              'id': match.id,
+              'game_system': match.gameSystem.apiKey,
+              'date_iso': match.dateIso,
+              'player_faction': match.playerFaction,
+              'opponent_faction': match.opponentFaction,
+              'opponent_name': match.opponentName,
+              'player_score': match.playerScore,
+              'opponent_score': match.opponentScore,
+              'result': match.result.toRustJson(),
+              'payload': match.toRustJson(),
+              'updated_at_iso': match.updatedAtIso,
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> deleteRemoteRow(
+    String resource,
+    String id, {
+    String endpoint = defaultCloudSyncEndpoint,
+  }) async {
+    try {
+      final creds = await AuthService.getOrCreateCredentials(endpoint: endpoint);
+      final uri = Uri.parse('$endpoint/api/$resource/$id');
+      final res = await http
+          .delete(
+            uri,
+            headers: AuthService.getAuthHeaders(creds),
+          )
+          .timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Synchronize `army_rosters`, `wishlists`, and `match_history` via `POST /api/sync/batch`.
+  static Future<bool> pushToCloudSync({
+    String? accessKey,
+    String? userId,
+    String? secretKey,
+    PersonalDataStoreUi? store,
+    String endpoint = defaultCloudSyncEndpoint,
+  }) async {
+    try {
+      final key = accessKey ??
+          secretKey ??
+          (await AuthService.getOrCreateCredentials(endpoint: endpoint))
+              .accessKey;
+      final activeStore = store ?? await loadPersonalStore();
+
+      final rostersPayload = <Map<String, dynamic>>[
+        ...activeStore.armyLists.map((l) => {
+              'id': l.id,
+              'game_system': 'wh40k',
+              'name': l.name,
+              'faction_id': l.factionId,
+              'faction_name': l.factionName,
+              'points_limit': l.pointsLimit,
+              'total_points': l.totalPoints,
+              'payload': l.toRustJson(),
+              'updated_at_iso': l.updatedAtIso,
+            }),
+        ..._killTeamRosters.map((r) => {
+              'id': r.id,
+              'game_system': 'kill_team',
+              'name': r.name,
+              'faction_id': r.factionId,
+              'faction_name': r.factionName,
+              'points_limit': r.operatives.length,
+              'total_points': r.operatives.length,
+              'payload': r.toRustJson(),
+              'updated_at_iso': r.updatedAtIso,
+            }),
+      ];
+
+      final wishlistsPayload = activeStore.wishlistItems
+          .map((item) => {
+                'id': item.id,
+                'game_system': 'wh40k',
+                'faction_id': item.factionId,
+                'faction_name': item.factionName,
+                'unit_id': item.unitId,
+                'unit_name': item.unitName,
+                'quantity_desired': item.quantityDesired,
+                'quantity_owned': item.quantityOwned,
+                'points_per_unit': item.pointsPerUnit,
+                'priority': item.priority.toRustJson(),
+                'state': item.state.toRustJson(),
+                'notes': item.notes,
+                'updated_at_iso': item.updatedAtIso,
+              })
+          .toList();
+
+      final matchesPayload = activeStore.matches
+          .map((m) => {
+                'id': m.id,
+                'game_system': m.gameSystem.apiKey,
+                'date_iso': m.dateIso,
+                'player_faction': m.playerFaction,
+                'opponent_faction': m.opponentFaction,
+                'opponent_name': m.opponentName,
+                'player_score': m.playerScore,
+                'opponent_score': m.opponentScore,
+                'result': m.result.toRustJson(),
+                'payload': m.toRustJson(),
+                'updated_at_iso': m.updatedAtIso,
+              })
+          .toList();
+
+      final uri = Uri.parse('$endpoint/api/sync/batch');
+      final res = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $key',
+            },
+            body: jsonEncode({
+              'rosters': rostersPayload,
+              'wishlists': wishlistsPayload,
+              'matches': matchesPayload,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Pull user data from normalized remote D1 tables (`GET /api/sync`).
+  static Future<PersonalDataStoreUi?> pullFromCloudSync({
+    String? accessKey,
+    String? userId,
+    String? secretKey,
+    String endpoint = defaultCloudSyncEndpoint,
+  }) async {
+    try {
+      final key = accessKey ??
+          secretKey ??
+          (await AuthService.getOrCreateCredentials(endpoint: endpoint))
+              .accessKey;
+      final uri = Uri.parse('$endpoint/api/sync');
+      final res = await http
+          .get(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $key',
+            },
+          )
+          .timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        if (decoded is Map<String, dynamic> &&
-            decoded['ok'] == true &&
-            decoded['exists'] == true) {
-          final data = decoded['data'];
-          if (data is Map<String, dynamic>) {
-            final rawJson = jsonEncode(data);
-            await writePersonalStoreRaw(rawJson);
-            if (OmnispexRustBridge.isReady) {
-              return OmnispexRustBridge.migratePersonalStore(rawJson);
+        if (decoded is Map<String, dynamic> && decoded['ok'] == true) {
+          final rostersRaw = decoded['rosters'] as List? ?? [];
+          final wishlistsRaw = decoded['wishlists'] as List? ?? [];
+          final matchesRaw = decoded['matches'] as List? ?? [];
+
+          final wh40kLists = <ArmyListUi>[];
+          final ktLists = <KillTeamRosterUi>[];
+          for (final r in rostersRaw) {
+            if (r is Map) {
+              final gs = r['game_system']?.toString() ?? 'wh40k';
+              final payload = r['payload'];
+              if (payload is Map) {
+                if (gs == 'kill_team') {
+                  ktLists.add(KillTeamRosterUi.fromRustJson(
+                      Map<String, dynamic>.from(payload)));
+                } else {
+                  wh40kLists.add(ArmyListUi.fromRustJson(
+                      Map<String, dynamic>.from(payload)));
+                }
+              }
             }
-            return PersonalDataStoreUi.fromRustJson(data);
           }
+          _killTeamRosters
+            ..clear()
+            ..addAll(ktLists);
+
+          final wishlists = wishlistsRaw
+              .whereType<Map>()
+              .map((w) =>
+                  WishlistItemUi.fromRustJson(Map<String, dynamic>.from(w)))
+              .toList();
+
+          final matches = matchesRaw
+              .whereType<Map>()
+              .map((m) {
+                final payload = m['payload'];
+                if (payload is Map) {
+                  return MatchRecordUi.fromRustJson(
+                      Map<String, dynamic>.from(payload));
+                }
+                return MatchRecordUi.fromRustJson(
+                    Map<String, dynamic>.from(m));
+              })
+              .toList();
+
+          if (wh40kLists.isEmpty &&
+              ktLists.isEmpty &&
+              wishlists.isEmpty &&
+              matches.isEmpty) {
+            return null;
+          }
+
+          final store = PersonalDataStoreUi(
+            armyLists: wh40kLists,
+            wishlistItems: wishlists,
+            matches: matches,
+          );
+          final map = store.toRustJson();
+          map['kill_team_rosters'] =
+              _killTeamRosters.map((r) => r.toRustJson()).toList();
+          await writePersonalStoreRaw(jsonEncode(map));
+          return store;
         }
       }
     } catch (_) {}

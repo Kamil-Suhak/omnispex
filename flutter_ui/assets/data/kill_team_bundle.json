@@ -1,0 +1,3315 @@
+{
+  "provenance": {
+    "edition": "Kill Team 2024 (3rd Edition)",
+    "rules_version": "KT24 Core + Balance Dataslate",
+    "built_at_iso": "2026-11-05T00:00:00Z"
+  },
+  "factions": [
+    {
+      "id": "kt-angels-of-death",
+      "slug": "angels-of-death",
+      "name": "Angels of Death",
+      "superfaction": "Imperium",
+      "archetypes": [
+        "Seek & Destroy",
+        "Security"
+      ],
+      "faction_rules": [
+        {
+          "name": "Astartes",
+          "description": "During each friendly ANGEL OF DEATH operative's activation, it can perform either two Shoot actions or two Fight actions."
+        },
+        {
+          "name": "Chapter Tactics",
+          "description": "Select two Chapter Tactics at the start of the battle (e.g. Aggressive, Dueller, Resolute, Sharpshooter, Siege Specialist, Stealthy)."
+        }
+      ],
+      "team_size": 6,
+      "min_team_size": 6,
+      "max_team_size": 6,
+      "operatives": [
+        {
+          "id": "aod-captain",
+          "name": "Space Marine Captain",
+          "faction_id": "kt-angels-of-death",
+          "faction_name": "Angels of Death",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 15,
+          "weapons": [
+            {
+              "name": "Plasma Pistol (Standard)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Plasma Pistol (Supercharge)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "Hot"
+                },
+                {
+                  "type": "Lethal",
+                  "data": 5
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Power Fist",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 5,
+              "critical_damage": 7,
+              "rules": [
+                {
+                  "type": "Brutal"
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Iron Halo",
+              "description": "Once per battle, ignore the damage inflicted from one attack die."
+            },
+            {
+              "name": "Heroic Leader",
+              "description": "Use a Firefight Ploy for 0CP once per Turning Point."
+            }
+          ],
+          "keywords": [
+            "ANGEL OF DEATH",
+            "IMPERIUM",
+            "ADEPTUS ASTARTES",
+            "LEADER",
+            "SPACE MARINE CAPTAIN"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "aod-intercessor-sgt",
+          "name": "Intercessor Sergeant",
+          "faction_id": "kt-angels-of-death",
+          "faction_name": "Angels of Death",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 15,
+          "weapons": [
+            {
+              "name": "Bolt Rifle",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 2,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Power Weapon",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Doctrine Mastery",
+              "description": "Gain Balanced on Bolt weapons or melee weapons."
+            }
+          ],
+          "keywords": [
+            "ANGEL OF DEATH",
+            "IMPERIUM",
+            "ADEPTUS ASTARTES",
+            "LEADER",
+            "INTERCESSOR SERGEANT"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "aod-eliminator",
+          "name": "Eliminator Sniper",
+          "faction_id": "kt-angels-of-death",
+          "faction_name": "Angels of Death",
+          "role": "Sniper",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 12,
+          "weapons": [
+            {
+              "name": "Bolt Sniper Rifle (Executioner)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 2,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Heavy"
+                },
+                {
+                  "type": "Saturate"
+                },
+                {
+                  "type": "SeekLight"
+                },
+                {
+                  "type": "Silent"
+                }
+              ]
+            },
+            {
+              "name": "Bolt Sniper Rifle (Mortis)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 2,
+              "normal_damage": 3,
+              "critical_damage": 3,
+              "rules": [
+                {
+                  "type": "Devastating",
+                  "data": 3
+                },
+                {
+                  "type": "Heavy"
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                },
+                {
+                  "type": "Silent"
+                }
+              ]
+            },
+            {
+              "name": "Fists",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Camo Cloak",
+              "description": "Retain an additional cover save while in cover."
+            }
+          ],
+          "keywords": [
+            "ANGEL OF DEATH",
+            "IMPERIUM",
+            "ADEPTUS ASTARTES"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "aod-heavy-gunner",
+          "name": "Heavy Intercessor Gunner",
+          "faction_id": "kt-angels-of-death",
+          "faction_name": "Angels of Death",
+          "role": "Heavy Gunner",
+          "apl": 3,
+          "movement": 5,
+          "save": 3,
+          "wounds": 18,
+          "weapons": [
+            {
+              "name": "Heavy Bolter (Focused)",
+              "weapon_type": "Ranged",
+              "attacks": 5,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "HeavyDashOnly"
+                },
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Heavy Bolter (Sweeping)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "HeavyDashOnly"
+                },
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                },
+                {
+                  "type": "Torrent",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Fists",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "ANGEL OF DEATH",
+            "IMPERIUM",
+            "ADEPTUS ASTARTES"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "aod-grenadier",
+          "name": "Assault Intercessor Grenadier",
+          "faction_id": "kt-angels-of-death",
+          "faction_name": "Angels of Death",
+          "role": "Specialist",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Heavy Bolt Pistol",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Chainsword",
+              "weapon_type": "Melee",
+              "attacks": 5,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": []
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Grenadier",
+              "description": "Equipped with free Frag and Krak grenades with +1 Hit."
+            }
+          ],
+          "keywords": [
+            "ANGEL OF DEATH",
+            "IMPERIUM",
+            "ADEPTUS ASTARTES"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "aod-gunner",
+          "name": "Intercessor Gunner",
+          "faction_id": "kt-angels-of-death",
+          "faction_name": "Angels of Death",
+          "role": "Gunner",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Auxiliary Grenade Launcher (Krak)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Auxiliary Grenade Launcher (Frag)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 2,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Blast",
+                  "data": 2
+                }
+              ]
+            },
+            {
+              "name": "Bolt Rifle",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Fists",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "ANGEL OF DEATH",
+            "IMPERIUM",
+            "ADEPTUS ASTARTES"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "aod-intercessor-warrior",
+          "name": "Intercessor Warrior",
+          "faction_id": "kt-angels-of-death",
+          "faction_name": "Angels of Death",
+          "role": "Warrior",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Bolt Rifle",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Stalker Bolt Rifle (Heavy)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "HeavyDashOnly"
+                },
+                {
+                  "type": "Lethal",
+                  "data": 5
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Fists",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "ANGEL OF DEATH",
+            "IMPERIUM",
+            "ADEPTUS ASTARTES"
+          ],
+          "max_per_kill_team": 5
+        },
+        {
+          "id": "aod-assault-warrior",
+          "name": "Assault Intercessor Warrior",
+          "faction_id": "kt-angels-of-death",
+          "faction_name": "Angels of Death",
+          "role": "Warrior",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Heavy Bolt Pistol",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Chainsword",
+              "weapon_type": "Melee",
+              "attacks": 5,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "ANGEL OF DEATH",
+            "IMPERIUM",
+            "ADEPTUS ASTARTES"
+          ],
+          "max_per_kill_team": 5
+        }
+      ],
+      "ploys": [
+        {
+          "id": "aod-ploy-combat-doctrine",
+          "name": "Combat Doctrine",
+          "ploy_type": "Strategy",
+          "cp_cost": 1,
+          "description": "Friendly ANGEL OF DEATH operatives gain Balanced on ranged attacks within 8\" or at long range."
+        },
+        {
+          "id": "aod-ploy-and-they-shall-know-no-fear",
+          "name": "And They Shall Know No Fear",
+          "ploy_type": "Strategy",
+          "cp_cost": 1,
+          "description": "Ignore APL modifiers and injured Hit penalties for friendly operatives."
+        },
+        {
+          "id": "aod-ploy-wrath-of-vengeance",
+          "name": "Wrath of Vengeance",
+          "ploy_type": "Firefight",
+          "cp_cost": 1,
+          "description": "After an operative incapacitates an enemy, perform an additional Shoot or Fight action."
+        },
+        {
+          "id": "aod-ploy-transhuman-physiology",
+          "name": "Transhuman Physiology",
+          "ploy_type": "Firefight",
+          "cp_cost": 1,
+          "description": "Retain one normal defense success as a critical success instead."
+        }
+      ],
+      "equipment": [
+        {
+          "id": "aod-eq-purity-seals",
+          "name": "Purity Seals",
+          "is_universal": false,
+          "description": "Once per Turning Point, if a friendly operative rolls two or more fails in a Shoot or Fight action, discard one fail to retain another fail as a normal success.",
+          "granted_weapon": null
+        },
+        {
+          "id": "aod-eq-chapter-reliquaries",
+          "name": "Chapter Reliquaries",
+          "is_universal": false,
+          "description": "Allows re-rolling one defense die per Turning Point.",
+          "granted_weapon": null
+        },
+        {
+          "id": "aod-eq-tilting-shields",
+          "name": "Tilting Shields",
+          "is_universal": false,
+          "description": "Opponent cannot retain critical hits on better than 6+ in melee against friendly operatives.",
+          "granted_weapon": null
+        },
+        {
+          "id": "aod-eq-auspex",
+          "name": "Auspex",
+          "is_universal": false,
+          "description": "Once per Turning Point, ignore Obscured for a friendly operative's Shoot action.",
+          "granted_weapon": null
+        }
+      ]
+    },
+    {
+      "id": "kt-plague-marines",
+      "slug": "plague-marines",
+      "name": "Plague Marines",
+      "superfaction": "Chaos",
+      "archetypes": [
+        "Security",
+        "Seek & Destroy"
+      ],
+      "faction_rules": [
+        {
+          "name": "Disgustingly Resilient",
+          "description": "Whenever an attack die would inflict 3 or more damage on a friendly PLAGUE MARINE operative, roll 1D6: on 4+, subtract 1 from the damage inflicted."
+        },
+        {
+          "name": "Poison",
+          "description": "Enemy operatives within Contagion range or damaged by Poison weapons gain a Poison token (1D3 damage on activation and -1 Hit vs Plague Marines)."
+        }
+      ],
+      "team_size": 6,
+      "min_team_size": 6,
+      "max_team_size": 6,
+      "operatives": [
+        {
+          "id": "pm-champion",
+          "name": "Plague Marine Champion",
+          "faction_id": "kt-plague-marines",
+          "faction_name": "Plague Marines",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 5,
+          "save": 3,
+          "wounds": 15,
+          "weapons": [
+            {
+              "name": "Plasma Pistol (Standard)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Plague Sword",
+              "weapon_type": "Melee",
+              "attacks": 5,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Severe"
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Grandfather's Blessing",
+              "description": "Regain D3 lost wounds at the start of activation."
+            }
+          ],
+          "keywords": [
+            "PLAGUE MARINE",
+            "CHAOS",
+            "HERETIC ASTARTES",
+            "LEADER",
+            "CHAMPION"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "pm-plaguecaster",
+          "name": "Malignant Plaguecaster",
+          "faction_id": "kt-plague-marines",
+          "faction_name": "Plague Marines",
+          "role": "Specialist",
+          "apl": 3,
+          "movement": 5,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Plague Wind",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "Blast",
+                  "data": 2
+                },
+                {
+                  "type": "Saturate"
+                },
+                {
+                  "type": "Severe"
+                }
+              ]
+            },
+            {
+              "name": "Corrupted Staff",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Shock"
+                },
+                {
+                  "type": "Stun"
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Gift of Contagion",
+              "description": "Psychic action to reduce enemy APL or worsen save."
+            }
+          ],
+          "keywords": [
+            "PLAGUE MARINE",
+            "CHAOS",
+            "HERETIC ASTARTES"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "pm-bombardier",
+          "name": "Plague Marine Bombardier",
+          "faction_id": "kt-plague-marines",
+          "faction_name": "Plague Marines",
+          "role": "Specialist",
+          "apl": 3,
+          "movement": 5,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Blight Grenade",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 2,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 6
+                },
+                {
+                  "type": "Blast",
+                  "data": 2
+                },
+                {
+                  "type": "Saturate"
+                },
+                {
+                  "type": "Severe"
+                }
+              ]
+            },
+            {
+              "name": "Boltgun",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            },
+            {
+              "name": "Plague Knife",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Severe"
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "PLAGUE MARINE",
+            "CHAOS",
+            "HERETIC ASTARTES"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "pm-fighter",
+          "name": "Plague Marine Fighter",
+          "faction_id": "kt-plague-marines",
+          "faction_name": "Plague Marines",
+          "role": "Specialist",
+          "apl": 3,
+          "movement": 5,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Flail of Corruption",
+              "weapon_type": "Melee",
+              "attacks": 5,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Ceaseless"
+                },
+                {
+                  "type": "Shock"
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "PLAGUE MARINE",
+            "CHAOS",
+            "HERETIC ASTARTES"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "pm-heavy-gunner",
+          "name": "Plague Marine Heavy Gunner",
+          "faction_id": "kt-plague-marines",
+          "faction_name": "Plague Marines",
+          "role": "Heavy Gunner",
+          "apl": 3,
+          "movement": 5,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Blight Launcher",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "HeavyDashOnly"
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                },
+                {
+                  "type": "Severe"
+                }
+              ]
+            },
+            {
+              "name": "Plague Spewer",
+              "weapon_type": "Ranged",
+              "attacks": 5,
+              "hit": 2,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "Saturate"
+                },
+                {
+                  "type": "Severe"
+                },
+                {
+                  "type": "Torrent",
+                  "data": 2
+                }
+              ]
+            },
+            {
+              "name": "Plague Knife",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Severe"
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "PLAGUE MARINE",
+            "CHAOS",
+            "HERETIC ASTARTES"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "pm-icon-bearer",
+          "name": "Plague Marine Icon Bearer",
+          "faction_id": "kt-plague-marines",
+          "faction_name": "Plague Marines",
+          "role": "Specialist",
+          "apl": 3,
+          "movement": 5,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Boltgun",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            },
+            {
+              "name": "Plague Knife",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Severe"
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Icon of Contagion",
+              "description": "+1 APL when determining control of objective markers."
+            }
+          ],
+          "keywords": [
+            "PLAGUE MARINE",
+            "CHAOS",
+            "HERETIC ASTARTES"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "pm-warrior",
+          "name": "Plague Marine Warrior",
+          "faction_id": "kt-plague-marines",
+          "faction_name": "Plague Marines",
+          "role": "Warrior",
+          "apl": 3,
+          "movement": 5,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Boltgun",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            },
+            {
+              "name": "Plague Knife",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Severe"
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "PLAGUE MARINE",
+            "CHAOS",
+            "HERETIC ASTARTES"
+          ],
+          "max_per_kill_team": 3
+        }
+      ],
+      "ploys": [
+        {
+          "id": "pm-ploy-contagion",
+          "name": "Contagion",
+          "ploy_type": "Strategy",
+          "cp_cost": 1,
+          "description": "Enemy operatives within 3\" of friendly PLAGUE MARINE operatives suffer -1 Hit."
+        },
+        {
+          "id": "pm-ploy-cloud-of-flies",
+          "name": "Cloud of Flies",
+          "ploy_type": "Strategy",
+          "cp_cost": 1,
+          "description": "Friendly operatives within 3\" of a Smoke or Contagion marker are Obscured from >6\"."
+        }
+      ],
+      "equipment": [
+        {
+          "id": "pm-eq-plague-bells",
+          "name": "Plague Bells",
+          "is_universal": false,
+          "description": "Once per Turning Point, add 1\" to the Movement stat of a friendly PLAGUE MARINE operative.",
+          "granted_weapon": null
+        },
+        {
+          "id": "pm-eq-blight-grenades",
+          "name": "Blight Grenades",
+          "is_universal": false,
+          "description": "Frag grenades equipped by friendly operatives gain the Poison and Severe rules.",
+          "granted_weapon": null
+        }
+      ]
+    },
+    {
+      "id": "kt-kommandos",
+      "slug": "kommandos",
+      "name": "Kommandos",
+      "superfaction": "Xenos",
+      "archetypes": [
+        "Infiltration",
+        "Seek & Destroy"
+      ],
+      "faction_rules": [
+        {
+          "name": "Throat Slittas",
+          "description": "Friendly KOMMANDO operatives can perform a Charge action while they have a Conceal order."
+        }
+      ],
+      "team_size": 10,
+      "min_team_size": 10,
+      "max_team_size": 11,
+      "operatives": [
+        {
+          "id": "kom-nob",
+          "name": "Kommando Boss Nob",
+          "faction_id": "kt-kommandos",
+          "faction_name": "Kommandos",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 6,
+          "save": 4,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Slugga",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 4,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                }
+              ]
+            },
+            {
+              "name": "Power Klaw",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 5,
+              "critical_damage": 7,
+              "rules": [
+                {
+                  "type": "Brutal"
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Get It Dun!",
+              "description": "Add 1 to the APL of a friendly KOMMANDO operative within 6\"."
+            }
+          ],
+          "keywords": [
+            "KOMMANDO",
+            "XENOS",
+            "ORK",
+            "LEADER",
+            "BOSS NOB"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "kom-rokkiteer",
+          "name": "Kommando Rokkit Boy",
+          "faction_id": "kt-kommandos",
+          "faction_name": "Kommandos",
+          "role": "Gunner",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 10,
+          "weapons": [
+            {
+              "name": "Rokkit Launcha",
+              "weapon_type": "Ranged",
+              "attacks": 5,
+              "hit": 4,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Blast",
+                  "data": 1
+                },
+                {
+                  "type": "Ceaseless"
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Fists",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "KOMMANDO",
+            "XENOS",
+            "ORK"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "kom-snipa",
+          "name": "Kommando Snipa Boy",
+          "faction_id": "kt-kommandos",
+          "faction_name": "Kommandos",
+          "role": "Sniper",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 10,
+          "weapons": [
+            {
+              "name": "Scoped Big Shoota",
+              "weapon_type": "Ranged",
+              "attacks": 6,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Devastating",
+                  "data": 2
+                }
+              ]
+            },
+            {
+              "name": "Fists",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "KOMMANDO",
+            "XENOS",
+            "ORK"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "kom-breacha",
+          "name": "Kommando Breacha Boy",
+          "faction_id": "kt-kommandos",
+          "faction_name": "Kommandos",
+          "role": "Specialist",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 10,
+          "weapons": [
+            {
+              "name": "Slugga",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 4,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                }
+              ]
+            },
+            {
+              "name": "Breacha Ram",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 5,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Brutal"
+                },
+                {
+                  "type": "Shock"
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Breach",
+              "description": "Move through wall terrain up to 1\" thick as open ground."
+            }
+          ],
+          "keywords": [
+            "KOMMANDO",
+            "XENOS",
+            "ORK"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "kom-boy",
+          "name": "Kommando Boy",
+          "faction_id": "kt-kommandos",
+          "faction_name": "Kommandos",
+          "role": "Warrior",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 10,
+          "weapons": [
+            {
+              "name": "Slugga",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 4,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                }
+              ]
+            },
+            {
+              "name": "Choppa",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "KOMMANDO",
+            "XENOS",
+            "ORK"
+          ],
+          "max_per_kill_team": 9
+        }
+      ],
+      "ploys": [
+        {
+          "id": "kom-ploy-sssshhhh",
+          "name": "Sssshhhh!",
+          "ploy_type": "Strategy",
+          "cp_cost": 1,
+          "description": "Friendly KOMMANDO operatives with a Conceal order out of 6\" can perform a free Dash."
+        },
+        {
+          "id": "kom-ploy-just-a-scratch",
+          "name": "Just a Scratch",
+          "ploy_type": "Firefight",
+          "cp_cost": 1,
+          "description": "Ignore the damage inflicted from one normal attack die."
+        }
+      ],
+      "equipment": [
+        {
+          "id": "kom-eq-dynamite",
+          "name": "Dynamite",
+          "is_universal": false,
+          "description": "Grants the Dynamite ranged weapon (ATK 4, HIT 4+, DMG 5/6, Range 4\", Blast 1\", Heavy, Piercing 1, Limited 1).",
+          "granted_weapon": {
+            "name": "Dynamite",
+            "weapon_type": "Ranged",
+            "attacks": 4,
+            "hit": 4,
+            "normal_damage": 5,
+            "critical_damage": 6,
+            "rules": [
+              {
+                "type": "Range",
+                "data": 4
+              },
+              {
+                "type": "Blast",
+                "data": 1
+              },
+              {
+                "type": "Heavy"
+              },
+              {
+                "type": "Piercing",
+                "data": 1
+              },
+              {
+                "type": "Limited",
+                "data": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "kt-kasrkin",
+      "slug": "kasrkin",
+      "name": "Kasrkin",
+      "superfaction": "Imperium",
+      "archetypes": [
+        "Security",
+        "Seek & Destroy"
+      ],
+      "faction_rules": [
+        {
+          "name": "Skill at Arms",
+          "description": "At the start of each Turning Point, select one Skill at Arms (e.g. Light 'Em Up for Severe on ranged weapons, Strike Fast for +1\" Move, Ice in Your Veins)."
+        }
+      ],
+      "team_size": 10,
+      "min_team_size": 10,
+      "max_team_size": 10,
+      "operatives": [
+        {
+          "id": "kas-sgt",
+          "name": "Kasrkin Sergeant",
+          "faction_id": "kt-kasrkin",
+          "faction_name": "Kasrkin",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 6,
+          "save": 4,
+          "wounds": 9,
+          "weapons": [
+            {
+              "name": "Hot-shot Laspistol",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Power Weapon",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Tactical Command",
+              "description": "Use an additional Skill at Arms on a friendly operative."
+            }
+          ],
+          "keywords": [
+            "KASRKIN",
+            "IMPERIUM",
+            "ASTRA MILITARUM",
+            "LEADER",
+            "SERGEANT"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "kas-gunner-plasma",
+          "name": "Kasrkin Gunner (Plasma)",
+          "faction_id": "kt-kasrkin",
+          "faction_name": "Kasrkin",
+          "role": "Gunner",
+          "apl": 2,
+          "movement": 6,
+          "save": 4,
+          "wounds": 8,
+          "weapons": [
+            {
+              "name": "Plasma Gun (Standard)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Plasma Gun (Supercharge)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 5,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Hot"
+                },
+                {
+                  "type": "Lethal",
+                  "data": 5
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Gun Butt",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 4,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "KASRKIN",
+            "IMPERIUM",
+            "ASTRA MILITARUM"
+          ],
+          "max_per_kill_team": 4
+        },
+        {
+          "id": "kas-sharpshooter",
+          "name": "Kasrkin Sharpshooter",
+          "faction_id": "kt-kasrkin",
+          "faction_name": "Kasrkin",
+          "role": "Sniper",
+          "apl": 2,
+          "movement": 6,
+          "save": 4,
+          "wounds": 8,
+          "weapons": [
+            {
+              "name": "Hot-shot Marksman Rifle (Snipe)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 2,
+              "normal_damage": 3,
+              "critical_damage": 3,
+              "rules": [
+                {
+                  "type": "Devastating",
+                  "data": 3
+                },
+                {
+                  "type": "Heavy"
+                },
+                {
+                  "type": "Silent"
+                }
+              ]
+            },
+            {
+              "name": "Gun Butt",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 4,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Camo Cloak",
+              "description": "Retain an additional cover save."
+            }
+          ],
+          "keywords": [
+            "KASRKIN",
+            "IMPERIUM",
+            "ASTRA MILITARUM"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "kas-trooper",
+          "name": "Kasrkin Trooper",
+          "faction_id": "kt-kasrkin",
+          "faction_name": "Kasrkin",
+          "role": "Warrior",
+          "apl": 2,
+          "movement": 6,
+          "save": 4,
+          "wounds": 8,
+          "weapons": [
+            {
+              "name": "Hot-shot Lasgun",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Gun Butt",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 4,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "KASRKIN",
+            "IMPERIUM",
+            "ASTRA MILITARUM"
+          ],
+          "max_per_kill_team": 9
+        }
+      ],
+      "ploys": [
+        {
+          "id": "kas-ploy-elimination-pattern",
+          "name": "Elimination Pattern",
+          "ploy_type": "Strategy",
+          "cp_cost": 1,
+          "description": "Hot-shot weapons gain Piercing 1 within 6\"."
+        }
+      ],
+      "equipment": [
+        {
+          "id": "kas-eq-foregrip",
+          "name": "Foregrip",
+          "is_universal": false,
+          "description": "Hot-shot weapons gain Accurate 1 when shooting targets within 6\".",
+          "granted_weapon": null
+        }
+      ]
+    },
+    {
+      "id": "kt-death-korps",
+      "slug": "death-korps",
+      "name": "Death Korps",
+      "superfaction": "Imperium",
+      "archetypes": [
+        "Security",
+        "Recon"
+      ],
+      "faction_rules": [
+        {
+          "name": "Guardsman Orders",
+          "description": "Issue Guardsman Orders (Take Aim!, Fix Bayonets!, Move! Move! Move!, Dig In!) across the killzone."
+        }
+      ],
+      "team_size": 14,
+      "min_team_size": 10,
+      "max_team_size": 14,
+      "operatives": [
+        {
+          "id": "dk-watchmaster",
+          "name": "Death Korps Watchmaster",
+          "faction_id": "kt-death-korps",
+          "faction_name": "Death Korps",
+          "role": "Leader",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 8,
+          "weapons": [
+            {
+              "name": "Plasma Pistol (Standard)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Power Weapon",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Guardsman Orders",
+              "description": "Issue a Guardsman Order for 1 AP."
+            }
+          ],
+          "keywords": [
+            "DEATH KORPS",
+            "IMPERIUM",
+            "ASTRA MILITARUM",
+            "LEADER",
+            "WATCHMASTER"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "dk-gunner",
+          "name": "Death Korps Gunner",
+          "faction_id": "kt-death-korps",
+          "faction_name": "Death Korps",
+          "role": "Gunner",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 7,
+          "weapons": [
+            {
+              "name": "Meltagun",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 4,
+              "normal_damage": 6,
+              "critical_damage": 3,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 6
+                },
+                {
+                  "type": "Devastating",
+                  "data": 4
+                },
+                {
+                  "type": "Piercing",
+                  "data": 2
+                }
+              ]
+            },
+            {
+              "name": "Bayonet",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 4,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "DEATH KORPS",
+            "IMPERIUM",
+            "ASTRA MILITARUM"
+          ],
+          "max_per_kill_team": 4
+        },
+        {
+          "id": "dk-trooper",
+          "name": "Death Korps Trooper",
+          "faction_id": "kt-death-korps",
+          "faction_name": "Death Korps",
+          "role": "Warrior",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 7,
+          "weapons": [
+            {
+              "name": "Lasgun",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 4,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            },
+            {
+              "name": "Bayonet",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 4,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Group Activation",
+              "description": "Activate two Troopers in succession."
+            }
+          ],
+          "keywords": [
+            "DEATH KORPS",
+            "IMPERIUM",
+            "ASTRA MILITARUM"
+          ],
+          "max_per_kill_team": 13
+        }
+      ],
+      "ploys": [
+        {
+          "id": "dk-ploy-in-death-atonement",
+          "name": "In Death, Atonement",
+          "ploy_type": "Firefight",
+          "cp_cost": 1,
+          "description": "When incapacitated, the operative can perform one 1AP action before being removed."
+        }
+      ],
+      "equipment": []
+    },
+    {
+      "id": "kt-legionaries",
+      "slug": "legionaries",
+      "name": "Legionaries",
+      "superfaction": "Chaos",
+      "archetypes": [
+        "Seek & Destroy",
+        "Security"
+      ],
+      "faction_rules": [
+        {
+          "name": "Marks of Chaos",
+          "description": "Assign Khorne, Nurgle, Tzeentch, Slaanesh, or Undivided Marks to operatives for tailored combat blessings."
+        }
+      ],
+      "team_size": 6,
+      "min_team_size": 6,
+      "max_team_size": 6,
+      "operatives": [
+        {
+          "id": "leg-chosen",
+          "name": "Legionary Chosen",
+          "faction_id": "kt-legionaries",
+          "faction_name": "Legionaries",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 15,
+          "weapons": [
+            {
+              "name": "Plasma Pistol (Standard)",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Daemon Blade",
+              "weapon_type": "Melee",
+              "attacks": 5,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 7,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Soul Gorge",
+              "description": "Regain 2 lost wounds whenever this operative incapacitates an enemy in melee."
+            }
+          ],
+          "keywords": [
+            "LEGIONARY",
+            "CHAOS",
+            "HERETIC ASTARTES",
+            "LEADER",
+            "CHOSEN"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "leg-anointed",
+          "name": "Legionary Anointed",
+          "faction_id": "kt-legionaries",
+          "faction_name": "Legionaries",
+          "role": "Specialist",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Bolt Pistol",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                }
+              ]
+            },
+            {
+              "name": "Daemonic Claw",
+              "weapon_type": "Melee",
+              "attacks": 5,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Ceaseless"
+                },
+                {
+                  "type": "Lethal",
+                  "data": 5
+                },
+                {
+                  "type": "Rending"
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Unleash Daemon",
+              "description": "Can fight twice per activation while Daemon is unleashed."
+            }
+          ],
+          "keywords": [
+            "LEGIONARY",
+            "CHAOS",
+            "HERETIC ASTARTES"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "leg-warrior",
+          "name": "Legionary Warrior",
+          "faction_id": "kt-legionaries",
+          "faction_name": "Legionaries",
+          "role": "Warrior",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Boltgun",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            },
+            {
+              "name": "Chainsword",
+              "weapon_type": "Melee",
+              "attacks": 5,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "LEGIONARY",
+            "CHAOS",
+            "HERETIC ASTARTES"
+          ],
+          "max_per_kill_team": 5
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    },
+    {
+      "id": "kt-tempestus-aquilons",
+      "slug": "tempestus-aquilons",
+      "name": "Tempestus Aquilons",
+      "superfaction": "Imperium",
+      "archetypes": [
+        "Seek & Destroy",
+        "Recon"
+      ],
+      "faction_rules": [
+        {
+          "name": "Drop Insertion",
+          "description": "Deploy Drop Markers and grav-chute insert operatives during Turning Points 1 and 2."
+        }
+      ],
+      "team_size": 11,
+      "min_team_size": 11,
+      "max_team_size": 11,
+      "operatives": [
+        {
+          "id": "ta-tempestor",
+          "name": "Aquilon Tempestor",
+          "faction_id": "kt-tempestus-aquilons",
+          "faction_name": "Tempestus Aquilons",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 6,
+          "save": 4,
+          "wounds": 9,
+          "weapons": [
+            {
+              "name": "Hot-shot Laspistol",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                }
+              ]
+            },
+            {
+              "name": "Power Weapon",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "TEMPESTUS AQUILON",
+            "IMPERIUM",
+            "LEADER",
+            "TEMPESTOR"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "ta-sentry",
+          "name": "Aquilon Servo-Sentry",
+          "faction_id": "kt-tempestus-aquilons",
+          "faction_name": "Tempestus Aquilons",
+          "role": "Specialist",
+          "apl": 2,
+          "movement": 4,
+          "save": 4,
+          "wounds": 10,
+          "weapons": [
+            {
+              "name": "Hot-shot Volley Gun (Focused)",
+              "weapon_type": "Ranged",
+              "attacks": 5,
+              "hit": 4,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "TEMPESTUS AQUILON",
+            "IMPERIUM",
+            "ASTRA MILITARUM"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "ta-trooper",
+          "name": "Aquilon Trooper",
+          "faction_id": "kt-tempestus-aquilons",
+          "faction_name": "Tempestus Aquilons",
+          "role": "Warrior",
+          "apl": 2,
+          "movement": 6,
+          "save": 4,
+          "wounds": 8,
+          "weapons": [
+            {
+              "name": "Hot-shot Lascarbine",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            },
+            {
+              "name": "Combat Blade",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 4,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "TEMPESTUS AQUILON",
+            "IMPERIUM",
+            "ASTRA MILITARUM"
+          ],
+          "max_per_kill_team": 10
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    },
+    {
+      "id": "kt-vespid-stingwings",
+      "slug": "vespid-stingwings",
+      "name": "Vespid Stingwings",
+      "superfaction": "Xenos",
+      "archetypes": [
+        "Recon",
+        "Seek & Destroy"
+      ],
+      "faction_rules": [
+        {
+          "name": "Airborne Predators",
+          "description": "Fly across terrain during Reposition and Charge actions."
+        },
+        {
+          "name": "Communion",
+          "description": "Spend Communion points to direct Stingwing targets and gain Neutron rules."
+        }
+      ],
+      "team_size": 11,
+      "min_team_size": 11,
+      "max_team_size": 11,
+      "operatives": [
+        {
+          "id": "ves-strain-leader",
+          "name": "Vespid Strain Leader",
+          "faction_id": "kt-vespid-stingwings",
+          "faction_name": "Vespid Stingwings",
+          "role": "Leader",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 10,
+          "weapons": [
+            {
+              "name": "Neutron Blaster",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 3,
+              "rules": [
+                {
+                  "type": "Devastating",
+                  "data": 2
+                }
+              ]
+            },
+            {
+              "name": "Claws",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 4,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "VESPID STINGWING",
+            "XENOS",
+            "LEADER",
+            "STRAIN LEADER"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "ves-warrior",
+          "name": "Vespid Warrior",
+          "faction_id": "kt-vespid-stingwings",
+          "faction_name": "Vespid Stingwings",
+          "role": "Warrior",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 9,
+          "weapons": [
+            {
+              "name": "Neutron Blaster",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 4,
+              "normal_damage": 3,
+              "critical_damage": 3,
+              "rules": [
+                {
+                  "type": "Devastating",
+                  "data": 2
+                }
+              ]
+            },
+            {
+              "name": "Claws",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 4,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "VESPID STINGWING",
+            "XENOS",
+            "T'AU EMPIRE"
+          ],
+          "max_per_kill_team": 10
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    },
+    {
+      "id": "kt-nemesis-claw",
+      "slug": "nemesis-claw",
+      "name": "Nemesis Claw",
+      "superfaction": "Chaos",
+      "archetypes": [
+        "Infiltration",
+        "Seek & Destroy"
+      ],
+      "faction_rules": [
+        {
+          "name": "In Midnight Clad",
+          "description": "Operatives in cover and >6\" from enemies are Obscured."
+        }
+      ],
+      "team_size": 6,
+      "min_team_size": 6,
+      "max_team_size": 6,
+      "operatives": [
+        {
+          "id": "nc-visionary",
+          "name": "Nemesis Claw Visionary",
+          "faction_id": "kt-nemesis-claw",
+          "faction_name": "Nemesis Claw",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 15,
+          "weapons": [
+            {
+              "name": "Bolt Pistol",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                }
+              ]
+            },
+            {
+              "name": "Nostraman Chainglaive",
+              "weapon_type": "Melee",
+              "attacks": 5,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Rending"
+                }
+              ]
+            }
+          ],
+          "abilities": [
+            {
+              "name": "Premonition",
+              "description": "Force an enemy roll to be re-rolled once per Turning Point."
+            }
+          ],
+          "keywords": [
+            "NEMESIS CLAW",
+            "CHAOS",
+            "LEADER",
+            "VISIONARY"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "nc-warrior",
+          "name": "Nemesis Claw Warrior",
+          "faction_id": "kt-nemesis-claw",
+          "faction_name": "Nemesis Claw",
+          "role": "Warrior",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 14,
+          "weapons": [
+            {
+              "name": "Boltgun",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            },
+            {
+              "name": "Chainsword",
+              "weapon_type": "Melee",
+              "attacks": 5,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "NEMESIS CLAW",
+            "CHAOS",
+            "HERETIC ASTARTES"
+          ],
+          "max_per_kill_team": 5
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    },
+    {
+      "id": "kt-blades-of-khaine",
+      "slug": "blades-of-khaine",
+      "name": "Blades of Khaine",
+      "superfaction": "Xenos",
+      "archetypes": [
+        "Seek & Destroy",
+        "Recon",
+        "Infiltration"
+      ],
+      "faction_rules": [
+        {
+          "name": "Aspect Techniques",
+          "description": "Execute Dire Avenger, Howling Banshee, and Striking Scorpion Aspect Techniques."
+        }
+      ],
+      "team_size": 8,
+      "min_team_size": 8,
+      "max_team_size": 8,
+      "operatives": [
+        {
+          "id": "bok-exarch",
+          "name": "Howling Banshee Exarch",
+          "faction_id": "kt-blades-of-khaine",
+          "faction_name": "Blades of Khaine",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 7,
+          "save": 3,
+          "wounds": 9,
+          "weapons": [
+            {
+              "name": "Shuriken Pistol",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "Rending"
+                }
+              ]
+            },
+            {
+              "name": "Executioner",
+              "weapon_type": "Melee",
+              "attacks": 5,
+              "hit": 2,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "BLADE OF KHAINE",
+            "XENOS",
+            "AELDARI",
+            "LEADER",
+            "EXARCH"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "bok-warrior",
+          "name": "Aspect Warrior",
+          "faction_id": "kt-blades-of-khaine",
+          "faction_name": "Blades of Khaine",
+          "role": "Warrior",
+          "apl": 3,
+          "movement": 7,
+          "save": 4,
+          "wounds": 8,
+          "weapons": [
+            {
+              "name": "Shuriken Catapult",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Rending"
+                }
+              ]
+            },
+            {
+              "name": "Banshee Blade",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "BLADE OF KHAINE",
+            "XENOS",
+            "AELDARI"
+          ],
+          "max_per_kill_team": 7
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    },
+    {
+      "id": "kt-pathfinders",
+      "slug": "pathfinders",
+      "name": "Pathfinders",
+      "superfaction": "Xenos",
+      "archetypes": [
+        "Recon"
+      ],
+      "faction_rules": [
+        {
+          "name": "Markerlights",
+          "description": "Place Markerlight tokens on enemy operatives to grant Accurate, Saturate, and +1 Hit."
+        }
+      ],
+      "team_size": 12,
+      "min_team_size": 12,
+      "max_team_size": 12,
+      "operatives": [
+        {
+          "id": "pf-shasui",
+          "name": "Shas'ui Pathfinder",
+          "faction_id": "kt-pathfinders",
+          "faction_name": "Pathfinders",
+          "role": "Leader",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 8,
+          "weapons": [
+            {
+              "name": "Pulse Carbine",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": []
+            },
+            {
+              "name": "Gun Butt",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 5,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "PATHFINDER",
+            "XENOS",
+            "T'AU EMPIRE",
+            "LEADER",
+            "SHAS'UI"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "pf-weapons-expert",
+          "name": "Weapons Expert Pathfinder",
+          "faction_id": "kt-pathfinders",
+          "faction_name": "Pathfinders",
+          "role": "Gunner",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 7,
+          "weapons": [
+            {
+              "name": "Rail Rifle",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 4,
+              "normal_damage": 4,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Devastating",
+                  "data": 2
+                },
+                {
+                  "type": "Lethal",
+                  "data": 5
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Gun Butt",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 5,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "PATHFINDER",
+            "XENOS",
+            "T'AU EMPIRE"
+          ],
+          "max_per_kill_team": 2
+        },
+        {
+          "id": "pf-shasla",
+          "name": "Shas'la Pathfinder",
+          "faction_id": "kt-pathfinders",
+          "faction_name": "Pathfinders",
+          "role": "Warrior",
+          "apl": 2,
+          "movement": 6,
+          "save": 5,
+          "wounds": 7,
+          "weapons": [
+            {
+              "name": "Pulse Carbine",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 4,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": []
+            },
+            {
+              "name": "Gun Butt",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 5,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "PATHFINDER",
+            "XENOS",
+            "T'AU EMPIRE"
+          ],
+          "max_per_kill_team": 11
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    },
+    {
+      "id": "kt-hierotek-circle",
+      "slug": "hierotek-circle",
+      "name": "Hierotek Circle",
+      "superfaction": "Xenos",
+      "archetypes": [
+        "Recon",
+        "Security"
+      ],
+      "faction_rules": [
+        {
+          "name": "Reanimation Protocols",
+          "description": "Place Reanimation markers when operatives are incapacitated and attempt reanimation on 3+."
+        }
+      ],
+      "team_size": 8,
+      "min_team_size": 8,
+      "max_team_size": 8,
+      "operatives": [
+        {
+          "id": "hc-chronomancer",
+          "name": "Chronomancer",
+          "faction_id": "kt-hierotek-circle",
+          "faction_name": "Hierotek Circle",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 13,
+          "weapons": [
+            {
+              "name": "Entropic Lance",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 5,
+              "critical_damage": 3,
+              "rules": [
+                {
+                  "type": "Devastating",
+                  "data": 3
+                },
+                {
+                  "type": "Piercing",
+                  "data": 2
+                }
+              ]
+            },
+            {
+              "name": "Entropic Lance (Melee)",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "HIEROTEK CIRCLE",
+            "XENOS",
+            "NECRON",
+            "LEADER",
+            "CHRONOMANCER"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "hc-immortal",
+          "name": "Immortal Guardian",
+          "faction_id": "kt-hierotek-circle",
+          "faction_name": "Hierotek Circle",
+          "role": "Warrior",
+          "apl": 2,
+          "movement": 5,
+          "save": 3,
+          "wounds": 10,
+          "weapons": [
+            {
+              "name": "Gauss Blaster",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Bayonet",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "HIEROTEK CIRCLE",
+            "XENOS",
+            "NECRON"
+          ],
+          "max_per_kill_team": 5
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    },
+    {
+      "id": "kt-hearthkyn-salvagers",
+      "slug": "hearthkyn-salvagers",
+      "name": "Hearthkyn Salvagers",
+      "superfaction": "Xenos",
+      "archetypes": [
+        "Security",
+        "Recon"
+      ],
+      "faction_rules": [
+        {
+          "name": "Grudge",
+          "description": "Assign Grudge tokens to enemy operatives; retain one normal hit as a critical hit per Grudge token."
+        }
+      ],
+      "team_size": 10,
+      "min_team_size": 10,
+      "max_team_size": 10,
+      "operatives": [
+        {
+          "id": "hs-theyn",
+          "name": "Hearthkyn Theyn",
+          "faction_id": "kt-hearthkyn-salvagers",
+          "faction_name": "Hearthkyn Salvagers",
+          "role": "Leader",
+          "apl": 2,
+          "movement": 5,
+          "save": 3,
+          "wounds": 9,
+          "weapons": [
+            {
+              "name": "Ion Blaster",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "PiercingCrits",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Plasma Sword",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "HEARTHKYN SALVAGER",
+            "XENOS",
+            "LEADER",
+            "THEYN"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "hs-warrior",
+          "name": "Hearthkyn Warrior",
+          "faction_id": "kt-hearthkyn-salvagers",
+          "faction_name": "Hearthkyn Salvagers",
+          "role": "Warrior",
+          "apl": 2,
+          "movement": 5,
+          "save": 4,
+          "wounds": 8,
+          "weapons": [
+            {
+              "name": "Autoch-pattern Bolter",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 4,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Accurate",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Fists",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 4,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "HEARTHKYN SALVAGER",
+            "XENOS",
+            "LEAGUES OF VOTANN"
+          ],
+          "max_per_kill_team": 9
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    },
+    {
+      "id": "kt-warpcoven",
+      "slug": "warpcoven",
+      "name": "Warpcoven",
+      "superfaction": "Chaos",
+      "archetypes": [
+        "Security",
+        "Recon"
+      ],
+      "faction_rules": [
+        {
+          "name": "Boon of Tzeentch",
+          "description": "Select Boons of Tzeentch for Sorcerer operatives."
+        }
+      ],
+      "team_size": 6,
+      "min_team_size": 6,
+      "max_team_size": 11,
+      "operatives": [
+        {
+          "id": "wc-sorcerer",
+          "name": "Sorcerer",
+          "faction_id": "kt-warpcoven",
+          "faction_name": "Warpcoven",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 6,
+          "save": 3,
+          "wounds": 13,
+          "weapons": [
+            {
+              "name": "Inferno Bolt Pistol",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Force Stave",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Shock"
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "WARPCOVEN",
+            "CHAOS",
+            "LEADER",
+            "SORCERER"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "wc-rubric",
+          "name": "Rubric Marine Warrior",
+          "faction_id": "kt-warpcoven",
+          "faction_name": "Warpcoven",
+          "role": "Warrior",
+          "apl": 2,
+          "movement": 5,
+          "save": 3,
+          "wounds": 12,
+          "weapons": [
+            {
+              "name": "Inferno Boltgun",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Piercing",
+                  "data": 1
+                }
+              ]
+            },
+            {
+              "name": "Fists",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "WARPCOVEN",
+            "CHAOS",
+            "THOUSAND SONS"
+          ],
+          "max_per_kill_team": 5
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    },
+    {
+      "id": "kt-phobos-strike-team",
+      "slug": "phobos-strike-team",
+      "name": "Phobos Strike Team",
+      "superfaction": "Imperium",
+      "archetypes": [
+        "Infiltration",
+        "Recon"
+      ],
+      "faction_rules": [
+        {
+          "name": "Omni-Scramblers",
+          "description": "Delay enemy operative activations each Turning Point."
+        }
+      ],
+      "team_size": 6,
+      "min_team_size": 6,
+      "max_team_size": 6,
+      "operatives": [
+        {
+          "id": "pst-sgt",
+          "name": "Infiltrator Sergeant",
+          "faction_id": "kt-phobos-strike-team",
+          "faction_name": "Phobos Strike Team",
+          "role": "Leader",
+          "apl": 3,
+          "movement": 7,
+          "save": 3,
+          "wounds": 13,
+          "weapons": [
+            {
+              "name": "Marksman Bolt Carbine",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 2,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            },
+            {
+              "name": "Combat Blade",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "PHOBOS STRIKE TEAM",
+            "IMPERIUM",
+            "LEADER",
+            "SERGEANT"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "pst-warrior",
+          "name": "Infiltrator Warrior",
+          "faction_id": "kt-phobos-strike-team",
+          "faction_name": "Phobos Strike Team",
+          "role": "Warrior",
+          "apl": 3,
+          "movement": 7,
+          "save": 3,
+          "wounds": 12,
+          "weapons": [
+            {
+              "name": "Marksman Bolt Carbine",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            },
+            {
+              "name": "Combat Blade",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 5,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "PHOBOS STRIKE TEAM",
+            "IMPERIUM",
+            "ADEPTUS ASTARTES"
+          ],
+          "max_per_kill_team": 5
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    },
+    {
+      "id": "kt-corsair-voidscarred",
+      "slug": "corsair-voidscarred",
+      "name": "Corsair Voidscarred",
+      "superfaction": "Xenos",
+      "archetypes": [
+        "Recon",
+        "Infiltration"
+      ],
+      "faction_rules": [
+        {
+          "name": "Aeldari Raiders",
+          "description": "Operatives can perform a free Dash action during their activation."
+        }
+      ],
+      "team_size": 9,
+      "min_team_size": 9,
+      "max_team_size": 9,
+      "operatives": [
+        {
+          "id": "cv-felarch",
+          "name": "Corsair Felarch",
+          "faction_id": "kt-corsair-voidscarred",
+          "faction_name": "Corsair Voidscarred",
+          "role": "Leader",
+          "apl": 2,
+          "movement": 6,
+          "save": 4,
+          "wounds": 9,
+          "weapons": [
+            {
+              "name": "Neuro Disruptor",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 5,
+              "rules": [
+                {
+                  "type": "Range",
+                  "data": 8
+                },
+                {
+                  "type": "Piercing",
+                  "data": 1
+                },
+                {
+                  "type": "Stun"
+                }
+              ]
+            },
+            {
+              "name": "Power Weapon",
+              "weapon_type": "Melee",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 4,
+              "critical_damage": 6,
+              "rules": [
+                {
+                  "type": "Lethal",
+                  "data": 5
+                }
+              ]
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "CORSAIR VOIDSCARRED",
+            "XENOS",
+            "AELDARI",
+            "LEADER",
+            "FELARCH"
+          ],
+          "max_per_kill_team": 1
+        },
+        {
+          "id": "cv-warrior",
+          "name": "Corsair Warrior",
+          "faction_id": "kt-corsair-voidscarred",
+          "faction_name": "Corsair Voidscarred",
+          "role": "Warrior",
+          "apl": 2,
+          "movement": 6,
+          "save": 4,
+          "wounds": 8,
+          "weapons": [
+            {
+              "name": "Shuriken Rifle",
+              "weapon_type": "Ranged",
+              "attacks": 4,
+              "hit": 3,
+              "normal_damage": 3,
+              "critical_damage": 4,
+              "rules": [
+                {
+                  "type": "Rending"
+                }
+              ]
+            },
+            {
+              "name": "Fists",
+              "weapon_type": "Melee",
+              "attacks": 3,
+              "hit": 4,
+              "normal_damage": 2,
+              "critical_damage": 3,
+              "rules": []
+            }
+          ],
+          "abilities": [],
+          "keywords": [
+            "CORSAIR VOIDSCARRED",
+            "XENOS",
+            "AELDARI"
+          ],
+          "max_per_kill_team": 8
+        }
+      ],
+      "ploys": [],
+      "equipment": []
+    }
+  ],
+  "universal_equipment": [
+    {
+      "id": "kt-eq-explosive-grenades",
+      "name": "Explosive Grenades (2x Frag or 2x Krak or 1x each)",
+      "is_universal": true,
+      "description": "Select two Explosive Grenades (Frag: ATK 4, HIT 4+, DMG 2/4, Range 6\", Blast 2\", Saturate; Krak: ATK 4, HIT 4+, DMG 4/5, Range 6\", Piercing 1, Saturate).",
+      "granted_weapon": {
+        "name": "Krak Grenade",
+        "weapon_type": "Ranged",
+        "attacks": 4,
+        "hit": 4,
+        "normal_damage": 4,
+        "critical_damage": 5,
+        "rules": [
+          {
+            "type": "Range",
+            "data": 6
+          },
+          {
+            "type": "Piercing",
+            "data": 1
+          },
+          {
+            "type": "Saturate"
+          },
+          {
+            "type": "Limited",
+            "data": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "kt-eq-utility-grenades",
+      "name": "Utility Grenades (2x Smoke or 2x Stun or 1x each)",
+      "is_universal": true,
+      "description": "Select two Utility Grenades (Smoke Grenade creates a 1\" obscuring smoke zone; Stun Grenade tests operatives within 2\" for -1 APL).",
+      "granted_weapon": null
+    },
+    {
+      "id": "kt-eq-light-barricades",
+      "name": "Light Barricades (2x)",
+      "is_universal": true,
+      "description": "Set up two Light Barricade terrain features wholly within your territory.",
+      "granted_weapon": null
+    },
+    {
+      "id": "kt-eq-heavy-barricade",
+      "name": "Heavy Barricade (1x)",
+      "is_universal": true,
+      "description": "Set up one Heavy Barricade terrain feature wholly within your territory.",
+      "granted_weapon": null
+    },
+    {
+      "id": "kt-eq-ladders",
+      "name": "Ladders (2x)",
+      "is_universal": true,
+      "description": "Set up two Ladders to reduce vertical climb cost to 1\".",
+      "granted_weapon": null
+    },
+    {
+      "id": "kt-eq-razor-wire",
+      "name": "Razor Wire (1x)",
+      "is_universal": true,
+      "description": "Set up one Razor Wire obstacle that penalizes movement across it by 2\".",
+      "granted_weapon": null
+    },
+    {
+      "id": "kt-eq-ammo-cache",
+      "name": "Ammo Cache (1x)",
+      "is_universal": true,
+      "description": "Friendly operatives within 1\" can spend 1 AP to gain Balanced on a ranged weapon for the Turning Point.",
+      "granted_weapon": null
+    },
+    {
+      "id": "kt-eq-comms-device",
+      "name": "Comms Device (1x)",
+      "is_universal": true,
+      "description": "Increases the range of friendly support/aura actions by 3\" while within 1\" of the device.",
+      "granted_weapon": null
+    }
+  ]
+}
