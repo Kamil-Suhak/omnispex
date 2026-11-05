@@ -358,4 +358,33 @@ describe("Omnispex Multi-User Key-Authenticated Cloud Worker", () => {
     assert.equal(syncAfter.matches.length, 1);
     assert.equal(syncAfter.matches[0].payload.player_score, 90);
   });
+
+  it("delegates static website asset requests to env.ASSETS binding", async () => {
+    let fetchedPath = "";
+    const mockAssets = {
+      async fetch(req) {
+        fetchedPath = new URL(req.url).pathname;
+        return new Response("<html>Omnispex Web</html>", {
+          status: 200,
+          headers: { "Content-Type": "text/html" },
+        });
+      },
+    };
+
+    const envWithAssets = { DB: new MockD1Database(), ASSETS: mockAssets };
+
+    // Root website request
+    const rootRes = await worker.fetch(new Request("https://omnispex.workers.dev/"), envWithAssets);
+    assert.equal(rootRes.status, 200);
+    assert.equal(fetchedPath, "/");
+    assert.equal(await rootRes.text(), "<html>Omnispex Web</html>");
+
+    // Static bundle file request
+    const wasmRes = await worker.fetch(
+      new Request("https://omnispex.workers.dev/omnispex_flutter.wasm"),
+      envWithAssets,
+    );
+    assert.equal(wasmRes.status, 200);
+    assert.equal(fetchedPath, "/omnispex_flutter.wasm");
+  });
 });

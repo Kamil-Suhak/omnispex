@@ -14,6 +14,7 @@
 
 export interface Env {
   DB: D1Database;
+  ASSETS?: Fetcher;
   ALLOWED_ORIGIN?: string;
 }
 
@@ -159,6 +160,11 @@ export default {
         200,
         headers,
       );
+    }
+
+    // Delegate static website requests to Cloudflare Workers Assets binding
+    if (env.ASSETS && !path.startsWith('/api')) {
+      return env.ASSETS.fetch(request);
     }
 
     const rawKey = extractBearerKey(request);
